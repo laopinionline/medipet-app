@@ -365,6 +365,19 @@ async function agregarMascota(uid){
   }catch(e){if(msg){msg.textContent='Error: '+e.message;msg.style.color='#ef4444';}}
 }
 
+async function cambiarPlanMascota(uid, index, nuevoPlan) {
+  if (!nuevoPlan) return;
+  try {
+    const snap = await db.collection('usuarios').doc(uid).get();
+    const mascotas = [...(snap.data().mascotas || [])];
+    mascotas[index] = { ...mascotas[index], plan: nuevoPlan };
+    await db.collection('usuarios').doc(uid).update({ mascotas });
+    // Actualizar el carnet visualmente sin recargar todo
+    const carnetPlanEl = document.querySelector(`#carnet-${index} div:nth-child(2)`);
+    if (carnetPlanEl) carnetPlanEl.textContent = nuevoPlan;
+  } catch(e) { alert('Error al cambiar plan: ' + e.message); }
+}
+
 async function actualizarFotoTitular(input, uid) {
   const msg = document.getElementById('fotoTitularMsg');
   if (!input.files || !input.files[0]) return;
@@ -731,8 +744,14 @@ function renderPanel(data){
               <div style="display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,.12);border-radius:100px;padding:3px 9px;font-size:.65rem;font-weight:700;"><span style="width:5px;height:5px;background:#4ade80;border-radius:50%;display:inline-block;"></span> Activo</div>
             </div>
           </div>
-          <div style="display:flex;gap:8px;margin-top:8px;">
-            <button onclick="descargarCarnet(${i},'${m.nombre}')" class="bmini" style="background:#EBF3FC;color:#1A5FB4;font-size:.8rem;padding:8px 14px;flex:1;">⬇ Guardar carnet</button>
+          <div style="display:flex;gap:8px;margin-top:8px;align-items:center;">
+            <select onchange="cambiarPlanMascota('${data.uid}',${i},this.value)" style="flex:1;padding:8px 12px;border:2px solid rgba(26,95,180,.15);border-radius:100px;font-family:'Nunito',sans-serif;font-size:.82rem;font-weight:700;color:#1A5FB4;background:#EBF3FC;outline:none;cursor:pointer;">
+              <option value="" ${!m.plan||m.plan==='Sin definir'?'selected':''}>Cambiar plan...</option>
+              <option value="Básico" ${m.plan==='Básico'?'selected':''}>Básico — $16.000/mes</option>
+              <option value="Completo" ${m.plan==='Completo'?'selected':''}>Completo — $45.000/mes</option>
+              <option value="Premium" ${m.plan==='Premium'?'selected':''}>Premium — $90.000/mes</option>
+            </select>
+            <button onclick="descargarCarnet(${i},'${m.nombre}')" class="bmini" style="background:#EBF3FC;color:#1A5FB4;font-size:.8rem;padding:8px 12px;">⬇</button>
             <button onclick="confirmarEliminarMascota('${data.uid}',${i},'${m.nombre}')" style="background:none;border:1px solid #fee2e2;color:#991b1b;border-radius:100px;padding:7px 12px;font-size:.8rem;cursor:pointer;">🗑</button>
           </div>
         </div>`).join('')}
