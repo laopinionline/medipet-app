@@ -291,7 +291,7 @@ async function doRegistro(){
       uid,nombre,apellido,email,telefono:tel,fechaNacimiento:fechaNac,
       rol:'afiliado',estado:'pendiente',
       plan:plan||'Sin definir',
-      mascota:{nombre:mascotaNombre,raza:mascotaRaza,fechaNacimiento:fechaMascota,foto:fotoURL},
+      mascotas:[{nombre:mascotaNombre,raza:mascotaRaza,fechaNacimiento:fechaMascota,foto:fotoURL}],
       creadoEn:TS()
     });
   }catch(e){
@@ -303,6 +303,58 @@ async function doRegistro(){
 }
 
 // CAMBIAR PASS
+function toggleFormMascota(){
+  const f=document.getElementById('formNuevaMascota');
+  if(f) f.style.display=f.style.display==='none'?'block':'none';
+}
+
+function previewFoto2(input){
+  if(input.files&&input.files[0]){
+    const r=new FileReader();
+    r.onload=e=>{const p=document.getElementById('newMascotaPreview');if(p){p.src=e.target.result;p.style.display='block';}};
+    r.readAsDataURL(input.files[0]);
+  }
+}
+
+async function agregarMascota(uid){
+  const nombre=v('newMascotaNombre'),raza=v('newMascotaRaza');
+  const fecha=document.getElementById('newMascotaFecha')?.value||'';
+  const fotoEl=document.getElementById('newMascotaFoto');
+  const msg=document.getElementById('mascotaMsg');
+  if(msg) msg.textContent='';
+  if(!nombre){if(msg){msg.textContent='Ingresá el nombre.';msg.style.color='#ef4444';}return;}
+  let foto='';
+  if(fotoEl&&fotoEl.files&&fotoEl.files[0]){
+    try{
+      foto=await new Promise((resolve)=>{
+        const reader=new FileReader();
+        reader.onload=(e)=>{
+          const img=new Image();
+          img.onload=()=>{
+            const canvas=document.createElement('canvas');
+            const MAX=300;let w=img.width,h=img.height;
+            if(w>h){if(w>MAX){h=h*MAX/w;w=MAX;}}else{if(h>MAX){w=w*MAX/h;h=MAX;}}
+            canvas.width=w;canvas.height=h;
+            canvas.getContext('2d').drawImage(img,0,0,w,h);
+            resolve(canvas.toDataURL('image/jpeg',0.7));
+          };img.src=e.target.result;
+        };reader.readAsDataURL(fotoEl.files[0]);
+      });
+    }catch(e){foto='';}
+  }
+  try{
+    const snap=await db.collection('usuarios').doc(uid).get();
+    const ud=snap.data();
+    const mascotas=ud.mascotas?[...ud.mascotas]:[];
+    if(ud.mascota&&mascotas.length===0)mascotas.push(ud.mascota); // migrar formato viejo
+    mascotas.push({nombre,raza,fechaNacimiento:fecha,foto});
+    await db.collection('usuarios').doc(uid).update({mascotas});
+    if(msg){msg.textContent='✓ '+nombre+' agregada.';msg.style.color='#22c55e';}
+    const snapNew=await db.collection('usuarios').doc(uid).get();
+    renderPanel({uid,...snapNew.data()});
+  }catch(e){if(msg){msg.textContent='Error: '+e.message;msg.style.color='#ef4444';}}
+}
+
 async function cambiarPass(){
   try{await auth.currentUser.updatePassword(document.getElementById('nuevaPass').value);setMsg('passMsg','✓ Contraseña actualizada',true);}
   catch(e){setMsg('passMsg','Reingresá para cambiar contraseña.',false);}
@@ -375,7 +427,13 @@ function cardUsuario(u){
         <strong>${u.nombre||''} ${u.apellido||''}</strong>
         <div style="font-size:.8rem;color:#5a6a8a;">${u.email||''}${u.telefono?' · '+u.telefono:''}</div>
         ${u.fechaNacimiento?`<div style="font-size:.78rem;color:#5a6a8a;">📅 Nacimiento: ${u.fechaNacimiento}</div>`:''}
-        <div style="font-size:.8rem;margin-top:4px;">🐾 <strong>${u.mascota?.nombre||'—'}</strong>${u.mascota?.raza?' · '+u.mascota.raza:''}${u.mascota?.fechaNacimiento?' · 🎂 '+u.mascota.fechaNacimiento:''}${u.plan?` &nbsp;·&nbsp; <span style="color:#1A5FB4;font-weight:700;">${u.plan}</span>`:''}</div>
+        <div style="font-size:.8rem;margin-top:4px;">
+          ${u.fechaNacimiento?`<div style="font-size:.72rem;color:#5a6a8a;">📅 Titular: ${u.fechaNacimiento}</div>`:''}
+          ${(u.mascotas||[u.mascota]).filter(Boolean).map(m=>
+            `🐾 <strong>${m?.nombre||'—'}</strong>${m?.raza?' · '+m.raza:''}${m?.fechaNacimiento?' · 🎂 '+m.fechaNacimiento:''}`
+          ).join('<br>')}
+          ${u.plan?` &nbsp;·&nbsp; <span style="color:#1A5FB4;font-weight:700;">${u.plan}</span>`:''}
+        </div>
         ${fecha?`<div style="font-size:.72rem;color:#9ca3af;margin-top:2px;">Registrado: ${fecha}</div>`:''}
       </div>
       <span style="background:${col};color:white;font-size:.65rem;font-weight:700;padding:3px 9px;border-radius:100px;white-space:nowrap;flex-shrink:0;">${(u.estado||'pendiente').toUpperCase()}</span>
@@ -407,7 +465,7 @@ async function crearAfiliado(){
       uid:cred.user.uid,nombre,apellido,email,telefono:tel,fechaNacimiento:'',
       rol:'afiliado',estado:'activo',
       plan:plan||'Sin definir',
-      mascota:{nombre:mascotaNombre,raza:mascotaRaza,fechaNacimiento:afilFechaMascota,foto:''},
+      mascotas:[{nombre:mascotaNombre,raza:mascotaRaza,fechaNacimiento:afilFechaMascota,foto:''}],
       creadoEn:TS()
     });
     setMsg('afilMsg','✓ Afiliado '+nombre+' creado y activado.',true);
@@ -480,20 +538,55 @@ function toggleFormAfiliado(){
 
 // RENDER
 function renderPanel(data){
-  const{rol,nombre,apellido,mascota,plan,clinica}=data;
+  const{rol,nombre,apellido,mascotas,mascota,plan,clinica}=data;
+  // Compatibilidad: soportar tanto mascota (viejo) como mascotas (nuevo)
+  const listaMascotas = mascotas || (mascota ? [mascota] : []);
+  const primeraMascota = listaMascotas[0] || {};
   let html='';
   if(rol==='afiliado'){
-    html=`<div class="panel-header"><div><div class="panel-rol">Afiliado</div><div class="panel-nombre">${nombre} ${apellido||''}</div>${plan?`<div class="panel-plan">Plan ${plan}</div>`:''}</div>${mascota?.foto?`<img src="${mascota.foto}" class="mascota-foto" alt="${mascota.nombre}">`:`<div class="mascota-ph">🐾</div>`}</div>
+    html=`<div class="panel-header"><div><div class="panel-rol">Afiliado</div><div class="panel-nombre">${nombre} ${apellido||''}</div>${plan?`<div class="panel-plan">Plan ${plan}</div>`:''}</div>${primeraMascota?.foto?`<img src="${primeraMascota.foto}" class="mascota-foto" alt="${primeraMascota.nombre}">`:`<div class="mascota-ph">🐾</div>`}</div>
     <div class="carnet"><div style="position:absolute;top:16px;right:16px;"><svg width="36" height="36"><use href="#mp-iso-w"/></svg></div>
       <div class="cl">PLAN</div><div class="cp">${plan||'Sin definir'}</div>
-      <div class="cm">${mascota?.nombre||'—'}</div><div class="cr">${mascota?.raza||''}</div>
+      <div class="cm">${primeraMascota?.nombre||'—'}</div><div class="cr">${primeraMascota?.raza||''}</div>
       <div class="ctlbl">TITULAR</div><div class="ct">${nombre} ${apellido||''}</div>
       <div class="cchip"><span class="cdot"></span> Cobertura activa</div>
     </div>
-    <div class="seccion"><div class="stit">Mi mascota</div>
-      ${mascota?.foto?`<img src="${mascota.foto}" style="width:100%;border-radius:14px;object-fit:cover;max-height:200px;">`:`<p style="color:#5a6a8a;font-size:.85rem;">Sin foto cargada.</p>`}
-      <p style="font-size:.9rem;margin-top:12px;"><strong>${mascota?.nombre||'—'}</strong>${mascota?.raza?' · '+mascota.raza:''}</p>
+
+    <div class="seccion">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <div class="stit" style="margin-bottom:0;">Mis mascotas (${listaMascotas.length})</div>
+        <button onclick="toggleFormMascota()" class="bmini bverde" style="font-size:.8rem;padding:7px 14px;">+ Agregar</button>
+      </div>
+      <div id="formNuevaMascota" style="display:none;background:var(--fondo);border-radius:12px;padding:14px;margin-bottom:14px;border:1px solid rgba(26,95,180,.12);">
+        <div class="fstack">
+          <div class="frow">
+            <input type="text" id="newMascotaNombre" placeholder="Nombre *" class="input-field">
+            <input type="text" id="newMascotaRaza" placeholder="Raza" class="input-field">
+          </div>
+          <div><label style="font-size:.8rem;font-weight:700;display:block;margin-bottom:4px;">Fecha de nacimiento</label><input type="date" id="newMascotaFecha" class="input-field"></div>
+          <div>
+            <label class="foto-label" for="newMascotaFoto">📷 &nbsp;Foto (opcional)</label>
+            <input type="file" id="newMascotaFoto" accept="image/*" capture="environment" style="display:none" onchange="previewFoto2(this)">
+            <img id="newMascotaPreview" src="" style="width:64px;height:64px;border-radius:50%;object-fit:cover;margin-top:8px;display:none;border:3px solid #5BA3E8;">
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button onclick="agregarMascota('${data.uid}')" class="btn-primary" style="flex:1;">Agregar mascota</button>
+            <button onclick="toggleFormMascota()" class="bmini brojo" style="padding:10px 16px;">✕</button>
+          </div>
+          <p id="mascotaMsg" style="font-size:.8rem;"></p>
+        </div>
+      </div>
+      ${listaMascotas.map((m,i)=>`
+        <div style="background:var(--fondo);border-radius:12px;padding:14px;margin-bottom:10px;border:1px solid rgba(26,95,180,.06);display:flex;align-items:center;gap:14px;">
+          ${m.foto?`<img src="${m.foto}" style="width:56px;height:56px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid #5BA3E8;">`:`<div style="width:56px;height:56px;border-radius:50%;background:var(--azul-pale);display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0;">🐾</div>`}
+          <div>
+            <strong>${m.nombre||'—'}</strong>
+            ${m.raza?`<div style="font-size:.8rem;color:#5a6a8a;">${m.raza}</div>`:''}
+            ${m.fechaNacimiento?`<div style="font-size:.75rem;color:#9ca3af;">🎂 ${m.fechaNacimiento}</div>`:''}
+          </div>
+        </div>`).join('')}
     </div>
+
     <div class="seccion"><div class="stit">Cambiar contraseña</div>
       <input type="password" id="nuevaPass" placeholder="Nueva contraseña" class="input-field">
       <button onclick="cambiarPass()" class="btn-primary" style="margin-top:10px;">Actualizar</button>
