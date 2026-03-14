@@ -442,13 +442,43 @@ function cardUsuario(u){
       ${u.estado!=='activo'?`<button onclick="cambiarEstado('${u.id}','activo')" class="bmini bverde">✓ Activar</button>`:''}
       ${u.estado==='activo'?`<button onclick="cambiarEstado('${u.id}','suspendido')" class="bmini brojo">Suspender</button>`:''}
       ${u.estado==='suspendido'?`<button onclick="cambiarEstado('${u.id}','activo')" class="bmini bverde">Reactivar</button>`:''}
-    </div>
+      <button onclick="confirmarEliminarUsuario('${u.id}','${u.nombre} ${u.apellido||''}')" class="bmini" style="background:#fee2e2;color:#991b1b;opacity:0.7;">🗑 Eliminar</button>    </div>
   </div>`;
 }
 
 async function cambiarEstado(uid,estado){
   await db.collection('usuarios').doc(uid).update({estado});
   cargarUsuariosAdmin();
+}
+
+// ── ELIMINAR MASCOTA ──
+async function confirmarEliminarMascota(uid, index, nombre) {
+  if (!confirm(`¿Eliminás a ${nombre}? Esta acción no se puede deshacer.`)) return;
+  try {
+    const snap = await db.collection('usuarios').doc(uid).get();
+    const ud = snap.data();
+    const mascotas = ud.mascotas ? [...ud.mascotas] : (ud.mascota ? [ud.mascota] : []);
+    mascotas.splice(index, 1);
+    await db.collection('usuarios').doc(uid).update({ mascotas });
+    const snapNew = await db.collection('usuarios').doc(uid).get();
+    renderPanel({ uid, ...snapNew.data() });
+  } catch(e) { alert('Error al eliminar: ' + e.message); }
+}
+
+// ── ELIMINAR USUARIO (solo admin) ──
+function confirmarEliminarUsuario(uid, nombre) {
+  if (!confirm(`¿Eliminás el usuario ${nombre}?\n\nEsta acción elimina todos sus datos de MEDIPet. No se puede deshacer.`)) return;
+  eliminarUsuario(uid);
+}
+
+async function eliminarUsuario(uid) {
+  try {
+    // Borrar documento de Firestore
+    await db.collection('usuarios').doc(uid).delete();
+    // Nota: borrar el usuario de Auth requiere que esté logueado como ese usuario
+    // o usar Admin SDK (backend). Marcamos como eliminado en Firestore es suficiente.
+    cargarUsuariosAdmin();
+  } catch(e) { alert('Error al eliminar: ' + e.message); }
 }
 
 // ADMIN: CREAR AFILIADO
@@ -579,11 +609,12 @@ function renderPanel(data){
       ${listaMascotas.map((m,i)=>`
         <div style="background:var(--fondo);border-radius:12px;padding:14px;margin-bottom:10px;border:1px solid rgba(26,95,180,.06);display:flex;align-items:center;gap:14px;">
           ${m.foto?`<img src="${m.foto}" style="width:56px;height:56px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid #5BA3E8;">`:`<div style="width:56px;height:56px;border-radius:50%;background:var(--azul-pale);display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0;">🐾</div>`}
-          <div>
+          <div style="flex:1;">
             <strong>${m.nombre||'—'}</strong>
             ${m.raza?`<div style="font-size:.8rem;color:#5a6a8a;">${m.raza}</div>`:''}
             ${m.fechaNacimiento?`<div style="font-size:.75rem;color:#9ca3af;">🎂 ${m.fechaNacimiento}</div>`:''}
           </div>
+          <button onclick="confirmarEliminarMascota('${data.uid}',${i},'${m.nombre}')" style="background:none;border:none;cursor:pointer;font-size:1.1rem;opacity:0.5;padding:4px;" title="Eliminar mascota">🗑</button>
         </div>`).join('')}
     </div>
 
