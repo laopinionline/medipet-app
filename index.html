@@ -480,43 +480,85 @@ function cardUsuario(u){
   const col=u.estado==='activo'?'#22c55e':u.estado==='pendiente'?'#f59e0b':'#ef4444';
   const fecha=u.creadoEn?.toDate?.()?.toLocaleDateString('es-AR')||'';
   const mascotas=(u.mascotas||[u.mascota]).filter(Boolean);
+  // Plan general: puede ser del usuario (viejo) o de las mascotas (nuevo)
+  const planesTexto = mascotas.length > 0
+    ? mascotas.map(m => m.plan && m.plan !== 'Sin definir' ? `${m.nombre}: ${m.plan}` : null).filter(Boolean).join(' · ')
+    : (u.plan && u.plan !== 'Sin definir' ? u.plan : '');
+
   return `<div class="uitem">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
       <div style="flex:1;">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-          <strong>${u.nombre||''} ${u.apellido||''}</strong>
+
+        <!-- Nombre + nroSocio + estado -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;">
+          <strong style="font-size:1rem;">${u.nombre||''} ${u.apellido||''}</strong>
           ${u.nroSocio?`<span style="background:#EBF3FC;color:#1A5FB4;font-size:.68rem;font-weight:800;padding:2px 8px;border-radius:100px;">${u.nroSocio}</span>`:''}
         </div>
-        <div style="font-size:.8rem;color:#5a6a8a;">${u.email||''}${u.telefono?' · '+u.telefono:''}</div>
-        ${u.fechaNacimiento?`<div style="font-size:.75rem;color:#5a6a8a;margin-top:2px;">📅 Titular: ${u.fechaNacimiento}</div>`:''}
-        ${u.plan?`<div style="font-size:.75rem;font-weight:700;color:#1A5FB4;margin-top:3px;">Plan ${u.plan}</div>`:''}
 
-        <!-- MASCOTAS CON FOTO -->
+        <!-- Contacto -->
+        <div style="font-size:.8rem;color:#5a6a8a;">${u.email||''}${u.telefono?' · '+u.telefono:''}</div>
+        ${u.fechaNacimiento?`<div style="font-size:.75rem;color:#5a6a8a;margin-top:2px;">📅 ${u.fechaNacimiento}</div>`:''}
+
+        <!-- Planes -->
+        ${planesTexto?`<div style="font-size:.75rem;font-weight:700;color:#1A5FB4;margin-top:4px;">📋 ${planesTexto}</div>`:'<div style="font-size:.75rem;color:#9ca3af;margin-top:4px;">Sin plan asignado</div>'}
+
+        <!-- MASCOTAS CON FOTO Y PLAN -->
         <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px;">
           ${mascotas.map(m=>`
             <div style="display:flex;align-items:center;gap:10px;background:white;border-radius:10px;padding:8px 10px;border:1px solid rgba(26,95,180,.08);">
               ${m.foto
                 ? `<img src="${m.foto}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid #5BA3E8;">`
                 : `<div style="width:40px;height:40px;border-radius:50%;background:#EBF3FC;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;">🐾</div>`}
-              <div>
-                <strong style="font-size:.85rem;">${m.nombre||'—'}</strong>
+              <div style="flex:1;">
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <strong style="font-size:.85rem;">${m.nombre||'—'}</strong>
+                  ${m.plan&&m.plan!=='Sin definir'?`<span style="background:#EBF3FC;color:#1A5FB4;font-size:.65rem;font-weight:700;padding:1px 7px;border-radius:100px;">${m.plan}</span>`:''}
+                </div>
                 ${m.raza?`<div style="font-size:.75rem;color:#5a6a8a;">${m.raza}</div>`:''}
                 ${m.fechaNacimiento?`<div style="font-size:.72rem;color:#9ca3af;">🎂 ${m.fechaNacimiento}</div>`:''}
               </div>
             </div>`).join('')}
         </div>
 
+        <!-- DATOS INTERNOS (facturación) -->
+        <details style="margin-top:10px;">
+          <summary style="font-size:.72rem;font-weight:700;color:#9ca3af;cursor:pointer;list-style:none;display:flex;align-items:center;gap:4px;">
+            <span>▸</span> Datos internos
+          </summary>
+          <div style="background:#f8faff;border-radius:10px;padding:10px;margin-top:6px;font-size:.75rem;color:#5a6a8a;border:1px solid rgba(26,95,180,.08);">
+            <div><strong>Nro socio:</strong> ${u.nroSocio||'Sin asignar'}</div>
+            <div><strong>UID Firebase:</strong> <span style="font-family:monospace;font-size:.68rem;">${u.uid||u.id}</span></div>
+            <div><strong>Email:</strong> ${u.email||'—'}</div>
+            <div><strong>Estado:</strong> ${u.estado||'—'}</div>
+            <div><strong>Fecha alta:</strong> ${fecha||'—'}</div>
+            ${mascotas.map(m=>`<div><strong>${m.nombre||'mascota'}:</strong> ${m.plan||'Sin plan'}</div>`).join('')}
+          </div>
+        </details>
+
         ${fecha?`<div style="font-size:.72rem;color:#9ca3af;margin-top:6px;">Registrado: ${fecha}</div>`:''}
       </div>
       <span style="background:${col};color:white;font-size:.65rem;font-weight:700;padding:3px 9px;border-radius:100px;white-space:nowrap;flex-shrink:0;">${(u.estado||'pendiente').toUpperCase()}</span>
     </div>
+
+    <!-- ACCIONES -->
     <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
       ${u.estado!=='activo'?`<button onclick="cambiarEstado('${u.id}','activo')" class="bmini bverde">✓ Activar</button>`:''}
       ${u.estado==='activo'?`<button onclick="cambiarEstado('${u.id}','suspendido')" class="bmini brojo">Suspender</button>`:''}
       ${u.estado==='suspendido'?`<button onclick="cambiarEstado('${u.id}','activo')" class="bmini bverde">Reactivar</button>`:''}
+      <button onclick="reenviarCredenciales('${u.email||''}')" class="bmini" style="background:#f0fdf4;color:#166534;">✉ Reenviar acceso</button>
       <button onclick="confirmarEliminarUsuario('${u.id}','${u.nombre} ${u.apellido||''}')" class="bmini" style="background:#fee2e2;color:#991b1b;opacity:0.7;">🗑 Eliminar</button>
     </div>
   </div>`;
+}
+
+async function reenviarCredenciales(email) {
+  if (!email) { alert('Este usuario no tiene email registrado.'); return; }
+  try {
+    await auth.sendPasswordResetEmail(email);
+    alert('✓ Se envió un email de acceso a ' + email + '\nEl afiliado recibirá un link para ingresar o restablecer su contraseña.');
+  } catch(e) {
+    alert('Error al enviar: ' + e.message);
+  }
 }
 
 async function cambiarEstado(uid,estado){
