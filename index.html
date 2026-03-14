@@ -133,6 +133,10 @@ body{font-family:'Nunito',sans-serif;background:var(--fondo);color:var(--texto);
       </div>
       <input type="email" id="regEmail" placeholder="Email *" class="input-field">
       <input type="tel" id="regTel" placeholder="Teléfono / WhatsApp" class="input-field">
+      <div>
+        <label style="font-size:0.8rem;font-weight:700;display:block;margin-bottom:4px;color:var(--texto);">Fecha de nacimiento *</label>
+        <input type="date" id="regFechaNac" class="input-field">
+      </div>
       <input type="password" id="regPass" placeholder="Contraseña (mín. 6 caracteres) *" class="input-field">
       <div style="border-top:1px solid var(--azul-pale);padding-top:12px;">
         <p style="font-size:.75rem;font-weight:800;color:var(--noche);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">Tu mascota</p>
@@ -246,6 +250,7 @@ async function doRegistro(){
   const nombre=v('regNombre'),apellido=v('regApellido'),email=v('regEmail'),tel=v('regTel');
   const pass=document.getElementById('regPass').value;
   const mascotaNombre=v('regMascota'),mascotaRaza=v('regRaza'),plan=v('regPlan');
+  const fechaNac=document.getElementById('regFechaNac')?.value||'';
   const fotoInput=document.getElementById('regFoto');
   const btn=document.getElementById('btnRegistro');
   setMsg('regError','',true);
@@ -278,7 +283,7 @@ async function doRegistro(){
       }catch(fe){console.warn('Foto:',fe.message);fotoURL='';}
     }
     await db.collection('usuarios').doc(uid).set({
-      uid,nombre,apellido,email,telefono:tel,
+      uid,nombre,apellido,email,telefono:tel,fechaNacimiento:fechaNac,
       rol:'afiliado',estado:'pendiente',
       plan:plan||'Sin definir',
       mascota:{nombre:mascotaNombre,raza:mascotaRaza,foto:fotoURL},
@@ -364,6 +369,7 @@ function cardUsuario(u){
       <div style="flex:1;">
         <strong>${u.nombre||''} ${u.apellido||''}</strong>
         <div style="font-size:.8rem;color:#5a6a8a;">${u.email||''}${u.telefono?' · '+u.telefono:''}</div>
+        ${u.fechaNacimiento?`<div style="font-size:.78rem;color:#5a6a8a;">📅 Nacimiento: ${u.fechaNacimiento}</div>`:''}
         <div style="font-size:.8rem;margin-top:4px;">🐾 <strong>${u.mascota?.nombre||'—'}</strong>${u.mascota?.raza?' · '+u.mascota.raza:''}${u.plan?` &nbsp;·&nbsp; <span style="color:#1A5FB4;font-weight:700;">${u.plan}</span>`:''}</div>
         ${fecha?`<div style="font-size:.72rem;color:#9ca3af;margin-top:2px;">Registrado: ${fecha}</div>`:''}
       </div>
@@ -392,7 +398,7 @@ async function crearAfiliado(){
   try{
     const cred=await auth.createUserWithEmailAndPassword(email,pass);
     await db.collection('usuarios').doc(cred.user.uid).set({
-      uid:cred.user.uid,nombre,apellido,email,telefono:tel,
+      uid:cred.user.uid,nombre,apellido,email,telefono:tel,fechaNacimiento:'',
       rol:'afiliado',estado:'activo',
       plan:plan||'Sin definir',
       mascota:{nombre:mascotaNombre,raza:mascotaRaza,foto:''},
