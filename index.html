@@ -157,7 +157,7 @@ body{font-family:'Nunito',sans-serif;background:var(--fondo);color:var(--texto);
       </select>
       <div>
         <label class="foto-label" for="regFoto">📷 &nbsp;Foto de tu mascota (opcional)</label>
-        <input type="file" id="regFoto" accept="image/*" capture="environment" style="display:none" onchange="previewFoto(this)">
+        <input type="file" id="regFoto" accept="image/*" style="display:none" onchange="previewFoto(this)">
         <img id="fotoPreview" src="" alt="Preview">
         <p style="font-size:.72rem;color:var(--suave);margin-top:6px;">Aparecerá en tu carnet digital.</p>
       </div>
@@ -608,7 +608,7 @@ function renderPanel(data){
           <div><label style="font-size:.8rem;font-weight:700;display:block;margin-bottom:4px;">Fecha de nacimiento</label><input type="date" id="newMascotaFecha" class="input-field"></div>
           <div>
             <label class="foto-label" for="newMascotaFoto">📷 &nbsp;Foto (opcional)</label>
-            <input type="file" id="newMascotaFoto" accept="image/*" capture="environment" style="display:none" onchange="previewFoto2(this)">
+            <input type="file" id="newMascotaFoto" accept="image/*" style="display:none" onchange="previewFoto2(this)">
             <img id="newMascotaPreview" src="" style="width:64px;height:64px;border-radius:50%;object-fit:cover;margin-top:8px;display:none;border:3px solid #5BA3E8;">
           </div>
           <div style="display:flex;gap:8px;">
