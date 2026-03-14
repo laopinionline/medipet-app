@@ -93,20 +93,26 @@ window.doRegistro = async () => {
   }
 
   try {
+    // 1. Crear usuario en Auth
     const cred = await createUserWithEmailAndPassword(auth, email, pass);
-    let fotoURL = '';
 
+    // 2. Intentar subir foto (no bloquea el registro si falla)
+    let fotoURL = '';
     if (fotoInput.files[0]) {
       try {
         const storageRef = ref(storage, `mascotas/${cred.user.uid}/foto.jpg`);
         await uploadBytes(storageRef, fotoInput.files[0]);
         fotoURL = await getDownloadURL(storageRef);
-      } catch(fotoErr) { console.warn('Foto no subida:', fotoErr); }
+      } catch(fotoErr) {
+        console.warn('Foto no subida, continuando sin foto:', fotoErr.message);
+      }
     }
 
+    // 3. Guardar en Firestore con reintentos
     const userData = {
       uid: cred.user.uid,
-      nombre, apellido, email, telefono: tel,
+      nombre, apellido, email,
+      telefono: tel,
       rol: 'afiliado',
       estado: 'pendiente',
       plan: plan || 'Sin definir',
@@ -114,24 +120,32 @@ window.doRegistro = async () => {
       creadoEn: serverTimestamp()
     };
 
-    // Reintentar hasta 3 veces si Firestore falla
     let guardado = false;
     for (let i = 0; i < 3; i++) {
       try {
         await setDoc(doc(db, "usuarios", cred.user.uid), userData);
-        guardado = true; break;
+        guardado = true;
+        break;
       } catch(fsErr) {
-        if (i === 2) throw fsErr;
-        await new Promise(r => setTimeout(r, 1000));
+        console.warn(`Intento ${i+1} fallido:`, fsErr.message);
+        if (i < 2) await new Promise(r => setTimeout(r, 1500));
       }
     }
-    if (!guardado) throw new Error('No se pudo guardar en la base de datos.');
+
+    if (!guardado) {
+      // Último recurso: mostrar error pero el usuario de Auth ya fue creado
+      err.textContent = 'Cuenta creada pero hubo un error al guardar tus datos. Contactá a MEDIPet.';
+      err.style.color = '#f59e0b';
+      btn.textContent = 'Crear mi cuenta'; btn.disabled = false;
+      return;
+    }
+    // El onAuthStateChanged va a detectar el login y mostrar el panel
 
   } catch(e) {
     btn.textContent = 'Crear mi cuenta'; btn.disabled = false;
     if (e.code === 'auth/email-already-in-use') err.textContent = 'Ese email ya está registrado.';
-    else if (e.code === 'auth/weak-password') err.textContent = 'La contraseña es muy débil.';
-    else err.textContent = 'Error: ' + e.message;
+    else if (e.code === 'auth/weak-password') err.textContent = 'La contraseña debe tener al menos 6 caracteres.';
+    else err.textContent = 'Error al registrarse: ' + e.message;
   }
 };
 
@@ -218,36 +232,69 @@ window.cargarAtencioneshistorial = async () => {
 window.cargarUsuariosAdmin = async () => {
   const lista = document.getElementById('listaUsuarios');
   if (!lista) return;
+  lista.innerHTML = '<p style="color:#5a6a8a;font-size:0.85rem;">Cargando...</p>';
   try {
     const snap = await getDocs(collection(db, "usuarios"));
-    if (snap.empty) { lista.innerHTML = '<p style="color:#5a6a8a;">No hay usuarios registrados.</p>'; return; }
-    lista.innerHTML = snap.docs.map(d => {
-      const u = d.data();
-      const rolColor = u.rol === 'admin' ? '#8b5cf6' : u.rol === 'prestador' ? '#1A5FB4' : '#22c55e';
-      const estadoColor = u.estado === 'activo' ? '#22c55e' : u.estado === 'pendiente' ? '#f59e0b' : '#ef4444';
-      return `<div class="usuario-item">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-          <div>
-            <strong>${u.nombre} ${u.apellido || ''}</strong>
-            <div style="font-size:0.8rem;color:#5a6a8a;">${u.email}</div>
-            ${u.mascota?.nombre ? `<div style="font-size:0.8rem;color:#5a6a8a;">🐾 ${u.mascota.nombre} ${u.mascota.raza ? '· '+u.mascota.raza : ''}</div>` : ''}
-          </div>
-          <div style="text-align:right;display:flex;flex-direction:column;gap:4px;">
-            <span style="background:${rolColor};color:white;font-size:0.65rem;font-weight:700;padding:3px 8px;border-radius:100px;">${u.rol.toUpperCase()}</span>
-            <span style="background:${estadoColor};color:white;font-size:0.65rem;font-weight:700;padding:3px 8px;border-radius:100px;">${u.estado?.toUpperCase() || 'PENDIENTE'}</span>
-          </div>
-        </div>
-        <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
-          ${u.estado !== 'activo' ? `<button onclick="cambiarEstado('${d.id}','activo')" class="btn-mini btn-verde">Activar</button>` : ''}
-          ${u.estado !== 'suspendido' ? `<button onclick="cambiarEstado('${d.id}','suspendido')" class="btn-mini btn-rojo">Suspender</button>` : ''}
-          ${u.plan ? `<span style="font-size:0.75rem;color:#1A5FB4;font-weight:700;">Plan: ${u.plan}</span>` : ''}
-        </div>
+    const todos = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .filter(u => u.rol === 'afiliado');
+
+    if (todos.length === 0) {
+      lista.innerHTML = '<p style="color:#5a6a8a;">No hay afiliados registrados aún.</p>';
+      return;
+    }
+
+    const pendientes = todos.filter(u => u.estado === 'pendiente');
+    const activos = todos.filter(u => u.estado !== 'pendiente');
+
+    let html = '';
+
+    // Sección pendientes (destacada)
+    if (pendientes.length > 0) {
+      html += `<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:12px;padding:12px 14px;margin-bottom:14px;">
+        <div style="font-size:0.75rem;font-weight:800;color:#92400e;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px;">
+          ⏳ Pendientes de activación (${pendientes.length})
+        </div>`;
+      pendientes.forEach(u => { html += renderUsuario(u); });
+      html += `</div>`;
+    }
+
+    // Resto de afiliados
+    if (activos.length > 0) {
+      html += `<div style="font-size:0.75rem;font-weight:800;color:var(--suave);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px;">
+        Afiliados activos (${activos.length})
       </div>`;
-    }).join('');
+      activos.forEach(u => { html += renderUsuario(u); });
+    }
+
+    lista.innerHTML = html;
   } catch(e) {
-    lista.innerHTML = '<p style="color:#ef4444;">Error al cargar usuarios.</p>';
+    lista.innerHTML = '<p style="color:#ef4444;">Error al cargar. Intentá de nuevo.</p>';
   }
 };
+
+function renderUsuario(u) {
+  const estadoColor = u.estado === 'activo' ? '#22c55e' : u.estado === 'pendiente' ? '#f59e0b' : '#ef4444';
+  const fecha = u.creadoEn?.toDate?.()?.toLocaleDateString('es-AR') || '';
+  return `<div class="usuario-item">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+      <div style="flex:1;">
+        <strong>${u.nombre} ${u.apellido || ''}</strong>
+        <div style="font-size:0.8rem;color:#5a6a8a;">${u.email}${u.telefono ? ' · '+u.telefono : ''}</div>
+        <div style="font-size:0.8rem;margin-top:4px;">
+          🐾 <strong>${u.mascota?.nombre || '—'}</strong>${u.mascota?.raza ? ' · '+u.mascota.raza : ''}
+          ${u.plan ? ` &nbsp;·&nbsp; Plan <strong>${u.plan}</strong>` : ''}
+        </div>
+        ${fecha ? `<div style="font-size:0.75rem;color:#9ca3af;margin-top:2px;">Registrado: ${fecha}</div>` : ''}
+      </div>
+      <span style="background:${estadoColor};color:white;font-size:0.65rem;font-weight:700;padding:3px 9px;border-radius:100px;white-space:nowrap;">${u.estado?.toUpperCase()}</span>
+    </div>
+    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+      ${u.estado !== 'activo' ? `<button onclick="cambiarEstado('${u.id}','activo')" class="btn-mini btn-verde">✓ Activar</button>` : ''}
+      ${u.estado !== 'suspendido' ? `<button onclick="cambiarEstado('${u.id}','suspendido')" class="btn-mini btn-rojo">Suspender</button>` : ''}
+      ${u.estado === 'suspendido' ? `<button onclick="cambiarEstado('${u.id}','activo')" class="btn-mini btn-verde">Reactivar</button>` : ''}
+    </div>
+  </div>`;
+}
 
 window.cambiarEstado = async (uid, estado) => {
   await updateDoc(doc(db, "usuarios", uid), { estado });
