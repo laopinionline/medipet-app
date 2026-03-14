@@ -421,20 +421,34 @@ async function cargarUsuariosAdmin(){
 function cardUsuario(u){
   const col=u.estado==='activo'?'#22c55e':u.estado==='pendiente'?'#f59e0b':'#ef4444';
   const fecha=u.creadoEn?.toDate?.()?.toLocaleDateString('es-AR')||'';
+  const mascotas=(u.mascotas||[u.mascota]).filter(Boolean);
   return `<div class="uitem">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
       <div style="flex:1;">
-        <strong>${u.nombre||''} ${u.apellido||''}</strong>
-        <div style="font-size:.8rem;color:#5a6a8a;">${u.email||''}${u.telefono?' · '+u.telefono:''}</div>
-        ${u.fechaNacimiento?`<div style="font-size:.78rem;color:#5a6a8a;">📅 Nacimiento: ${u.fechaNacimiento}</div>`:''}
-        <div style="font-size:.8rem;margin-top:4px;">
-          ${u.fechaNacimiento?`<div style="font-size:.72rem;color:#5a6a8a;">📅 Titular: ${u.fechaNacimiento}</div>`:''}
-          ${(u.mascotas||[u.mascota]).filter(Boolean).map(m=>
-            `🐾 <strong>${m?.nombre||'—'}</strong>${m?.raza?' · '+m.raza:''}${m?.fechaNacimiento?' · 🎂 '+m.fechaNacimiento:''}`
-          ).join('<br>')}
-          ${u.plan?` &nbsp;·&nbsp; <span style="color:#1A5FB4;font-weight:700;">${u.plan}</span>`:''}
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+          <strong>${u.nombre||''} ${u.apellido||''}</strong>
+          ${u.nroSocio?`<span style="background:#EBF3FC;color:#1A5FB4;font-size:.68rem;font-weight:800;padding:2px 8px;border-radius:100px;">${u.nroSocio}</span>`:''}
         </div>
-        ${fecha?`<div style="font-size:.72rem;color:#9ca3af;margin-top:2px;">Registrado: ${fecha}</div>`:''}
+        <div style="font-size:.8rem;color:#5a6a8a;">${u.email||''}${u.telefono?' · '+u.telefono:''}</div>
+        ${u.fechaNacimiento?`<div style="font-size:.75rem;color:#5a6a8a;margin-top:2px;">📅 Titular: ${u.fechaNacimiento}</div>`:''}
+        ${u.plan?`<div style="font-size:.75rem;font-weight:700;color:#1A5FB4;margin-top:3px;">Plan ${u.plan}</div>`:''}
+
+        <!-- MASCOTAS CON FOTO -->
+        <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px;">
+          ${mascotas.map(m=>`
+            <div style="display:flex;align-items:center;gap:10px;background:white;border-radius:10px;padding:8px 10px;border:1px solid rgba(26,95,180,.08);">
+              ${m.foto
+                ? `<img src="${m.foto}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid #5BA3E8;">`
+                : `<div style="width:40px;height:40px;border-radius:50%;background:#EBF3FC;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;">🐾</div>`}
+              <div>
+                <strong style="font-size:.85rem;">${m.nombre||'—'}</strong>
+                ${m.raza?`<div style="font-size:.75rem;color:#5a6a8a;">${m.raza}</div>`:''}
+                ${m.fechaNacimiento?`<div style="font-size:.72rem;color:#9ca3af;">🎂 ${m.fechaNacimiento}</div>`:''}
+              </div>
+            </div>`).join('')}
+        </div>
+
+        ${fecha?`<div style="font-size:.72rem;color:#9ca3af;margin-top:6px;">Registrado: ${fecha}</div>`:''}
       </div>
       <span style="background:${col};color:white;font-size:.65rem;font-weight:700;padding:3px 9px;border-radius:100px;white-space:nowrap;flex-shrink:0;">${(u.estado||'pendiente').toUpperCase()}</span>
     </div>
@@ -442,13 +456,34 @@ function cardUsuario(u){
       ${u.estado!=='activo'?`<button onclick="cambiarEstado('${u.id}','activo')" class="bmini bverde">✓ Activar</button>`:''}
       ${u.estado==='activo'?`<button onclick="cambiarEstado('${u.id}','suspendido')" class="bmini brojo">Suspender</button>`:''}
       ${u.estado==='suspendido'?`<button onclick="cambiarEstado('${u.id}','activo')" class="bmini bverde">Reactivar</button>`:''}
-      <button onclick="confirmarEliminarUsuario('${u.id}','${u.nombre} ${u.apellido||''}')" class="bmini" style="background:#fee2e2;color:#991b1b;opacity:0.7;">🗑 Eliminar</button>    </div>
+      <button onclick="confirmarEliminarUsuario('${u.id}','${u.nombre} ${u.apellido||''}')" class="bmini" style="background:#fee2e2;color:#991b1b;opacity:0.7;">🗑 Eliminar</button>
+    </div>
   </div>`;
 }
 
 async function cambiarEstado(uid,estado){
-  await db.collection('usuarios').doc(uid).update({estado});
+  const update = {estado};
+  // Al activar, asignar número de socio si no tiene
+  if (estado === 'activo') {
+    const snap = await db.collection('usuarios').doc(uid).get();
+    if (!snap.data()?.nroSocio) {
+      const nroSocio = await generarNroSocio();
+      update.nroSocio = nroSocio;
+    }
+  }
+  await db.collection('usuarios').doc(uid).update(update);
   cargarUsuariosAdmin();
+}
+
+async function generarNroSocio() {
+  const snap = await db.collection('usuarios')
+    .where('nroSocio', '>=', 'MP-')
+    .orderBy('nroSocio', 'desc')
+    .limit(1).get();
+  if (snap.empty) return 'MP-0001';
+  const ultimo = snap.docs[0].data().nroSocio;
+  const num = parseInt(ultimo.replace('MP-', '')) + 1;
+  return 'MP-' + String(num).padStart(4, '0');
 }
 
 // ── ELIMINAR MASCOTA ──
@@ -502,10 +537,12 @@ async function crearAfiliado(){
   setMsg('afilMsg','',true);
   if(!nombre||!email||!pass||!mascotaNombre){setMsg('afilMsg','Completá los campos obligatorios.',false);return;}
   try{
+    const nroSocio = await generarNroSocio();
     const cred=await auth.createUserWithEmailAndPassword(email,pass);
     await db.collection('usuarios').doc(cred.user.uid).set({
       uid:cred.user.uid,nombre,apellido,email,telefono:tel,fechaNacimiento:'',
       rol:'afiliado',estado:'activo',
+      nroSocio,
       plan:plan||'Sin definir',
       mascotas:[{nombre:mascotaNombre,raza:mascotaRaza,fechaNacimiento:afilFechaMascota,foto:''}],
       creadoEn:TS()
@@ -591,6 +628,7 @@ function renderPanel(data){
       <div class="cl">PLAN</div><div class="cp">${plan||'Sin definir'}</div>
       <div class="cm">${primeraMascota?.nombre||'—'}</div><div class="cr">${primeraMascota?.raza||''}</div>
       <div class="ctlbl">TITULAR</div><div class="ct">${nombre} ${apellido||''}</div>
+      ${data.nroSocio?`<div style="font-size:.65rem;opacity:.6;letter-spacing:1px;margin-top:4px;">${data.nroSocio}</div>`:''}
       <div class="cchip"><span class="cdot"></span> Cobertura activa</div>
     </div>
 
