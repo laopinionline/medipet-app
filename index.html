@@ -473,11 +473,23 @@ function confirmarEliminarUsuario(uid, nombre) {
 
 async function eliminarUsuario(uid) {
   try {
-    // Borrar documento de Firestore
+    // 1. Obtener el email del usuario antes de borrar
+    const snap = await db.collection('usuarios').doc(uid).get();
+    const email = snap.data()?.email || '';
+    
+    // 2. Borrar documento de Firestore
     await db.collection('usuarios').doc(uid).delete();
-    // Nota: borrar el usuario de Auth requiere que esté logueado como ese usuario
-    // o usar Admin SDK (backend). Marcamos como eliminado en Firestore es suficiente.
+    
+    // 3. Enviar reset de contraseña para invalidar la sesión
+    // y liberar el email para re-registro
+    if (email) {
+      try {
+        await auth.sendPasswordResetEmail(email);
+      } catch(e) { /* no critical */ }
+    }
+    
     cargarUsuariosAdmin();
+    alert('Usuario eliminado. Si quiere registrarse de nuevo con el mismo email, primero debe hacer clic en el link que recibió por email para resetear la contraseña, o contactar a MEDIPet.');
   } catch(e) { alert('Error al eliminar: ' + e.message); }
 }
 
