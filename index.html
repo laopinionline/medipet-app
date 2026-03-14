@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MEDIPet — Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
+
+<!-- Firebase -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, updatePassword, updateEmail } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc, addDoc, collection, query, where, getDocs, updateDoc, serverTimestamp, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBW3nLFqr55xYN16rSpapqIb6yVnyKbp-4",
+  authDomain: "medipet-c3a4d.firebaseapp.com",
+  projectId: "medipet-c3a4d",
+  storageBucket: "medipet-c3a4d.firebasestorage.app",
+  messagingSenderId: "893304150807",
+  appId: "1:893304150807:web:4563f00e1a2a856124b552"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const storage = getStorage(app);
+
+// ── ESTADO GLOBAL ──
+let currentUser = null;
+let currentRole = null;
+
+// ── AUTH STATE ──
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    currentUser = user;
+    const snap = await getDoc(doc(db, "usuarios", user.uid));
+    if (snap.exists()) {
+      currentRole = snap.data().rol;
+      renderPanel(snap.data());
+    } else {
+      showLogin("Usuario no configurado. Contactá a MEDIPet.");
+    }
+  } else {
+    currentUser = null;
+    currentRole = null;
+    showLogin();
+  }
+});
+
+// ── LOGIN ──
+window.doLogin = async () => {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass = document.getElementById('loginPass').value;
+  const err = document.getElementById('loginError');
+  err.textContent = '';
+  try {
+    await signInWithEmailAndPassword(auth, email, pass);
+  } catch(e) {
+    err.textContent = 'Email o contraseña incorrectos.';
+  }
+};
+
+window.doLogout = async () => {
+  await signOut(auth);
+};
+
+// ── REGISTRO AFILIADO ──
+window.doRegistro = async () => {
+  const nombre = document.getElementById('regNombre').value.trim();
+  const apellido = document.getElementById('regApellido').value.trim();
+  const email = document.getElementById('regEmail').value.trim();
+  const tel = document.getElementById('regTel').value.trim();
+  const pass = document.getElementById('regPass').value;
+  const mascotaNombre = document.getElementById('regMascota').value.trim();
+  const mascotaRaza = document.getElementById('regRaza').value.trim();
+  const plan = document.getElementById('regPlan').value;
+  const fotoInput = document.getElementById('regFoto');
+  const err = document.getElementById('regError');
+  err.textContent = '';
+
+  if (!nombre || !email || !pass || !mascotaNombre) {
+    err.textContent = 'Completá los campos obligatorios.'; return;
+  }
+
+  try {
+    const cred = await createUserWithEmailAndPassword(auth, email, pass);
+    let fotoURL = '';
+
+    if (fotoInput.files[0]) {
+      const storageRef = ref(storage, `mascotas/${cred.user.uid}/foto.jpg`);
+      await uploadBytes(storageRef, fotoInput.files[0]);
+      fotoURL = await getDownloadURL(storageRef);
+    }
+
+    await setDoc(doc(db, "usuarios", cred.user.uid), {
+      uid: cred.user.uid,
+      nombre, apellido, email, telefono: tel,
+      rol: 'afiliado',
+      estado: 'pendiente',
+      plan,
+      mascota: { nombre: mascotaNombre, raza: mascotaRaza, foto: fotoURL },
+      creadoEn: serverTimestamp()
+    });
+  } catch(e) {
+    err.textContent = e.code === 'auth/email-already-in-use' ? 'Ese email ya está registrado.' : 'Error: ' + e.message;
+  }
+};
+
+// ── CAMBIAR CONTRASEÑA ──
+window.cambiarPass = async () => {
+  const nueva = document.getElementById('nuevaPass').value;
+  const msg = document.getElementById('passMsg');
+  try {
+    await updatePassword(currentUser, nueva);
+    msg.textContent = '✓ Contraseña actualizada';
+    msg.style.color = '#22c55e';
+  } catch(e) {
+    msg.textContent = 'Error: reingresá para cambiar contraseña.';
+    msg.style.color = '#ef4444';
+  }
+};
+
+// ── PRESTADOR: CARGAR ATENCIÓN ──
+window.cargarAtencion = async () => {
+  const afiliado = document.getElementById('atenAfiliado').value.trim();
+  const mascota = document.getElementById('atenMascota').value.trim();
+  const descripcion = document.getElementById('atenDescripcion').value.trim();
+  const monto = parseFloat(document.getElementById('atenMonto').value);
+  const msg = document.getElementById('atenMsg');
+  msg.textContent = '';
+
+  if (!afiliado || !descripcion || !monto) {
+    msg.textContent = 'Completá todos los campos.'; return;
+  }
+
+  try {
+    const snap = await getDoc(doc(db, "usuarios", currentUser.uid));
+    const prestData = snap.data();
+    await addDoc(collection(db, "atenciones"), {
+      prestadorId: currentUser.uid,
+      prestadorNombre: prestData.nombre + ' ' + prestData.apellido,
+      afiliadoEmail: afiliado,
+      mascota, descripcion, monto,
+      estado: 'pendiente',
+      fecha: serverTimestamp()
+    });
+    msg.textContent = '✓ Atención registrada. MEDIPet procesará el pago.';
+    msg.style.color = '#22c55e';
+    document.getElementById('atenAfiliado').value = '';
+    document.getElementById('atenMascota').value = '';
+    document.getElementById('atenDescripcion').value = '';
+    document.getElementById('atenMonto').value = '';
+    cargarAtencioneshistorial();
+  } catch(e) {
+    msg.textContent = 'Error al registrar: ' + e.message;
+    msg.style.color = '#ef4444';
+  }
+};
+
+window.cargarAtencioneshistorial = async () => {
+  const lista = document.getElementById('historialAtenciones');
+  if (!lista) return;
+  const q = query(collection(db, "atenciones"), where("prestadorId", "==", currentUser.uid), orderBy("fecha", "desc"));
+  try {
+    const snap = await getDocs(q);
+    if (snap.empty) { lista.innerHTML = '<p style="color:#5a6a8a;font-size:0.85rem;">No hay atenciones registradas aún.</p>'; return; }
+    lista.innerHTML = snap.docs.map(d => {
+      const a = d.data();
+      const fecha = a.fecha?.toDate?.()?.toLocaleDateString('es-AR') || 'Sin fecha';
+      const badge = a.estado === 'pagado' ? '#22c55e' : a.estado === 'rechazado' ? '#ef4444' : '#f59e0b';
+      return `<div class="atencion-item">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <strong>${a.mascota || 'Mascota'}</strong>
+          <span style="background:${badge};color:white;font-size:0.7rem;font-weight:700;padding:3px 10px;border-radius:100px;">${a.estado.toUpperCase()}</span>
+        </div>
+        <div style="font-size:0.8rem;color:#5a6a8a;margin-top:4px;">${a.descripcion}</div>
+        <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:0.8rem;">
+          <span style="color:#5a6a8a;">${fecha} · ${a.afiliadoEmail}</span>
+          <strong style="color:#1A5FB4;">$${a.monto?.toLocaleString('es-AR')}</strong>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    lista.innerHTML = '<p style="color:#ef4444;font-size:0.85rem;">Error al cargar historial.</p>';
+  }
+};
+
+// ── ADMIN: CARGAR USUARIOS ──
+window.cargarUsuariosAdmin = async () => {
+  const lista = document.getElementById('listaUsuarios');
+  if (!lista) return;
+  try {
+    const snap = await getDocs(collection(db, "usuarios"));
+    if (snap.empty) { lista.innerHTML = '<p style="color:#5a6a8a;">No hay usuarios registrados.</p>'; return; }
+    lista.innerHTML = snap.docs.map(d => {
+      const u = d.data();
+      const rolColor = u.rol === 'admin' ? '#8b5cf6' : u.rol === 'prestador' ? '#1A5FB4' : '#22c55e';
+      const estadoColor = u.estado === 'activo' ? '#22c55e' : u.estado === 'pendiente' ? '#f59e0b' : '#ef4444';
+      return `<div class="usuario-item">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <div>
+            <strong>${u.nombre} ${u.apellido || ''}</strong>
+            <div style="font-size:0.8rem;color:#5a6a8a;">${u.email}</div>
+            ${u.mascota?.nombre ? `<div style="font-size:0.8rem;color:#5a6a8a;">🐾 ${u.mascota.nombre} ${u.mascota.raza ? '· '+u.mascota.raza : ''}</div>` : ''}
+          </div>
+          <div style="text-align:right;display:flex;flex-direction:column;gap:4px;">
+            <span style="background:${rolColor};color:white;font-size:0.65rem;font-weight:700;padding:3px 8px;border-radius:100px;">${u.rol.toUpperCase()}</span>
+            <span style="background:${estadoColor};color:white;font-size:0.65rem;font-weight:700;padding:3px 8px;border-radius:100px;">${u.estado?.toUpperCase() || 'PENDIENTE'}</span>
+          </div>
+        </div>
+        <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
+          ${u.estado !== 'activo' ? `<button onclick="cambiarEstado('${d.id}','activo')" class="btn-mini btn-verde">Activar</button>` : ''}
+          ${u.estado !== 'suspendido' ? `<button onclick="cambiarEstado('${d.id}','suspendido')" class="btn-mini btn-rojo">Suspender</button>` : ''}
+          ${u.plan ? `<span style="font-size:0.75rem;color:#1A5FB4;font-weight:700;">Plan: ${u.plan}</span>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    lista.innerHTML = '<p style="color:#ef4444;">Error al cargar usuarios.</p>';
+  }
+};
+
+window.cambiarEstado = async (uid, estado) => {
+  await updateDoc(doc(db, "usuarios", uid), { estado });
+  cargarUsuariosAdmin();
+};
+
+// ── ADMIN: CREAR PRESTADOR ──
+window.crearPrestador = async () => {
+  const nombre = document.getElementById('prestNombre').value.trim();
+  const apellido = document.getElementById('prestApellido').value.trim();
+  const email = document.getElementById('prestEmail').value.trim();
+  const clinica = document.getElementById('prestClinica').value.trim();
+  const pass = document.getElementById('prestPass').value;
+  const msg = document.getElementById('prestMsg');
+  msg.textContent = '';
+
+  if (!nombre || !email || !pass) { msg.textContent = 'Completá los campos.'; return; }
+
+  try {
+    const cred = await createUserWithEmailAndPassword(auth, email, pass);
+    await setDoc(doc(db, "usuarios", cred.user.uid), {
+      uid: cred.user.uid,
+      nombre, apellido, email,
+      clinica, rol: 'prestador',
+      estado: 'activo',
+      creadoEn: serverTimestamp()
+    });
+    msg.textContent = `✓ Prestador creado. Credenciales enviadas a ${email}`;
+    msg.style.color = '#22c55e';
+    document.getElementById('prestNombre').value = '';
+    document.getElementById('prestApellido').value = '';
+    document.getElementById('prestEmail').value = '';
+    document.getElementById('prestClinica').value = '';
+    document.getElementById('prestPass').value = '';
+    cargarUsuariosAdmin();
+  } catch(e) {
+    msg.textContent = e.code === 'auth/email-already-in-use' ? 'Email ya registrado.' : 'Error: ' + e.message;
+    msg.style.color = '#ef4444';
+  }
+};
+
+// ── ADMIN: ATENCIONES PENDIENTES ──
+window.cargarAtencionesAdmin = async () => {
+  const lista = document.getElementById('listaAtenciones');
+  if (!lista) return;
+  try {
+    const snap = await getDocs(query(collection(db, "atenciones"), orderBy("fecha", "desc")));
+    if (snap.empty) { lista.innerHTML = '<p style="color:#5a6a8a;">No hay atenciones registradas.</p>'; return; }
+    lista.innerHTML = snap.docs.map(d => {
+      const a = d.data();
+      const fecha = a.fecha?.toDate?.()?.toLocaleDateString('es-AR') || 'Sin fecha';
+      const badge = a.estado === 'pagado' ? '#22c55e' : a.estado === 'rechazado' ? '#ef4444' : '#f59e0b';
+      return `<div class="atencion-item">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <div>
+            <strong>${a.prestadorNombre}</strong>
+            <div style="font-size:0.8rem;color:#5a6a8a;">${a.descripcion}</div>
+            <div style="font-size:0.78rem;color:#5a6a8a;">${fecha} · Afiliado: ${a.afiliadoEmail}</div>
+          </div>
+          <div style="text-align:right;">
+            <strong style="color:#1A5FB4;font-size:1.1rem;">$${a.monto?.toLocaleString('es-AR')}</strong>
+            <div style="margin-top:4px;"><span style="background:${badge};color:white;font-size:0.65rem;font-weight:700;padding:3px 8px;border-radius:100px;">${a.estado.toUpperCase()}</span></div>
+          </div>
+        </div>
+        ${a.estado === 'pendiente' ? `
+        <div style="margin-top:8px;display:flex;gap:8px;">
+          <button onclick="procesarAtencion('${d.id}','pagado')" class="btn-mini btn-verde">Aprobar pago</button>
+          <button onclick="procesarAtencion('${d.id}','rechazado')" class="btn-mini btn-rojo">Rechazar</button>
+        </div>` : ''}
+      </div>`;
+    }).join('');
+  } catch(e) {
+    lista.innerHTML = '<p style="color:#ef4444;">Error al cargar atenciones.</p>';
+  }
+};
+
+window.procesarAtencion = async (id, estado) => {
+  await updateDoc(doc(db, "atenciones", id), { estado, procesadoEn: serverTimestamp() });
+  cargarAtencionesAdmin();
+};
+
+// ── RENDER PANELS ──
+function renderPanel(userData) {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('registerScreen').style.display = 'none';
+  document.getElementById('appScreen').style.display = 'block';
+
+  const { rol, nombre, apellido, mascota, plan, clinica } = userData;
+
+  let panelHTML = '';
+
+  if (rol === 'afiliado') {
+    panelHTML = `
+      <div class="panel-header">
+        <div>
+          <div class="panel-rol">Afiliado</div>
+          <div class="panel-nombre">${nombre} ${apellido || ''}</div>
+          ${plan ? `<div class="panel-plan">Plan ${plan}</div>` : ''}
+        </div>
+        ${mascota?.foto ? `<img src="${mascota.foto}" class="mascota-foto" alt="${mascota.nombre}">` : `<div class="mascota-placeholder">🐾</div>`}
+      </div>
+
+      <div class="carnet">
+        <div style="position:absolute;top:16px;right:16px;">
+          <svg width="36" height="36"><use href="#mp-iso-white"/></svg>
+        </div>
+        <div class="carnet-label">PLAN</div>
+        <div class="carnet-plan">${plan || 'Básico'}</div>
+        <div class="carnet-mascota">${mascota?.nombre || '—'}</div>
+        <div class="carnet-raza">${mascota?.raza || ''}</div>
+        <div class="carnet-titular-label">TITULAR</div>
+        <div class="carnet-titular">${nombre} ${apellido || ''}</div>
+        <div class="carnet-chip"><span class="chip-dot"></span> Cobertura activa</div>
+      </div>
+
+      <div class="seccion">
+        <div class="seccion-titulo">Mi mascota</div>
+        ${mascota?.foto ? `<img src="${mascota.foto}" style="width:100%;border-radius:16px;object-fit:cover;max-height:200px;">` : '<p style="color:#5a6a8a;font-size:0.85rem;">Sin foto cargada</p>'}
+        <p style="font-size:0.9rem;margin-top:12px;"><strong>${mascota?.nombre || '—'}</strong> ${mascota?.raza ? '· '+mascota.raza : ''}</p>
+      </div>
+
+      <div class="seccion">
+        <div class="seccion-titulo">Cambiar contraseña</div>
+        <input type="password" id="nuevaPass" placeholder="Nueva contraseña" class="input-field">
+        <button onclick="cambiarPass()" class="btn-primary" style="margin-top:10px;">Actualizar contraseña</button>
+        <p id="passMsg" style="font-size:0.8rem;margin-top:8px;"></p>
+      </div>`;
+
+  } else if (rol === 'prestador') {
+    panelHTML = `
+      <div class="panel-header">
+        <div>
+          <div class="panel-rol prestador">Prestador</div>
+          <div class="panel-nombre">${nombre} ${apellido || ''}</div>
+          ${clinica ? `<div style="font-size:0.85rem;color:#5a6a8a;">${clinica}</div>` : ''}
+        </div>
+        <div style="font-size:3rem;">🏥</div>
+      </div>
+
+      <div class="seccion">
+        <div class="seccion-titulo">Registrar atención</div>
+        <p style="font-size:0.8rem;color:#5a6a8a;margin-bottom:12px;">Cargá la atención realizada. MEDIPet procesará el pago.</p>
+        <input type="email" id="atenAfiliado" placeholder="Email del afiliado *" class="input-field">
+        <input type="text" id="atenMascota" placeholder="Nombre de la mascota" class="input-field" style="margin-top:8px;">
+        <textarea id="atenDescripcion" placeholder="Descripción de la atención *" class="input-field" style="margin-top:8px;height:80px;resize:vertical;"></textarea>
+        <input type="number" id="atenMonto" placeholder="Monto a cobrar ($) *" class="input-field" style="margin-top:8px;">
+        <button onclick="cargarAtencion()" class="btn-primary" style="margin-top:10px;">Registrar atención</button>
+        <p id="atenMsg" style="font-size:0.8rem;margin-top:8px;"></p>
+      </div>
+
+      <div class="seccion">
+        <div class="seccion-titulo">Historial de atenciones</div>
+        <div id="historialAtenciones"><p style="color:#5a6a8a;font-size:0.85rem;">Cargando...</p></div>
+      </div>
+
+      <div class="seccion">
+        <div class="seccion-titulo">Cambiar contraseña</div>
+        <input type="password" id="nuevaPass" placeholder="Nueva contraseña" class="input-field">
+        <button onclick="cambiarPass()" class="btn-primary" style="margin-top:10px;">Actualizar contraseña</button>
+        <p id="passMsg" style="font-size:0.8rem;margin-top:8px;"></p>
+      </div>`;
+
+  } else if (rol === 'admin') {
+    panelHTML = `
+      <div class="panel-header">
+        <div>
+          <div class="panel-rol admin">Administrador</div>
+          <div class="panel-nombre">${nombre} ${apellido || ''}</div>
+          <div style="font-size:0.8rem;color:#5a6a8a;">MEDIPet · Panel de control</div>
+        </div>
+        <div style="font-size:3rem;">⚙️</div>
+      </div>
+
+      <!-- TABS ADMIN -->
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('afiliados')">Afiliados</button>
+        <button class="tab" onclick="switchTab('prestadores')">Prestadores</button>
+        <button class="tab" onclick="switchTab('pagos')">Pagos</button>
+      </div>
+
+      <div id="tab-afiliados" class="tab-content">
+        <div class="seccion">
+          <div class="seccion-titulo">Usuarios registrados</div>
+          <div id="listaUsuarios"><p style="color:#5a6a8a;font-size:0.85rem;">Cargando...</p></div>
+        </div>
+      </div>
+
+      <div id="tab-prestadores" class="tab-content" style="display:none;">
+        <div class="seccion">
+          <div class="seccion-titulo">Crear prestador</div>
+          <p style="font-size:0.8rem;color:#5a6a8a;margin-bottom:12px;">Los prestadores reciben sus credenciales por email.</p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <input type="text" id="prestNombre" placeholder="Nombre *" class="input-field">
+            <input type="text" id="prestApellido" placeholder="Apellido" class="input-field">
+          </div>
+          <input type="email" id="prestEmail" placeholder="Email *" class="input-field" style="margin-top:8px;">
+          <input type="text" id="prestClinica" placeholder="Nombre de la clínica" class="input-field" style="margin-top:8px;">
+          <input type="password" id="prestPass" placeholder="Contraseña inicial *" class="input-field" style="margin-top:8px;">
+          <button onclick="crearPrestador()" class="btn-primary" style="margin-top:10px;">Crear prestador</button>
+          <p id="prestMsg" style="font-size:0.8rem;margin-top:8px;"></p>
+        </div>
+      </div>
+
+      <div id="tab-pagos" class="tab-content" style="display:none;">
+        <div class="seccion">
+          <div class="seccion-titulo">Atenciones y pagos</div>
+          <div id="listaAtenciones"><p style="color:#5a6a8a;font-size:0.85rem;">Cargando...</p></div>
+        </div>
+      </div>`;
+  }
+
+  document.getElementById('panelContent').innerHTML = panelHTML;
+
+  // Cargar datos según rol
+  if (rol === 'prestador') {
+    setTimeout(cargarAtencioneshistorial, 300);
+  } else if (rol === 'admin') {
+    setTimeout(cargarUsuariosAdmin, 300);
+  }
+}
+
+window.switchTab = (tab) => {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
+  document.getElementById('tab-' + tab).style.display = 'block';
+  event.target.classList.add('active');
+  if (tab === 'afiliados') cargarUsuariosAdmin();
+  if (tab === 'pagos') cargarAtencionesAdmin();
+};
+
+function showLogin(msg) {
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('registerScreen').style.display = 'none';
+  document.getElementById('appScreen').style.display = 'none';
+  if (msg) {
+    const err = document.getElementById('loginError');
+    if (err) err.textContent = msg;
+  }
+}
+
+window.showRegister = () => {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('registerScreen').style.display = 'flex';
+};
+
+window.showLoginBack = () => showLogin();
+
+// Preview foto
+window.previewFoto = (input) => {
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      document.getElementById('fotoPreview').src = e.target.result;
+      document.getElementById('fotoPreview').style.display = 'block';
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+};
+</script>
+
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --azul: #1A5FB4; --azul-medio: #2272D9; --azul-claro: #5BA3E8;
+  --azul-pale: #EBF3FC; --noche: #0D1B3E; --fondo: #F5F7FA;
+  --texto: #1a2340; --suave: #5a6a8a;
+}
+body { font-family: 'Nunito', sans-serif; background: var(--fondo); color: var(--texto); min-height: 100vh; }
+
+/* ── LOGIN / REGISTER SCREENS ── */
+.screen {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 100vh; padding: 24px;
+  background: linear-gradient(145deg, var(--noche), #1A3A7A, var(--azul));
+}
+.auth-card {
+  background: white; border-radius: 24px; padding: 36px 28px;
+  width: 100%; max-width: 420px;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.3);
+}
+.auth-logo {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 28px;
+}
+.auth-logo .marca { font-weight: 900; font-size: 1.6rem; color: var(--azul); letter-spacing: -1px; }
+.auth-logo .marca span { color: var(--azul-claro); }
+.auth-title { font-size: 1.1rem; font-weight: 800; margin-bottom: 6px; color: var(--noche); }
+.auth-sub { font-size: 0.8rem; color: var(--suave); margin-bottom: 24px; }
+
+.input-field {
+  width: 100%; padding: 12px 14px;
+  border: 2px solid rgba(26,95,180,0.15); border-radius: 12px;
+  font-family: 'Nunito', sans-serif; font-size: 0.9rem; font-weight: 600;
+  color: var(--texto); background: var(--fondo); outline: none;
+  transition: border-color 0.2s;
+}
+.input-field:focus { border-color: var(--azul-medio); background: white; }
+
+.btn-primary {
+  width: 100%; padding: 13px; background: var(--azul); color: white;
+  border: none; border-radius: 12px; font-family: 'Nunito', sans-serif;
+  font-size: 0.95rem; font-weight: 800; cursor: pointer; transition: background 0.2s;
+}
+.btn-primary:hover { background: var(--noche); }
+
+.link-btn { background: none; border: none; color: var(--azul); font-family: 'Nunito', sans-serif;
+  font-size: 0.85rem; font-weight: 700; cursor: pointer; text-decoration: underline; }
+
+.error-msg { color: #ef4444; font-size: 0.8rem; margin-top: 8px; font-weight: 600; }
+
+/* ── APP SCREEN ── */
+#appScreen { display: none; min-height: 100vh; }
+
+.app-nav {
+  background: var(--noche); padding: 14px 20px;
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 10;
+}
+.app-nav .logo { display: flex; align-items: center; gap: 8px; }
+.app-nav .logo .marca { font-weight: 900; font-size: 1.2rem; color: white; }
+.app-nav .logo .marca span { color: var(--azul-claro); }
+
+.btn-logout {
+  background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+  color: white; font-family: 'Nunito', sans-serif; font-size: 0.8rem; font-weight: 700;
+  padding: 7px 16px; border-radius: 100px; cursor: pointer; transition: background 0.2s;
+}
+.btn-logout:hover { background: rgba(255,255,255,0.2); }
+
+.app-body { max-width: 600px; margin: 0 auto; padding: 24px 16px 80px; }
+
+/* ── PANEL HEADER ── */
+.panel-header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  margin-bottom: 20px;
+}
+.panel-rol {
+  display: inline-block; background: var(--azul-pale); color: var(--azul);
+  font-size: 0.7rem; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase;
+  padding: 4px 10px; border-radius: 100px; margin-bottom: 6px;
+}
+.panel-rol.prestador { background: #dbeafe; color: #1d4ed8; }
+.panel-rol.admin { background: #ede9fe; color: #7c3aed; }
+.panel-nombre { font-size: 1.5rem; font-weight: 900; color: var(--noche); line-height: 1.2; }
+.panel-plan { font-size: 0.8rem; color: var(--suave); font-weight: 600; margin-top: 4px; }
+.mascota-foto { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; border: 3px solid var(--azul-claro); }
+.mascota-placeholder { width: 64px; height: 64px; border-radius: 50%; background: var(--azul-pale); display: flex; align-items: center; justify-content: center; font-size: 1.8rem; }
+
+/* ── CARNET ── */
+.carnet {
+  background: linear-gradient(135deg, var(--azul-medio), var(--noche));
+  border-radius: 20px; padding: 24px; color: white;
+  position: relative; overflow: hidden; margin-bottom: 20px;
+  box-shadow: 0 12px 40px rgba(26,95,180,0.3);
+}
+.carnet::before {
+  content: ''; position: absolute; top: -30px; right: -30px;
+  width: 120px; height: 120px; background: rgba(255,255,255,0.05); border-radius: 50%;
+}
+.carnet-label { font-size: 0.65rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; opacity: 0.6; margin-bottom: 3px; }
+.carnet-plan { font-size: 0.9rem; font-weight: 800; color: var(--azul-claro); margin-bottom: 16px; }
+.carnet-mascota { font-size: 1.6rem; font-weight: 900; line-height: 1; }
+.carnet-raza { font-size: 0.7rem; opacity: 0.65; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 14px; }
+.carnet-titular-label { font-size: 0.65rem; opacity: 0.6; font-weight: 700; margin-bottom: 2px; }
+.carnet-titular { font-size: 0.85rem; font-weight: 700; }
+.carnet-chip {
+  display: inline-flex; align-items: center; gap: 6px; margin-top: 12px;
+  background: rgba(255,255,255,0.12); border-radius: 100px; padding: 5px 12px;
+  font-size: 0.75rem; font-weight: 700;
+}
+.chip-dot { width: 7px; height: 7px; background: #4ade80; border-radius: 50%; }
+
+/* ── SECCIONES ── */
+.seccion { background: white; border-radius: 20px; padding: 20px; margin-bottom: 16px; border: 1px solid rgba(26,95,180,0.08); }
+.seccion-titulo { font-size: 0.85rem; font-weight: 800; color: var(--noche); margin-bottom: 14px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+/* ── TABS ADMIN ── */
+.tabs { display: flex; gap: 4px; background: white; border-radius: 16px; padding: 6px; margin-bottom: 16px; border: 1px solid rgba(26,95,180,0.08); }
+.tab {
+  flex: 1; padding: 10px; border: none; background: none; border-radius: 12px;
+  font-family: 'Nunito', sans-serif; font-size: 0.85rem; font-weight: 700;
+  color: var(--suave); cursor: pointer; transition: all 0.2s;
+}
+.tab.active { background: var(--azul); color: white; }
+
+/* ── ITEMS ── */
+.usuario-item, .atencion-item {
+  padding: 14px; border-radius: 12px; background: var(--fondo);
+  margin-bottom: 10px; border: 1px solid rgba(26,95,180,0.06);
+}
+.btn-mini {
+  padding: 5px 12px; border: none; border-radius: 100px;
+  font-family: 'Nunito', sans-serif; font-size: 0.75rem; font-weight: 800;
+  cursor: pointer; transition: opacity 0.2s;
+}
+.btn-mini:hover { opacity: 0.8; }
+.btn-verde { background: #dcfce7; color: #166534; }
+.btn-rojo { background: #fee2e2; color: #991b1b; }
+
+/* ── FOTO PREVIEW ── */
+#fotoPreview { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; margin-top: 10px; display: none; border: 3px solid var(--azul-claro); }
+.foto-upload-label {
+  display: flex; align-items: center; gap: 8px; cursor: pointer;
+  background: var(--azul-pale); border-radius: 12px; padding: 10px 14px;
+  font-size: 0.85rem; font-weight: 700; color: var(--azul);
+}
+</style>
+</head>
+<body>
+
+<!-- SVG ISOTIPO -->
+<svg width="0" height="0" style="position:absolute;overflow:hidden">
+  <defs>
+    <symbol id="mp-iso" viewBox="0 0 80 80">
+      <rect width="80" height="80" rx="18" fill="#2272D9"/>
+      <circle cx="24" cy="28" r="10" fill="#5BA3E8"/>
+      <circle cx="56" cy="28" r="10" fill="#5BA3E8"/>
+      <circle cx="40" cy="44" r="22" fill="#5BA3E8"/>
+      <circle cx="33" cy="42" r="4" fill="white"/>
+      <circle cx="47" cy="42" r="4" fill="white"/>
+      <circle cx="34" cy="43" r="2" fill="#1A5FB4"/>
+      <circle cx="48" cy="43" r="2" fill="#1A5FB4"/>
+      <ellipse cx="40" cy="50" rx="2.5" ry="1.8" fill="#1A5FB4" opacity="0.5"/>
+      <line x1="57" y1="11" x2="57" y2="19" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="53" y1="15" x2="61" y2="15" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="mp-iso-white" viewBox="0 0 80 80">
+      <rect width="80" height="80" rx="18" fill="rgba(255,255,255,0.15)"/>
+      <circle cx="24" cy="28" r="10" fill="rgba(255,255,255,0.7)"/>
+      <circle cx="56" cy="28" r="10" fill="rgba(255,255,255,0.7)"/>
+      <circle cx="40" cy="44" r="22" fill="white"/>
+      <circle cx="33" cy="42" r="4" fill="white"/>
+      <circle cx="47" cy="42" r="4" fill="white"/>
+      <circle cx="34" cy="43" r="2" fill="#2272D9"/>
+      <circle cx="48" cy="43" r="2" fill="#2272D9"/>
+      <ellipse cx="40" cy="50" rx="2.5" ry="1.8" fill="#2272D9" opacity="0.4"/>
+      <line x1="57" y1="11" x2="57" y2="19" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="53" y1="15" x2="61" y2="15" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+    </symbol>
+  </defs>
+</svg>
+
+<!-- ── LOGIN ── -->
+<div id="loginScreen" class="screen">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <svg width="44" height="44"><use href="#mp-iso"/></svg>
+      <div class="marca">MEDI<span>Pet</span></div>
+    </div>
+    <div class="auth-title">Ingresá a tu cuenta</div>
+    <div class="auth-sub">Afiliados · Prestadores · Administradores</div>
+
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <input type="email" id="loginEmail" placeholder="Email" class="input-field">
+      <input type="password" id="loginPass" placeholder="Contraseña" class="input-field"
+        onkeydown="if(event.key==='Enter') doLogin()">
+      <button onclick="doLogin()" class="btn-primary" style="margin-top:4px;">Ingresar</button>
+      <p id="loginError" class="error-msg"></p>
+    </div>
+
+    <div style="border-top:1px solid var(--azul-pale);margin-top:20px;padding-top:16px;text-align:center;">
+      <p style="font-size:0.8rem;color:var(--suave);margin-bottom:8px;">¿Todavía no tenés plan?</p>
+      <button onclick="showRegister()" class="link-btn">Afiliarme a MEDIPet →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── REGISTRO AFILIADO ── -->
+<div id="registerScreen" class="screen" style="display:none;">
+  <div class="auth-card" style="max-width:480px;">
+    <div class="auth-logo">
+      <svg width="40" height="40"><use href="#mp-iso"/></svg>
+      <div class="marca">MEDI<span>Pet</span></div>
+    </div>
+    <div class="auth-title">Afiliate a MEDIPet</div>
+    <div class="auth-sub">Completá tus datos y los de tu mascota</div>
+
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <input type="text" id="regNombre" placeholder="Nombre *" class="input-field">
+        <input type="text" id="regApellido" placeholder="Apellido" class="input-field">
+      </div>
+      <input type="email" id="regEmail" placeholder="Email *" class="input-field">
+      <input type="tel" id="regTel" placeholder="Teléfono / WhatsApp" class="input-field">
+      <input type="password" id="regPass" placeholder="Contraseña *" class="input-field">
+
+      <div style="border-top:1px solid var(--azul-pale);padding-top:12px;margin-top:4px;">
+        <p style="font-size:0.75rem;font-weight:800;color:var(--noche);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">Tu mascota</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <input type="text" id="regMascota" placeholder="Nombre *" class="input-field">
+          <input type="text" id="regRaza" placeholder="Raza" class="input-field">
+        </div>
+      </div>
+
+      <select id="regPlan" class="input-field">
+        <option value="">Elegir plan...</option>
+        <option value="Básico">Básico — $16.000/mes</option>
+        <option value="Completo">Completo — $45.000/mes</option>
+        <option value="Premium">Premium — $90.000/mes</option>
+      </select>
+
+      <!-- FOTO MASCOTA -->
+      <div>
+        <label class="foto-upload-label" for="regFoto">
+          📷 Foto de tu mascota
+        </label>
+        <input type="file" id="regFoto" accept="image/*" capture="environment" style="display:none" onchange="previewFoto(this)">
+        <img id="fotoPreview" src="" alt="Preview">
+        <p style="font-size:0.72rem;color:var(--suave);margin-top:6px;">La foto se usará en tu carnet digital y zona de afiliados.</p>
+      </div>
+
+      <button onclick="doRegistro()" class="btn-primary" style="margin-top:4px;">Crear mi cuenta</button>
+      <p id="regError" class="error-msg"></p>
+    </div>
+
+    <div style="text-align:center;margin-top:16px;">
+      <button onclick="showLoginBack()" class="link-btn">← Ya tengo cuenta</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── APP ── -->
+<div id="appScreen" style="display:none;">
+  <nav class="app-nav">
+    <div class="logo">
+      <svg width="32" height="32"><use href="#mp-iso-white"/></svg>
+      <div class="marca">MEDI<span>Pet</span></div>
+    </div>
+    <button onclick="doLogout()" class="btn-logout">Salir</button>
+  </nav>
+  <div class="app-body">
+    <div id="panelContent"></div>
+  </div>
+</div>
+
+</body>
+</html>
