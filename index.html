@@ -144,6 +144,10 @@ body{font-family:'Nunito',sans-serif;background:var(--fondo);color:var(--texto);
           <input type="text" id="regMascota" placeholder="Nombre *" class="input-field">
           <input type="text" id="regRaza" placeholder="Raza" class="input-field">
         </div>
+      <div>
+        <label style="font-size:0.8rem;font-weight:700;display:block;margin-bottom:4px;color:var(--texto);">Fecha de nacimiento de la mascota</label>
+        <input type="date" id="regFechaMascota" class="input-field">
+      </div>
       </div>
       <select id="regPlan" class="input-field">
         <option value="">Elegir plan...</option>
@@ -250,6 +254,7 @@ async function doRegistro(){
   const nombre=v('regNombre'),apellido=v('regApellido'),email=v('regEmail'),tel=v('regTel');
   const pass=document.getElementById('regPass').value;
   const mascotaNombre=v('regMascota'),mascotaRaza=v('regRaza'),plan=v('regPlan');
+  const fechaMascota=document.getElementById('regFechaMascota')?.value||'';
   const fechaNac=document.getElementById('regFechaNac')?.value||'';
   const fotoInput=document.getElementById('regFoto');
   const btn=document.getElementById('btnRegistro');
@@ -286,7 +291,7 @@ async function doRegistro(){
       uid,nombre,apellido,email,telefono:tel,fechaNacimiento:fechaNac,
       rol:'afiliado',estado:'pendiente',
       plan:plan||'Sin definir',
-      mascota:{nombre:mascotaNombre,raza:mascotaRaza,foto:fotoURL},
+      mascota:{nombre:mascotaNombre,raza:mascotaRaza,fechaNacimiento:fechaMascota,foto:fotoURL},
       creadoEn:TS()
     });
   }catch(e){
@@ -370,7 +375,7 @@ function cardUsuario(u){
         <strong>${u.nombre||''} ${u.apellido||''}</strong>
         <div style="font-size:.8rem;color:#5a6a8a;">${u.email||''}${u.telefono?' · '+u.telefono:''}</div>
         ${u.fechaNacimiento?`<div style="font-size:.78rem;color:#5a6a8a;">📅 Nacimiento: ${u.fechaNacimiento}</div>`:''}
-        <div style="font-size:.8rem;margin-top:4px;">🐾 <strong>${u.mascota?.nombre||'—'}</strong>${u.mascota?.raza?' · '+u.mascota.raza:''}${u.plan?` &nbsp;·&nbsp; <span style="color:#1A5FB4;font-weight:700;">${u.plan}</span>`:''}</div>
+        <div style="font-size:.8rem;margin-top:4px;">🐾 <strong>${u.mascota?.nombre||'—'}</strong>${u.mascota?.raza?' · '+u.mascota.raza:''}${u.mascota?.fechaNacimiento?' · 🎂 '+u.mascota.fechaNacimiento:''}${u.plan?` &nbsp;·&nbsp; <span style="color:#1A5FB4;font-weight:700;">${u.plan}</span>`:''}</div>
         ${fecha?`<div style="font-size:.72rem;color:#9ca3af;margin-top:2px;">Registrado: ${fecha}</div>`:''}
       </div>
       <span style="background:${col};color:white;font-size:.65rem;font-weight:700;padding:3px 9px;border-radius:100px;white-space:nowrap;flex-shrink:0;">${(u.estado||'pendiente').toUpperCase()}</span>
@@ -393,6 +398,7 @@ async function crearAfiliado(){
   const nombre=v('afilNombre'),apellido=v('afilApellido'),email=v('afilEmail'),tel=v('afilTel');
   const pass=document.getElementById('afilPass').value;
   const mascotaNombre=v('afilMascota'),mascotaRaza=v('afilRaza'),plan=v('afilPlan');
+  const afilFechaMascota=document.getElementById('afilFechaMascota')?.value||'';
   setMsg('afilMsg','',true);
   if(!nombre||!email||!pass||!mascotaNombre){setMsg('afilMsg','Completá los campos obligatorios.',false);return;}
   try{
@@ -401,7 +407,7 @@ async function crearAfiliado(){
       uid:cred.user.uid,nombre,apellido,email,telefono:tel,fechaNacimiento:'',
       rol:'afiliado',estado:'activo',
       plan:plan||'Sin definir',
-      mascota:{nombre:mascotaNombre,raza:mascotaRaza,foto:''},
+      mascota:{nombre:mascotaNombre,raza:mascotaRaza,fechaNacimiento:afilFechaMascota,foto:''},
       creadoEn:TS()
     });
     setMsg('afilMsg','✓ Afiliado '+nombre+' creado y activado.',true);
@@ -541,6 +547,7 @@ function renderPanel(data){
               <input type="text" id="afilMascota" placeholder="Mascota *" class="input-field">
               <input type="text" id="afilRaza" placeholder="Raza" class="input-field">
             </div>
+            <div><label style="font-size:0.75rem;font-weight:700;display:block;margin-bottom:4px;">Fecha nac. mascota</label><input type="date" id="afilFechaMascota" class="input-field"></div>
             <select id="afilPlan" class="input-field">
               <option value="">Plan...</option>
               <option value="Básico">Básico</option>
