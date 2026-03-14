@@ -181,6 +181,27 @@ firebase.initializeApp({
 const auth=firebase.auth(), db=firebase.firestore(), storage=firebase.storage();
 const TS=()=>firebase.firestore.FieldValue.serverTimestamp();
 
+// Detectar si viene con ?plan=X o ?registro=1 desde la landing
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  const plan = params.get('plan');
+  const registro = params.get('registro');
+  if (plan || registro) {
+    // Mostrar pantalla de registro automáticamente
+    document.addEventListener('DOMContentLoaded', function() {
+      showScreen('registerScreen');
+      if (plan) {
+        const sel = document.getElementById('regPlan');
+        if (sel) {
+          const opts = Array.from(sel.options);
+          const match = opts.find(o => o.value.toLowerCase().includes(plan.toLowerCase()));
+          if (match) sel.value = match.value;
+        }
+      }
+    });
+  }
+})();
+
 function showScreen(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('appScreen').style.display='none';
