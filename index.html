@@ -78,10 +78,18 @@ window.doRegistro = async () => {
   const plan = document.getElementById('regPlan').value;
   const fotoInput = document.getElementById('regFoto');
   const err = document.getElementById('regError');
+  const btn = document.querySelector('#registerScreen .btn-primary');
   err.textContent = '';
+  btn.textContent = 'Creando cuenta...';
+  btn.disabled = true;
 
   if (!nombre || !email || !pass || !mascotaNombre) {
-    err.textContent = 'Completá los campos obligatorios.'; return;
+    err.textContent = 'Completá los campos obligatorios.';
+    btn.textContent = 'Crear mi cuenta'; btn.disabled = false; return;
+  }
+  if (pass.length < 6) {
+    err.textContent = 'La contraseña debe tener al menos 6 caracteres.';
+    btn.textContent = 'Crear mi cuenta'; btn.disabled = false; return;
   }
 
   try {
@@ -89,22 +97,41 @@ window.doRegistro = async () => {
     let fotoURL = '';
 
     if (fotoInput.files[0]) {
-      const storageRef = ref(storage, `mascotas/${cred.user.uid}/foto.jpg`);
-      await uploadBytes(storageRef, fotoInput.files[0]);
-      fotoURL = await getDownloadURL(storageRef);
+      try {
+        const storageRef = ref(storage, `mascotas/${cred.user.uid}/foto.jpg`);
+        await uploadBytes(storageRef, fotoInput.files[0]);
+        fotoURL = await getDownloadURL(storageRef);
+      } catch(fotoErr) { console.warn('Foto no subida:', fotoErr); }
     }
 
-    await setDoc(doc(db, "usuarios", cred.user.uid), {
+    const userData = {
       uid: cred.user.uid,
       nombre, apellido, email, telefono: tel,
       rol: 'afiliado',
       estado: 'pendiente',
-      plan,
+      plan: plan || 'Sin definir',
       mascota: { nombre: mascotaNombre, raza: mascotaRaza, foto: fotoURL },
       creadoEn: serverTimestamp()
-    });
+    };
+
+    // Reintentar hasta 3 veces si Firestore falla
+    let guardado = false;
+    for (let i = 0; i < 3; i++) {
+      try {
+        await setDoc(doc(db, "usuarios", cred.user.uid), userData);
+        guardado = true; break;
+      } catch(fsErr) {
+        if (i === 2) throw fsErr;
+        await new Promise(r => setTimeout(r, 1000));
+      }
+    }
+    if (!guardado) throw new Error('No se pudo guardar en la base de datos.');
+
   } catch(e) {
-    err.textContent = e.code === 'auth/email-already-in-use' ? 'Ese email ya está registrado.' : 'Error: ' + e.message;
+    btn.textContent = 'Crear mi cuenta'; btn.disabled = false;
+    if (e.code === 'auth/email-already-in-use') err.textContent = 'Ese email ya está registrado.';
+    else if (e.code === 'auth/weak-password') err.textContent = 'La contraseña es muy débil.';
+    else err.textContent = 'Error: ' + e.message;
   }
 };
 
@@ -396,14 +423,45 @@ function renderPanel(userData) {
 
       <!-- TABS ADMIN -->
       <div class="tabs">
-        <button class="tab active" onclick="switchTab('afiliados')">Afiliados</button>
-        <button class="tab" onclick="switchTab('prestadores')">Prestadores</button>
-        <button class="tab" onclick="switchTab('pagos')">Pagos</button>
+        <button class="tab active" onclick="switchTab('afiliados', event)">Afiliados</button>
+        <button class="tab" onclick="switchTab('prestadores', event)">Prestadores</button>
+        <button class="tab" onclick="switchTab('pagos', event)">Pagos</button>
       </div>
 
       <div id="tab-afiliados" class="tab-content">
         <div class="seccion">
-          <div class="seccion-titulo">Usuarios registrados</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+            <div class="seccion-titulo" style="margin-bottom:0;">Afiliados registrados</div>
+            <button onclick="toggleNuevoAfiliado()" class="btn-mini btn-verde" style="font-size:0.8rem;padding:7px 14px;">+ Nuevo afiliado</button>
+          </div>
+
+          <!-- Formulario nuevo afiliado (oculto por defecto) -->
+          <div id="formNuevoAfiliado" style="display:none;background:var(--fondo);border-radius:12px;padding:16px;margin-bottom:16px;border:1px solid rgba(26,95,180,0.12);">
+            <p style="font-size:0.75rem;font-weight:800;color:var(--noche);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px;">Crear afiliado manualmente</p>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+              <input type="text" id="afilNombre" placeholder="Nombre *" class="input-field">
+              <input type="text" id="afilApellido" placeholder="Apellido" class="input-field">
+            </div>
+            <input type="email" id="afilEmail" placeholder="Email *" class="input-field" style="margin-top:8px;">
+            <input type="tel" id="afilTel" placeholder="Teléfono / WhatsApp" class="input-field" style="margin-top:8px;">
+            <input type="password" id="afilPass" placeholder="Contraseña inicial *" class="input-field" style="margin-top:8px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">
+              <input type="text" id="afilMascota" placeholder="Nombre mascota *" class="input-field">
+              <input type="text" id="afilRaza" placeholder="Raza" class="input-field">
+            </div>
+            <select id="afilPlan" class="input-field" style="margin-top:8px;">
+              <option value="">Elegir plan...</option>
+              <option value="Básico">Básico — $16.000/mes</option>
+              <option value="Completo">Completo — $45.000/mes</option>
+              <option value="Premium">Premium — $90.000/mes</option>
+            </select>
+            <div style="display:flex;gap:8px;margin-top:10px;">
+              <button onclick="crearAfiliado()" class="btn-primary" style="flex:1;">Crear afiliado</button>
+              <button onclick="toggleNuevoAfiliado()" class="btn-mini btn-rojo" style="padding:10px 16px;">Cancelar</button>
+            </div>
+            <p id="afilMsg" style="font-size:0.8rem;margin-top:8px;"></p>
+          </div>
+
           <div id="listaUsuarios"><p style="color:#5a6a8a;font-size:0.85rem;">Cargando...</p></div>
         </div>
       </div>
@@ -411,7 +469,7 @@ function renderPanel(userData) {
       <div id="tab-prestadores" class="tab-content" style="display:none;">
         <div class="seccion">
           <div class="seccion-titulo">Crear prestador</div>
-          <p style="font-size:0.8rem;color:#5a6a8a;margin-bottom:12px;">Los prestadores reciben sus credenciales por email.</p>
+          <p style="font-size:0.8rem;color:#5a6a8a;margin-bottom:12px;">Los prestadores ingresan con las credenciales que vos les enviás.</p>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
             <input type="text" id="prestNombre" placeholder="Nombre *" class="input-field">
             <input type="text" id="prestApellido" placeholder="Apellido" class="input-field">
@@ -442,13 +500,57 @@ function renderPanel(userData) {
   }
 }
 
-window.switchTab = (tab) => {
+window.switchTab = (tab, e) => {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
   document.getElementById('tab-' + tab).style.display = 'block';
-  event.target.classList.add('active');
+  if (e) e.target.classList.add('active');
   if (tab === 'afiliados') cargarUsuariosAdmin();
   if (tab === 'pagos') cargarAtencionesAdmin();
+};
+
+window.toggleNuevoAfiliado = () => {
+  const f = document.getElementById('formNuevoAfiliado');
+  f.style.display = f.style.display === 'none' ? 'block' : 'none';
+};
+
+window.crearAfiliado = async () => {
+  const nombre = document.getElementById('afilNombre').value.trim();
+  const apellido = document.getElementById('afilApellido').value.trim();
+  const email = document.getElementById('afilEmail').value.trim();
+  const tel = document.getElementById('afilTel').value.trim();
+  const pass = document.getElementById('afilPass').value;
+  const mascotaNombre = document.getElementById('afilMascota').value.trim();
+  const mascotaRaza = document.getElementById('afilRaza').value.trim();
+  const plan = document.getElementById('afilPlan').value;
+  const msg = document.getElementById('afilMsg');
+  msg.textContent = '';
+
+  if (!nombre || !email || !pass || !mascotaNombre) {
+    msg.textContent = 'Completá los campos obligatorios.';
+    msg.style.color = '#ef4444'; return;
+  }
+
+  try {
+    const cred = await createUserWithEmailAndPassword(auth, email, pass);
+    await setDoc(doc(db, "usuarios", cred.user.uid), {
+      uid: cred.user.uid,
+      nombre, apellido, email, telefono: tel,
+      rol: 'afiliado', estado: 'activo',
+      plan: plan || 'Sin definir',
+      mascota: { nombre: mascotaNombre, raza: mascotaRaza, foto: '' },
+      creadoEn: serverTimestamp()
+    });
+    msg.textContent = `✓ Afiliado ${nombre} creado correctamente.`;
+    msg.style.color = '#22c55e';
+    // Limpiar campos
+    ['afilNombre','afilApellido','afilEmail','afilTel','afilPass','afilMascota','afilRaza'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('afilPlan').value = '';
+    cargarUsuariosAdmin();
+  } catch(e) {
+    msg.textContent = e.code === 'auth/email-already-in-use' ? 'Email ya registrado.' : 'Error: ' + e.message;
+    msg.style.color = '#ef4444';
+  }
 };
 
 function showLogin(msg) {
