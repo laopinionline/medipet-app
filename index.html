@@ -748,9 +748,10 @@ function renderPanel(data){
           <div><label style="font-size:.8rem;font-weight:700;display:block;margin-bottom:4px;">Fecha de nacimiento</label><input type="date" id="newMascotaFecha" class="input-field"></div>
           <select id="newMascotaPlan" class="input-field" style="margin-top:4px;">
             <option value="">Plan de esta mascota...</option>
-            <option value="Básico">Básico — $16.000/mes</option>
-            <option value="Completo">Completo — $45.000/mes</option>
-            <option value="Premium">Premium — $90.000/mes</option>
+            <option value="MEDIPet Urgencias">MEDIPet Urgencias — $23.988/mes (todas las edades)</option>
+            <option value="MEDIPet Joven">MEDIPet Joven — $58.788/mes (hasta 1 año)</option>
+            <option value="MEDIPet Adulto">MEDIPet Adulto — $54.388/mes (1 a 7 años)</option>
+            <option value="MEDIPet Senior">MEDIPet Senior — $70.788/mes (más de 7 años)</option>
           </select>
           <div>
             <label class="foto-label" for="newMascotaFoto">📷 &nbsp;Foto (opcional)</label>
@@ -789,9 +790,10 @@ function renderPanel(data){
           <div style="display:flex;gap:8px;margin-top:8px;align-items:center;">
             <select onchange="cambiarPlanMascota('${data.uid}',${i},this.value)" style="flex:1;padding:8px 12px;border:2px solid rgba(26,95,180,.15);border-radius:100px;font-family:'Nunito',sans-serif;font-size:.82rem;font-weight:700;color:#1A5FB4;background:#EBF3FC;outline:none;cursor:pointer;">
               <option value="" ${!m.plan||m.plan==='Sin definir'?'selected':''}>Cambiar plan...</option>
-              <option value="Básico" ${m.plan==='Básico'?'selected':''}>Básico — $16.000/mes</option>
-              <option value="Completo" ${m.plan==='Completo'?'selected':''}>Completo — $45.000/mes</option>
-              <option value="Premium" ${m.plan==='Premium'?'selected':''}>Premium — $90.000/mes</option>
+              <option value="MEDIPet Urgencias" \${m.plan==='MEDIPet Urgencias'?'selected':''}>MEDIPet Urgencias</option>
+              <option value="MEDIPet Joven" \${m.plan==='MEDIPet Joven'?'selected':''}>MEDIPet Joven</option>
+              <option value="MEDIPet Adulto" \${m.plan==='MEDIPet Adulto'?'selected':''}>MEDIPet Adulto</option>
+              <option value="MEDIPet Senior" \${m.plan==='MEDIPet Senior'?'selected':''}>MEDIPet Senior</option>
             </select>
             <button onclick="descargarCarnet(${i},'${m.nombre}')" class="bmini" style="background:#EBF3FC;color:#1A5FB4;font-size:.8rem;padding:8px 12px;">⬇</button>
             <button onclick="confirmarEliminarMascota('${data.uid}',${i},'${m.nombre}')" style="background:none;border:1px solid #fee2e2;color:#991b1b;border-radius:100px;padding:7px 12px;font-size:.8rem;cursor:pointer;">🗑</button>
@@ -862,11 +864,12 @@ function renderPanel(data){
             </div>
             <div><label style="font-size:0.75rem;font-weight:700;display:block;margin-bottom:4px;">Fecha nac. mascota</label><input type="date" id="afilFechaMascota" class="input-field"></div>
             <select id="afilPlan" class="input-field">
-              <option value="">Plan...</option>
-              <option value="Básico">Básico</option>
-              <option value="Completo">Completo</option>
-              <option value="Premium">Premium</option>
-            </select>
+                          <option value="">Plan...</option>
+            <option value="MEDIPet Urgencias">MEDIPet Urgencias</option>
+            <option value="MEDIPet Joven">MEDIPet Joven</option>
+            <option value="MEDIPet Adulto">MEDIPet Adulto</option>
+            <option value="MEDIPet Senior">MEDIPet Senior</option>
+          </select>
             <div style="display:flex;gap:8px;">
               <button onclick="crearAfiliado()" class="btn-primary" style="flex:1;">Crear afiliado</button>
               <button onclick="toggleFormAfiliado()" class="bmini brojo" style="padding:10px 16px;">✕</button>
