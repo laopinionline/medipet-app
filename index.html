@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MEDIPet — Portal</title>
+<title>MEDIPaw — Portal</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
@@ -104,7 +104,7 @@ body{font-family:'Nunito',sans-serif;background:var(--fondo);color:var(--texto);
 <!-- LOGIN -->
 <div id="loginScreen" class="screen active">
   <div class="auth-card">
-    <div class="auth-logo"><svg width="44" height="44"><use href="#mp-iso"/></svg><div class="marca">MEDI<span>Pet</span></div></div>
+    <div class="auth-logo"><svg width="44" height="44"><use href="#mp-iso"/></svg><div class="marca">MEDI<span>Paw</span></div></div>
     <div class="auth-title">Ingresá a tu cuenta</div>
     <div class="auth-sub">Afiliados · Prestadores · Administradores</div>
     <div class="fstack">
@@ -115,7 +115,7 @@ body{font-family:'Nunito',sans-serif;background:var(--fondo);color:var(--texto);
     </div>
     <div class="divider">
       <p style="font-size:.8rem;color:var(--suave);margin-bottom:8px;">¿Todavía no tenés plan?</p>
-      <button onclick="showScreen('registerScreen')" class="link-btn">Afiliarme a MEDIPet →</button>
+      <button onclick="showScreen('registerScreen')" class="link-btn">Afiliarme a MEDIPaw →</button>
     </div>
   </div>
 </div>
@@ -123,8 +123,8 @@ body{font-family:'Nunito',sans-serif;background:var(--fondo);color:var(--texto);
 <!-- REGISTRO -->
 <div id="registerScreen" class="screen">
   <div class="auth-card tall" style="max-width:480px;">
-    <div class="auth-logo"><svg width="40" height="40"><use href="#mp-iso"/></svg><div class="marca">MEDI<span>Pet</span></div></div>
-    <div class="auth-title">Afiliate a MEDIPet</div>
+    <div class="auth-logo"><svg width="40" height="40"><use href="#mp-iso"/></svg><div class="marca">MEDI<span>Paw</span></div></div>
+    <div class="auth-title">Afiliate a MEDIPaw</div>
     <div class="auth-sub">Completá tus datos y los de tu mascota</div>
     <div class="fstack">
       <div class="frow">
@@ -177,7 +177,7 @@ body{font-family:'Nunito',sans-serif;background:var(--fondo);color:var(--texto);
 <!-- APP -->
 <div id="appScreen">
   <nav class="app-nav">
-    <div class="logo"><svg width="32" height="32"><use href="#mp-iso-w"/></svg><div class="marca">MEDI<span>Pet</span></div></div>
+    <div class="logo"><svg width="32" height="32"><use href="#mp-iso-w"/></svg><div class="marca">MEDI<span>Paw</span></div></div>
     <button onclick="doLogout()" class="btn-logout">Salir</button>
   </nav>
   <div class="app-body"><div id="panelContent"></div></div>
@@ -433,7 +433,7 @@ async function cargarAtencion(){
       afiliadoEmail:afiliado,mascota,descripcion,monto,
       estado:'pendiente',fecha:TS()
     });
-    setMsg('atenMsg','✓ Atención registrada. MEDIPet procesará el pago.',true);
+    setMsg('atenMsg','✓ Atención registrada. MEDIPaw procesará el pago.',true);
     ['atenAfiliado','atenMascota','atenDescripcion','atenMonto'].forEach(id=>document.getElementById(id).value='');
     cargarHistorial();
   }catch(e){setMsg('atenMsg','Error: '+e.message,false);}
@@ -602,7 +602,7 @@ async function confirmarEliminarMascota(uid, index, nombre) {
 
 // ── ELIMINAR USUARIO (solo admin) ──
 function confirmarEliminarUsuario(uid, nombre) {
-  if (!confirm(`¿Eliminás el usuario ${nombre}?\n\nEsta acción elimina todos sus datos de MEDIPet. No se puede deshacer.`)) return;
+  if (!confirm(`¿Eliminás el usuario ${nombre}?\n\nEsta acción elimina todos sus datos de MEDIPaw. No se puede deshacer.`)) return;
   eliminarUsuario(uid);
 }
 
@@ -624,7 +624,7 @@ async function eliminarUsuario(uid) {
     }
     
     cargarUsuariosAdmin();
-    alert('Usuario eliminado. Si quiere registrarse de nuevo con el mismo email, primero debe hacer clic en el link que recibió por email para resetear la contraseña, o contactar a MEDIPet.');
+    alert('Usuario eliminado. Si quiere registrarse de nuevo con el mismo email, primero debe hacer clic en el link que recibió por email para resetear la contraseña, o contactar a MEDIPaw.');
   } catch(e) { alert('Error al eliminar: ' + e.message); }
 }
 
@@ -748,10 +748,10 @@ function renderPanel(data){
           <div><label style="font-size:.8rem;font-weight:700;display:block;margin-bottom:4px;">Fecha de nacimiento</label><input type="date" id="newMascotaFecha" class="input-field"></div>
           <select id="newMascotaPlan" class="input-field" style="margin-top:4px;">
             <option value="">Plan de esta mascota...</option>
-            <option value="MEDIPet Urgencias">MEDIPet Urgencias — $23.988/mes (todas las edades)</option>
-            <option value="MEDIPet Joven">MEDIPet Joven — $58.788/mes (hasta 1 año)</option>
-            <option value="MEDIPet Adulto">MEDIPet Adulto — $54.388/mes (1 a 7 años)</option>
-            <option value="MEDIPet Senior">MEDIPet Senior — $70.788/mes (más de 7 años)</option>
+            <option value="MEDIPaw Urgencias">MEDIPaw Urgencias — $23.988/mes (todas las edades)</option>
+            <option value="MEDIPaw Joven">MEDIPaw Joven — $58.788/mes (hasta 1 año)</option>
+            <option value="MEDIPaw Adulto">MEDIPaw Adulto — $54.388/mes (1 a 7 años)</option>
+            <option value="MEDIPaw Senior">MEDIPaw Senior — $70.788/mes (más de 7 años)</option>
           </select>
           <div>
             <label class="foto-label" for="newMascotaFoto">📷 &nbsp;Foto (opcional)</label>
@@ -790,10 +790,10 @@ function renderPanel(data){
           <div style="display:flex;gap:8px;margin-top:8px;align-items:center;">
             <select onchange="cambiarPlanMascota('${data.uid}',${i},this.value)" style="flex:1;padding:8px 12px;border:2px solid rgba(26,95,180,.15);border-radius:100px;font-family:'Nunito',sans-serif;font-size:.82rem;font-weight:700;color:#1A5FB4;background:#EBF3FC;outline:none;cursor:pointer;">
               <option value="" ${!m.plan||m.plan==='Sin definir'?'selected':''}>Cambiar plan...</option>
-              <option value="MEDIPet Urgencias" \${m.plan==='MEDIPet Urgencias'?'selected':''}>MEDIPet Urgencias</option>
-              <option value="MEDIPet Joven" \${m.plan==='MEDIPet Joven'?'selected':''}>MEDIPet Joven</option>
-              <option value="MEDIPet Adulto" \${m.plan==='MEDIPet Adulto'?'selected':''}>MEDIPet Adulto</option>
-              <option value="MEDIPet Senior" \${m.plan==='MEDIPet Senior'?'selected':''}>MEDIPet Senior</option>
+              <option value="MEDIPaw Urgencias" \${m.plan==='MEDIPaw Urgencias'?'selected':''}>MEDIPaw Urgencias</option>
+              <option value="MEDIPaw Joven" \${m.plan==='MEDIPaw Joven'?'selected':''}>MEDIPaw Joven</option>
+              <option value="MEDIPaw Adulto" \${m.plan==='MEDIPaw Adulto'?'selected':''}>MEDIPaw Adulto</option>
+              <option value="MEDIPaw Senior" \${m.plan==='MEDIPaw Senior'?'selected':''}>MEDIPaw Senior</option>
             </select>
             <button onclick="descargarCarnet(${i},'${m.nombre}')" class="bmini" style="background:#EBF3FC;color:#1A5FB4;font-size:.8rem;padding:8px 12px;">⬇</button>
             <button onclick="confirmarEliminarMascota('${data.uid}',${i},'${m.nombre}')" style="background:none;border:1px solid #fee2e2;color:#991b1b;border-radius:100px;padding:7px 12px;font-size:.8rem;cursor:pointer;">🗑</button>
@@ -836,7 +836,7 @@ function renderPanel(data){
     setTimeout(cargarHistorial,300);
 
   }else if(rol==='admin'){
-    html=`<div class="panel-header"><div><div class="panel-rol admin">Administrador</div><div class="panel-nombre">Panel MEDIPet</div></div><div style="font-size:2.5rem;">⚙️</div></div>
+    html=`<div class="panel-header"><div><div class="panel-rol admin">Administrador</div><div class="panel-nombre">Panel MEDIPaw</div></div><div style="font-size:2.5rem;">⚙️</div></div>
     <div class="tabs">
       <button class="tab active" onclick="switchTab('afiliados',this)">Afiliados</button>
       <button class="tab" onclick="switchTab('prestadores',this)">Prestadores</button>
@@ -865,10 +865,10 @@ function renderPanel(data){
             <div><label style="font-size:0.75rem;font-weight:700;display:block;margin-bottom:4px;">Fecha nac. mascota</label><input type="date" id="afilFechaMascota" class="input-field"></div>
             <select id="afilPlan" class="input-field">
                           <option value="">Plan...</option>
-            <option value="MEDIPet Urgencias">MEDIPet Urgencias</option>
-            <option value="MEDIPet Joven">MEDIPet Joven</option>
-            <option value="MEDIPet Adulto">MEDIPet Adulto</option>
-            <option value="MEDIPet Senior">MEDIPet Senior</option>
+            <option value="MEDIPaw Urgencias">MEDIPaw Urgencias</option>
+            <option value="MEDIPaw Joven">MEDIPaw Joven</option>
+            <option value="MEDIPaw Adulto">MEDIPaw Adulto</option>
+            <option value="MEDIPaw Senior">MEDIPaw Senior</option>
           </select>
             <div style="display:flex;gap:8px;">
               <button onclick="crearAfiliado()" class="btn-primary" style="flex:1;">Crear afiliado</button>
