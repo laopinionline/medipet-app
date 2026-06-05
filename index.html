@@ -72,6 +72,17 @@ body{font-family:'Nunito',sans-serif;background:var(--fondo);color:var(--texto);
 .pend-box{background:#fffbeb;border:1px solid #fcd34d;border-radius:12px;padding:12px 14px;margin-bottom:14px}
 .pend-tit{font-size:.75rem;font-weight:800;color:#92400e;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px}
 .form-box{background:var(--fondo);border-radius:12px;padding:14px;margin-bottom:14px;border:1px solid rgba(26,95,180,.12)}
+/* Ficha mascota admin */
+.ficha-srv{display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--fondo);border-radius:10px;margin-bottom:6px;border:1px solid rgba(26,95,180,.06)}
+.ficha-srv .srv-ico{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0}
+.ficha-srv .srv-body{flex:1;min-width:0}
+.ficha-srv .srv-nm{font-size:.8rem;font-weight:700;color:var(--noche)}
+.ficha-srv .srv-dt{font-size:.7rem;color:var(--suave)}
+.ficha-srv select{padding:4px 8px;border:1px solid rgba(26,95,180,.2);border-radius:8px;font-family:'Nunito',sans-serif;font-size:.72rem;font-weight:700;background:white;color:var(--texto);flex-shrink:0}
+.ficha-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.ficha-actions button{padding:6px 12px;border:none;border-radius:100px;font-family:'Nunito',sans-serif;font-size:.72rem;font-weight:800;cursor:pointer}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--noche);color:white;padding:10px 20px;border-radius:100px;font-size:.82rem;font-weight:700;z-index:999;opacity:0;transition:opacity .3s}
+.toast.show{opacity:1}
 @media(max-width:500px){.frow{grid-template-columns:1fr}.auth-card{padding:28px 18px}}
 </style>
 </head>
@@ -105,17 +116,17 @@ body{font-family:'Nunito',sans-serif;background:var(--fondo);color:var(--texto);
 <div id="loginScreen" class="screen active">
   <div class="auth-card">
     <div class="auth-logo"><svg width="44" height="44"><use href="#mp-iso"/></svg><div class="marca">MEDI<span>Paw</span></div></div>
-    <div class="auth-title">Ingresá a tu cuenta</div>
+    <div class="auth-title">Ingresa a tu cuenta</div>
     <div class="auth-sub">Afiliados · Prestadores · Administradores</div>
     <div class="fstack">
       <input type="email" id="loginEmail" placeholder="Email" class="input-field">
-      <input type="password" id="loginPass" placeholder="Contraseña" class="input-field" onkeydown="if(event.key==='Enter')doLogin()">
+      <input type="password" id="loginPass" placeholder="Contrasena" class="input-field" onkeydown="if(event.key==='Enter')doLogin()">
       <button onclick="doLogin()" class="btn-primary" id="btnLogin">Ingresar</button>
       <p id="loginError" class="errmsg"></p>
     </div>
     <div class="divider">
-      <p style="font-size:.8rem;color:var(--suave);margin-bottom:8px;">¿Todavía no tenés plan?</p>
-      <button onclick="showScreen('registerScreen')" class="link-btn">Afiliarme a MEDIPaw →</button>
+      <p style="font-size:.8rem;color:var(--suave);margin-bottom:8px;">Todavia no tenes plan?</p>
+      <button onclick="showScreen('registerScreen')" class="link-btn">Afiliarme a MEDIPaw</button>
     </div>
   </div>
 </div>
@@ -125,19 +136,19 @@ body{font-family:'Nunito',sans-serif;background:var(--fondo);color:var(--texto);
   <div class="auth-card tall" style="max-width:480px;">
     <div class="auth-logo"><svg width="40" height="40"><use href="#mp-iso"/></svg><div class="marca">MEDI<span>Paw</span></div></div>
     <div class="auth-title">Afiliate a MEDIPaw</div>
-    <div class="auth-sub">Completá tus datos y los de tu mascota</div>
+    <div class="auth-sub">Completa tus datos y los de tu mascota</div>
     <div class="fstack">
       <div class="frow">
         <input type="text" id="regNombre" placeholder="Nombre *" class="input-field">
         <input type="text" id="regApellido" placeholder="Apellido" class="input-field">
       </div>
       <input type="email" id="regEmail" placeholder="Email *" class="input-field">
-      <input type="tel" id="regTel" placeholder="Teléfono / WhatsApp" class="input-field">
+      <input type="tel" id="regTel" placeholder="Telefono / WhatsApp" class="input-field">
       <div>
         <label style="font-size:0.8rem;font-weight:700;display:block;margin-bottom:4px;color:var(--texto);">Fecha de nacimiento *</label>
         <input type="date" id="regFechaNac" class="input-field">
       </div>
-      <input type="password" id="regPass" placeholder="Contraseña (mín. 6 caracteres) *" class="input-field">
+      <input type="password" id="regPass" placeholder="Contrasena (min. 6 caracteres) *" class="input-field">
       <div style="border-top:1px solid var(--azul-pale);padding-top:12px;">
         <p style="font-size:.75rem;font-weight:800;color:var(--noche);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">Tu mascota</p>
         <div class="frow">
@@ -150,27 +161,28 @@ body{font-family:'Nunito',sans-serif;background:var(--fondo);color:var(--texto);
       </div>
       <select id="regPlan" class="input-field" style="margin-top:8px;">
         <option value="">Plan de la mascota...</option>
-        <option value="Básico">Básico — $16.000/mes</option>
-        <option value="Completo">Completo — $45.000/mes</option>
-        <option value="Premium">Premium — $90.000/mes</option>
+        <option value="MEDIPaw Urgencias">MEDIPaw Urgencias — $23.988/mes</option>
+        <option value="MEDIPaw Joven">MEDIPaw Joven — $58.788/mes</option>
+        <option value="MEDIPaw Adulto">MEDIPaw Adulto — $54.388/mes</option>
+        <option value="MEDIPaw Senior">MEDIPaw Senior — $70.788/mes</option>
       </select>
       <div style="margin-top:8px;">
-        <label class="foto-label" for="regFoto">📷 &nbsp;Foto de tu mascota (opcional)</label>
+        <label class="foto-label" for="regFoto">Foto de tu mascota (opcional)</label>
         <input type="file" id="regFoto" accept="image/*" style="display:none" onchange="previewFoto(this)">
         <img id="fotoPreview" src="" alt="Preview">
-        <p style="font-size:.72rem;color:var(--suave);margin-top:6px;">Aparecerá en el carnet de tu mascota.</p>
+        <p style="font-size:.72rem;color:var(--suave);margin-top:6px;">Aparecera en el carnet de tu mascota.</p>
       </div>
       </div>
       <div style="border-top:1px solid var(--azul-pale);padding-top:12px;">
         <p style="font-size:.75rem;font-weight:800;color:var(--noche);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">Tu foto (opcional)</p>
-        <label class="foto-label" for="regFotoTitular">🧑 &nbsp;Tu foto de perfil</label>
+        <label class="foto-label" for="regFotoTitular">Tu foto de perfil</label>
         <input type="file" id="regFotoTitular" accept="image/*" style="display:none" onchange="previewFotoTitular(this)">
         <img id="fotoTitularPreview" src="" alt="" style="width:72px;height:72px;border-radius:50%;object-fit:cover;margin-top:8px;display:none;border:3px solid #5BA3E8;">
       </div>
       <button onclick="doRegistro()" class="btn-primary" id="btnRegistro">Crear mi cuenta</button>
       <p id="regError" class="errmsg"></p>
     </div>
-    <div class="divider"><button onclick="showScreen('loginScreen')" class="link-btn">← Ya tengo cuenta</button></div>
+    <div class="divider"><button onclick="showScreen('loginScreen')" class="link-btn">Ya tengo cuenta</button></div>
   </div>
 </div>
 
@@ -182,6 +194,9 @@ body{font-family:'Nunito',sans-serif;background:var(--fondo);color:var(--texto);
   </nav>
   <div class="app-body"><div id="panelContent"></div></div>
 </div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
 
 <script>
 firebase.initializeApp({
@@ -195,13 +210,46 @@ firebase.initializeApp({
 const auth=firebase.auth(), db=firebase.firestore(), storage=firebase.storage();
 const TS=()=>firebase.firestore.FieldValue.serverTimestamp();
 
+// ── CATALOGO DE SERVICIOS POR DEFECTO ──
+const CATALOGO_SERVICIOS = [
+  { key:'salud', nombre:'Cobertura de salud', detalle:'Segun tu plan MEDIPaw', estado:'activo' },
+  { key:'descuento', nombre:'Descuento 10%', detalle:'En comercios adheridos', estado:'disponible' },
+  { key:'gps', nombre:'GPS MEDIPaw', detalle:'Localizador para tu mascota', estado:'disponible' },
+  { key:'tienda', nombre:'Tienda MEDIPaw', detalle:'Productos exclusivos para socios', estado:'disponible' },
+  { key:'vacuna', nombre:'Recordatorio de vacunas', detalle:'Te avisamos cuando toque', estado:'disponible' }
+];
+
+// ── UTILIDADES ──
+function generarToken() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let t = '';
+  const arr = new Uint8Array(24);
+  crypto.getRandomValues(arr);
+  for (let i = 0; i < 24; i++) t += chars[arr[i] % chars.length];
+  return t;
+}
+
+function generarMascotaId(nroSocio, index) {
+  const num = nroSocio ? nroSocio.replace('MP-','') : '0000';
+  return 'MP-' + num + '-' + String(index + 1).padStart(2, '0');
+}
+
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+// Deep link
+const PUBLIC_BASE = 'https://medipaw.com.ar/m/';
+
 // Detectar si viene con ?plan=X o ?registro=1 desde la landing
 (function() {
   const params = new URLSearchParams(window.location.search);
   const plan = params.get('plan');
   const registro = params.get('registro');
   if (plan || registro) {
-    // Mostrar pantalla de registro automáticamente
     document.addEventListener('DOMContentLoaded', function() {
       showScreen('registerScreen');
       if (plan) {
@@ -231,7 +279,7 @@ auth.onAuthStateChanged(async user=>{
     try{
       const snap=await db.collection('usuarios').doc(user.uid).get();
       if(snap.exists){showScreen('appScreen');renderPanel({uid:user.uid,...snap.data()});}
-      else{setMsg('loginError','Tu registro está siendo procesado. Intentá en unos segundos.',false);await auth.signOut();showScreen('loginScreen');}
+      else{setMsg('loginError','Tu registro esta siendo procesado.',false);await auth.signOut();showScreen('loginScreen');}
     }catch(e){setMsg('loginError','Error al cargar perfil: '+e.message,false);showScreen('loginScreen');}
   }else{showScreen('loginScreen');}
 });
@@ -242,7 +290,7 @@ async function doLogin(){
   const btn=document.getElementById('btnLogin');
   setMsg('loginError','',true); btn.textContent='Ingresando...'; btn.disabled=true;
   try{await auth.signInWithEmailAndPassword(email,pass);}
-  catch(e){setMsg('loginError','Email o contraseña incorrectos.',false);btn.textContent='Ingresar';btn.disabled=false;}
+  catch(e){setMsg('loginError','Email o contrasena incorrectos.',false);btn.textContent='Ingresar';btn.disabled=false;}
 }
 function doLogout(){auth.signOut();}
 
@@ -295,38 +343,44 @@ async function doRegistro(){
   const fotoInput=document.getElementById('regFoto');
   const btn=document.getElementById('btnRegistro');
   setMsg('regError','',true);
-  if(!nombre||!email||!pass||!mascotaNombre){setMsg('regError','Completá los campos obligatorios (*).',false);return;}
-  if(pass.length<6){setMsg('regError','La contraseña debe tener al menos 6 caracteres.',false);return;}
+  if(!nombre||!email||!pass||!mascotaNombre){setMsg('regError','Completa los campos obligatorios (*).',false);return;}
+  if(pass.length<6){setMsg('regError','La contrasena debe tener al menos 6 caracteres.',false);return;}
   btn.textContent='Creando cuenta...';btn.disabled=true;
   try{
     const cred=await auth.createUserWithEmailAndPassword(email,pass);
     const uid=cred.user.uid;
-    // Comprimir foto mascota
     let fotoURL='';
     if(fotoInput.files&&fotoInput.files[0]){
       try{ fotoURL=await comprimirFoto(fotoInput.files[0]); }catch(fe){fotoURL='';}
     }
-    // Comprimir foto titular
     let fotoTitularURL='';
     if(fotoTitularEl&&fotoTitularEl.files&&fotoTitularEl.files[0]){
       try{ fotoTitularURL=await comprimirFoto(fotoTitularEl.files[0]); }catch(fe){fotoTitularURL='';}
     }
+    const token = generarToken();
+    const mascota = {
+      nombre:mascotaNombre, raza:mascotaRaza, fechaNacimiento:fechaMascota,
+      plan:plan||'Sin definir', foto:fotoURL,
+      mascotaId: '', // se asigna al activar (cuando hay nroSocio)
+      token: token,
+      servicios: CATALOGO_SERVICIOS.map(s => ({...s}))
+    };
     await db.collection('usuarios').doc(uid).set({
       uid,nombre,apellido,email,telefono:tel,fechaNacimiento:fechaNac,
       fotoTitular:fotoTitularURL,
       rol:'afiliado',estado:'pendiente',
-      mascotas:[{nombre:mascotaNombre,raza:mascotaRaza,fechaNacimiento:fechaMascota,plan:plan||'Sin definir',foto:fotoURL}],
+      mascotas:[mascota],
       creadoEn:TS()
     });
   }catch(e){
     btn.textContent='Crear mi cuenta';btn.disabled=false;
-    if(e.code==='auth/email-already-in-use')setMsg('regError','Ese email ya está registrado.',false);
-    else if(e.code==='auth/weak-password')setMsg('regError','Contraseña muy débil.',false);
+    if(e.code==='auth/email-already-in-use')setMsg('regError','Ese email ya esta registrado.',false);
+    else if(e.code==='auth/weak-password')setMsg('regError','Contrasena muy debil.',false);
     else setMsg('regError','Error: '+e.message,false);
   }
 }
 
-// CAMBIAR PASS
+// MASCOTA HELPERS
 function toggleFormMascota(){
   const f=document.getElementById('formNuevaMascota');
   if(f) f.style.display=f.style.display==='none'?'block':'none';
@@ -347,7 +401,7 @@ async function agregarMascota(uid){
   const fotoEl=document.getElementById('newMascotaFoto');
   const msg=document.getElementById('mascotaMsg');
   if(msg) msg.textContent='';
-  if(!nombre){if(msg){msg.textContent='Ingresá el nombre.';msg.style.color='#ef4444';}return;}
+  if(!nombre){if(msg){msg.textContent='Ingresa el nombre.';msg.style.color='#ef4444';}return;}
   let foto='';
   if(fotoEl&&fotoEl.files&&fotoEl.files[0]){
     try{ foto=await comprimirFoto(fotoEl.files[0]); }catch(e){foto='';}
@@ -356,10 +410,20 @@ async function agregarMascota(uid){
     const snap=await db.collection('usuarios').doc(uid).get();
     const ud=snap.data();
     const mascotas=ud.mascotas?[...ud.mascotas]:[];
-    if(ud.mascota&&mascotas.length===0)mascotas.push(ud.mascota);
-    mascotas.push({nombre,raza,fechaNacimiento:fecha,plan:plan||'Sin definir',foto});
+    const token = generarToken();
+    const idx = mascotas.length;
+    const mascotaId = ud.nroSocio ? generarMascotaId(ud.nroSocio, idx) : '';
+    mascotas.push({
+      nombre, raza, fechaNacimiento:fecha, plan:plan||'Sin definir', foto,
+      mascotaId, token,
+      servicios: CATALOGO_SERVICIOS.map(s => ({...s}))
+    });
     await db.collection('usuarios').doc(uid).update({mascotas});
-    if(msg){msg.textContent='✓ '+nombre+' agregada.';msg.style.color='#22c55e';}
+    // Sync public if active and has mascotaId
+    if (ud.estado === 'activo' && mascotaId) {
+      await syncMascotaPublica(ud, mascotas[idx], idx);
+    }
+    if(msg){msg.textContent='+ '+nombre+' agregada.';msg.style.color='#22c55e';}
     const snapNew=await db.collection('usuarios').doc(uid).get();
     renderPanel({uid,...snapNew.data()});
   }catch(e){if(msg){msg.textContent='Error: '+e.message;msg.style.color='#ef4444';}}
@@ -369,10 +433,14 @@ async function cambiarPlanMascota(uid, index, nuevoPlan) {
   if (!nuevoPlan) return;
   try {
     const snap = await db.collection('usuarios').doc(uid).get();
-    const mascotas = [...(snap.data().mascotas || [])];
+    const ud = snap.data();
+    const mascotas = [...(ud.mascotas || [])];
     mascotas[index] = { ...mascotas[index], plan: nuevoPlan };
     await db.collection('usuarios').doc(uid).update({ mascotas });
-    // Actualizar el carnet visualmente sin recargar todo
+    // Sync public
+    if (mascotas[index].token && ud.estado === 'activo') {
+      await syncMascotaPublica(ud, mascotas[index], index);
+    }
     const carnetPlanEl = document.querySelector(`#carnet-${index} div:nth-child(2)`);
     if (carnetPlanEl) carnetPlanEl.textContent = nuevoPlan;
   } catch(e) { alert('Error al cambiar plan: ' + e.message); }
@@ -385,7 +453,7 @@ async function actualizarFotoTitular(input, uid) {
     if(msg) { msg.textContent = 'Subiendo...'; msg.style.color = '#5a6a8a'; }
     const foto = await comprimirFoto(input.files[0], 400);
     await db.collection('usuarios').doc(uid).update({ fotoTitular: foto });
-    if(msg) { msg.textContent = '✓ Foto actualizada.'; msg.style.color = '#22c55e'; }
+    if(msg) { msg.textContent = 'Foto actualizada.'; msg.style.color = '#22c55e'; }
     const snap = await db.collection('usuarios').doc(uid).get();
     renderPanel({ uid, ...snap.data() });
   } catch(e) {
@@ -405,25 +473,120 @@ async function descargarCarnet(index, nombreMascota) {
     }
     const canvas = await html2canvas(carnetEl, { scale: 2, backgroundColor: null, logging: false, useCORS: true });
     const link = document.createElement('a');
-    link.download = 'carnet-medipet-' + (nombreMascota||'mascota').toLowerCase().replace(/\s+/g,'-') + '.png';
+    link.download = 'carnet-medipaw-' + (nombreMascota||'mascota').toLowerCase().replace(/\s+/g,'-') + '.png';
     link.href = canvas.toDataURL('image/png');
     link.click();
   } catch(e) {
-    alert('Para guardar el carnet, hacé una captura de pantalla de esta sección.');
+    alert('Para guardar el carnet, hace una captura de pantalla.');
   }
 }
 
 async function cambiarPass(){
-  try{await auth.currentUser.updatePassword(document.getElementById('nuevaPass').value);setMsg('passMsg','✓ Contraseña actualizada',true);}
-  catch(e){setMsg('passMsg','Reingresá para cambiar contraseña.',false);}
+  try{await auth.currentUser.updatePassword(document.getElementById('nuevaPass').value);setMsg('passMsg','Contrasena actualizada',true);}
+  catch(e){setMsg('passMsg','Reingresa para cambiar contrasena.',false);}
 }
 
-// PRESTADOR: CARGAR ATENCIÓN
+// ── SYNC MASCOTA PUBLICA ──
+async function syncMascotaPublica(userData, mascota, index) {
+  if (!mascota.token) return;
+  const nroSocio = userData.nroSocio || '';
+  const mascotaId = mascota.mascotaId || generarMascotaId(nroSocio, index);
+  await db.collection('mascotas_publicas').doc(mascota.token).set({
+    nombre: mascota.nombre || '',
+    raza: mascota.raza || '',
+    fechaNacimiento: mascota.fechaNacimiento || '',
+    foto: mascota.foto || '',
+    plan: mascota.plan || '',
+    estado: userData.estado || 'activo',
+    nroSocio: nroSocio,
+    titularNombre: (userData.nombre || '') + ' ' + (userData.apellido || ''),
+    mascotaId: mascotaId,
+    servicios: mascota.servicios || [],
+    actualizadoEn: TS()
+  });
+}
+
+// ── ADMIN: FICHA DE MASCOTA ──
+// Ensure mascota has id+token; returns updated mascota
+function ensureMascotaFields(mascota, nroSocio, index) {
+  let changed = false;
+  if (!mascota.token) { mascota.token = generarToken(); changed = true; }
+  if (!mascota.mascotaId && nroSocio) { mascota.mascotaId = generarMascotaId(nroSocio, index); changed = true; }
+  if (!mascota.servicios || mascota.servicios.length === 0) {
+    mascota.servicios = CATALOGO_SERVICIOS.map(s => ({...s}));
+    changed = true;
+  }
+  return { mascota, changed };
+}
+
+async function adminGuardarServicios(uid, index) {
+  try {
+    const snap = await db.collection('usuarios').doc(uid).get();
+    const ud = snap.data();
+    const mascotas = [...(ud.mascotas || [])];
+    const m = mascotas[index];
+    // Read states from selects
+    const srvEls = document.querySelectorAll(`[data-srv-uid="${uid}"][data-srv-idx="${index}"]`);
+    srvEls.forEach(sel => {
+      const key = sel.dataset.srvKey;
+      const srv = m.servicios.find(s => s.key === key);
+      if (srv) srv.estado = sel.value;
+    });
+    mascotas[index] = m;
+    await db.collection('usuarios').doc(uid).update({ mascotas });
+    // Sync public
+    if (m.token && ud.estado === 'activo') {
+      await syncMascotaPublica(ud, m, index);
+    }
+    toast('Servicios guardados y ficha publica sincronizada');
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+async function adminCopiarEnlace(token) {
+  const url = PUBLIC_BASE + token;
+  try {
+    await navigator.clipboard.writeText(url);
+    toast('Enlace copiado');
+  } catch(e) {
+    prompt('Copia este enlace:', url);
+  }
+}
+
+function adminWhatsApp(token, nombre) {
+  const url = PUBLIC_BASE + token;
+  const text = encodeURIComponent('Hola! Aca tenes la ficha MEDIPaw de ' + nombre + ': ' + url);
+  window.open('https://wa.me/?text=' + text, '_blank');
+}
+
+async function adminRegenerarToken(uid, index) {
+  if (!confirm('Regenerar el token? El enlace anterior dejara de funcionar.')) return;
+  try {
+    const snap = await db.collection('usuarios').doc(uid).get();
+    const ud = snap.data();
+    const mascotas = [...(ud.mascotas || [])];
+    const oldToken = mascotas[index].token;
+    const newToken = generarToken();
+    mascotas[index].token = newToken;
+    await db.collection('usuarios').doc(uid).update({ mascotas });
+    // Delete old public doc
+    if (oldToken) {
+      try { await db.collection('mascotas_publicas').doc(oldToken).delete(); } catch(e) {}
+    }
+    // Create new public doc
+    if (ud.estado === 'activo') {
+      await syncMascotaPublica(ud, mascotas[index], index);
+    }
+    toast('Token regenerado');
+    cargarUsuariosAdmin();
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+// ── PRESTADOR: CARGAR ATENCION ──
 async function cargarAtencion(){
   const afiliado=v('atenAfiliado'),mascota=v('atenMascota'),descripcion=v('atenDescripcion');
   const monto=parseFloat(document.getElementById('atenMonto').value);
   setMsg('atenMsg','',true);
-  if(!afiliado||!descripcion||!monto){setMsg('atenMsg','Completá todos los campos.',false);return;}
+  if(!afiliado||!descripcion||!monto){setMsg('atenMsg','Completa todos los campos.',false);return;}
   try{
     const snap=await db.collection('usuarios').doc(auth.currentUser.uid).get();
     const p=snap.data();
@@ -433,7 +596,7 @@ async function cargarAtencion(){
       afiliadoEmail:afiliado,mascota,descripcion,monto,
       estado:'pendiente',fecha:TS()
     });
-    setMsg('atenMsg','✓ Atención registrada. MEDIPaw procesará el pago.',true);
+    setMsg('atenMsg','Atencion registrada. MEDIPaw procesara el pago.',true);
     ['atenAfiliado','atenMascota','atenDescripcion','atenMonto'].forEach(id=>document.getElementById(id).value='');
     cargarHistorial();
   }catch(e){setMsg('atenMsg','Error: '+e.message,false);}
@@ -443,7 +606,7 @@ async function cargarHistorial(){
   const lista=document.getElementById('historialAtenciones');if(!lista)return;
   try{
     const snap=await db.collection('atenciones').where('prestadorId','==',auth.currentUser.uid).orderBy('fecha','desc').get();
-    if(snap.empty){lista.innerHTML='<p style="color:#5a6a8a;font-size:.85rem;">Sin atenciones aún.</p>';return;}
+    if(snap.empty){lista.innerHTML='<p style="color:#5a6a8a;font-size:.85rem;">Sin atenciones aun.</p>';return;}
     lista.innerHTML=snap.docs.map(d=>{
       const a=d.data(),fecha=a.fecha?.toDate?.()?.toLocaleDateString('es-AR')||'',
         col=a.estado==='pagado'?'#22c55e':a.estado==='rechazado'?'#ef4444':'#f59e0b';
@@ -454,19 +617,19 @@ async function cargarHistorial(){
   }catch(e){lista.innerHTML='<p style="color:#ef4444;">Error al cargar.</p>';}
 }
 
-// ADMIN: USUARIOS
+// ── ADMIN: USUARIOS ──
 async function cargarUsuariosAdmin(){
   const lista=document.getElementById('listaUsuarios');if(!lista)return;
   lista.innerHTML='<p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p>';
   try{
     const snap=await db.collection('usuarios').get();
     const todos=snap.docs.map(d=>({id:d.id,...d.data()})).filter(u=>u.rol==='afiliado');
-    if(todos.length===0){lista.innerHTML='<p style="color:#5a6a8a;font-size:.85rem;">No hay afiliados registrados aún.</p>';return;}
+    if(todos.length===0){lista.innerHTML='<p style="color:#5a6a8a;font-size:.85rem;">No hay afiliados registrados aun.</p>';return;}
     const pend=todos.filter(u=>u.estado==='pendiente');
     const resto=todos.filter(u=>u.estado!=='pendiente');
     let html='';
     if(pend.length>0){
-      html+=`<div class="pend-box"><div class="pend-tit">⏳ Pendientes de activación (${pend.length})</div>${pend.map(u=>cardUsuario(u)).join('')}</div>`;
+      html+=`<div class="pend-box"><div class="pend-tit">Pendientes de activacion (${pend.length})</div>${pend.map(u=>cardUsuario(u)).join('')}</div>`;
     }
     if(resto.length>0){
       html+=`<div style="font-size:.75rem;font-weight:800;color:var(--suave);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">Afiliados (${resto.length})</div>`;
@@ -476,54 +639,99 @@ async function cargarUsuariosAdmin(){
   }catch(e){lista.innerHTML='<p style="color:#ef4444;">Error: '+e.message+'</p>';}
 }
 
+const SRV_ICONS_ADMIN = {
+  salud: { icon: '\u{1FA7A}', bg: '#EBF3FC' },
+  descuento: { icon: '\u{1F3F7}\uFE0F', bg: '#fef3c7' },
+  gps: { icon: '\u{1F4CD}', bg: '#dcfce7' },
+  tienda: { icon: '\u{1F6D2}', bg: '#ede9fe' },
+  vacuna: { icon: '\u{1F489}', bg: '#fce7f3' }
+};
+
 function cardUsuario(u){
   const col=u.estado==='activo'?'#22c55e':u.estado==='pendiente'?'#f59e0b':'#ef4444';
   const fecha=u.creadoEn?.toDate?.()?.toLocaleDateString('es-AR')||'';
-  const mascotas=(u.mascotas||[u.mascota]).filter(Boolean);
-  // Plan general: puede ser del usuario (viejo) o de las mascotas (nuevo)
+  const mascotas=(u.mascotas||[]).filter(Boolean);
   const planesTexto = mascotas.length > 0
     ? mascotas.map(m => m.plan && m.plan !== 'Sin definir' ? `${m.nombre}: ${m.plan}` : null).filter(Boolean).join(' · ')
-    : (u.plan && u.plan !== 'Sin definir' ? u.plan : '');
+    : '';
+
+  // Ensure fields for each mascota
+  let needsSave = false;
+  mascotas.forEach((m, i) => {
+    const r = ensureMascotaFields(m, u.nroSocio, i);
+    if (r.changed) { mascotas[i] = r.mascota; needsSave = true; }
+  });
+  // Auto-save if fields were missing (async, fire-and-forget)
+  if (needsSave && u.id) {
+    db.collection('usuarios').doc(u.id).update({ mascotas }).catch(() => {});
+  }
 
   return `<div class="uitem">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
       <div style="flex:1;">
-
-        <!-- Nombre + nroSocio + estado -->
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;">
           <strong style="font-size:1rem;">${u.nombre||''} ${u.apellido||''}</strong>
           ${u.nroSocio?`<span style="background:#EBF3FC;color:#1A5FB4;font-size:.68rem;font-weight:800;padding:2px 8px;border-radius:100px;">${u.nroSocio}</span>`:''}
         </div>
-
-        <!-- Contacto -->
         <div style="font-size:.8rem;color:#5a6a8a;">${u.email||''}${u.telefono?' · '+u.telefono:''}</div>
-        ${u.fechaNacimiento?`<div style="font-size:.75rem;color:#5a6a8a;margin-top:2px;">📅 ${u.fechaNacimiento}</div>`:''}
+        ${u.fechaNacimiento?`<div style="font-size:.75rem;color:#5a6a8a;margin-top:2px;">${u.fechaNacimiento}</div>`:''}
+        ${planesTexto?`<div style="font-size:.75rem;font-weight:700;color:#1A5FB4;margin-top:4px;">${planesTexto}</div>`:'<div style="font-size:.75rem;color:#9ca3af;margin-top:4px;">Sin plan asignado</div>'}
 
-        <!-- Planes -->
-        ${planesTexto?`<div style="font-size:.75rem;font-weight:700;color:#1A5FB4;margin-top:4px;">📋 ${planesTexto}</div>`:'<div style="font-size:.75rem;color:#9ca3af;margin-top:4px;">Sin plan asignado</div>'}
-
-        <!-- MASCOTAS CON FOTO Y PLAN -->
-        <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px;">
-          ${mascotas.map(m=>`
-            <div style="display:flex;align-items:center;gap:10px;background:white;border-radius:10px;padding:8px 10px;border:1px solid rgba(26,95,180,.08);">
-              ${m.foto
-                ? `<img src="${m.foto}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid #5BA3E8;">`
-                : `<div style="width:40px;height:40px;border-radius:50%;background:#EBF3FC;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;">🐾</div>`}
-              <div style="flex:1;">
-                <div style="display:flex;align-items:center;gap:6px;">
-                  <strong style="font-size:.85rem;">${m.nombre||'—'}</strong>
-                  ${m.plan&&m.plan!=='Sin definir'?`<span style="background:#EBF3FC;color:#1A5FB4;font-size:.65rem;font-weight:700;padding:1px 7px;border-radius:100px;">${m.plan}</span>`:''}
+        <!-- MASCOTAS CON FICHA -->
+        <div style="margin-top:10px;display:flex;flex-direction:column;gap:12px;">
+          ${mascotas.map((m,i)=>{
+            const srvIcons = SRV_ICONS_ADMIN;
+            const servicios = m.servicios || [];
+            return `
+            <div style="background:white;border-radius:14px;padding:12px;border:1px solid rgba(26,95,180,.1);">
+              <!-- Mascota header -->
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+                ${m.foto
+                  ? `<img src="${m.foto}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid #5BA3E8;">`
+                  : `<div style="width:40px;height:40px;border-radius:50%;background:#EBF3FC;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;">🐾</div>`}
+                <div style="flex:1;">
+                  <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                    <strong style="font-size:.85rem;">${m.nombre||'—'}</strong>
+                    ${m.plan&&m.plan!=='Sin definir'?`<span style="background:#EBF3FC;color:#1A5FB4;font-size:.65rem;font-weight:700;padding:1px 7px;border-radius:100px;">${m.plan}</span>`:''}
+                  </div>
+                  ${m.raza?`<div style="font-size:.75rem;color:#5a6a8a;">${m.raza}</div>`:''}
+                  ${m.mascotaId?`<div style="font-size:.68rem;color:#9ca3af;font-family:monospace;">ID: ${m.mascotaId}</div>`:''}
                 </div>
-                ${m.raza?`<div style="font-size:.75rem;color:#5a6a8a;">${m.raza}</div>`:''}
-                ${m.fechaNacimiento?`<div style="font-size:.72rem;color:#9ca3af;">🎂 ${m.fechaNacimiento}</div>`:''}
               </div>
-            </div>`).join('')}
+
+              <!-- Servicios -->
+              <div style="font-size:.7rem;font-weight:800;color:var(--suave);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Servicios</div>
+              ${servicios.map(s => {
+                const ic = srvIcons[s.key] || { icon:'*', bg:'#EBF3FC' };
+                return `<div class="ficha-srv">
+                  <div class="srv-ico" style="background:${ic.bg}">${ic.icon}</div>
+                  <div class="srv-body">
+                    <div class="srv-nm">${s.nombre}</div>
+                    <div class="srv-dt">${s.detalle||''}</div>
+                  </div>
+                  <select data-srv-uid="${u.id}" data-srv-idx="${i}" data-srv-key="${s.key}">
+                    <option value="activo" ${s.estado==='activo'?'selected':''}>Activo</option>
+                    <option value="disponible" ${s.estado==='disponible'?'selected':''}>Disponible</option>
+                    <option value="oculto" ${s.estado==='oculto'?'selected':''}>Oculto</option>
+                  </select>
+                </div>`;
+              }).join('')}
+
+              <!-- Actions -->
+              <div class="ficha-actions">
+                <button onclick="adminGuardarServicios('${u.id}',${i})" style="background:#dcfce7;color:#166534;">Guardar</button>
+                ${m.token?`<button onclick="adminCopiarEnlace('${m.token}')" style="background:#EBF3FC;color:#1A5FB4;">Copiar enlace</button>`:''}
+                ${m.token?`<button onclick="adminWhatsApp('${m.token}','${(m.nombre||'').replace(/'/g,"\\'")}')" style="background:#dcfce7;color:#166534;">WhatsApp</button>`:''}
+                ${m.token?`<button onclick="adminRegenerarToken('${u.id}',${i})" style="background:#fef3c7;color:#92400e;">Regenerar token</button>`:''}
+              </div>
+            </div>`;
+          }).join('')}
         </div>
 
-        <!-- DATOS INTERNOS (facturación) -->
+        <!-- DATOS INTERNOS -->
         <details style="margin-top:10px;">
           <summary style="font-size:.72rem;font-weight:700;color:#9ca3af;cursor:pointer;list-style:none;display:flex;align-items:center;gap:4px;">
-            <span>▸</span> Datos internos
+            <span>&#9656;</span> Datos internos
           </summary>
           <div style="background:#f8faff;border-radius:10px;padding:10px;margin-top:6px;font-size:.75rem;color:#5a6a8a;border:1px solid rgba(26,95,180,.08);">
             <div><strong>Nro socio:</strong> ${u.nroSocio||'Sin asignar'}</div>
@@ -531,7 +739,7 @@ function cardUsuario(u){
             <div><strong>Email:</strong> ${u.email||'—'}</div>
             <div><strong>Estado:</strong> ${u.estado||'—'}</div>
             <div><strong>Fecha alta:</strong> ${fecha||'—'}</div>
-            ${mascotas.map(m=>`<div><strong>${m.nombre||'mascota'}:</strong> ${m.plan||'Sin plan'}</div>`).join('')}
+            ${mascotas.map(m=>`<div><strong>${m.nombre||'mascota'}:</strong> ${m.plan||'Sin plan'} ${m.mascotaId?'('+m.mascotaId+')':''}</div>`).join('')}
           </div>
         </details>
 
@@ -542,11 +750,11 @@ function cardUsuario(u){
 
     <!-- ACCIONES -->
     <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
-      ${u.estado!=='activo'?`<button onclick="cambiarEstado('${u.id}','activo')" class="bmini bverde">✓ Activar</button>`:''}
+      ${u.estado!=='activo'?`<button onclick="cambiarEstado('${u.id}','activo')" class="bmini bverde">Activar</button>`:''}
       ${u.estado==='activo'?`<button onclick="cambiarEstado('${u.id}','suspendido')" class="bmini brojo">Suspender</button>`:''}
       ${u.estado==='suspendido'?`<button onclick="cambiarEstado('${u.id}','activo')" class="bmini bverde">Reactivar</button>`:''}
-      <button onclick="reenviarCredenciales('${u.email||''}')" class="bmini" style="background:#f0fdf4;color:#166534;">✉ Reenviar acceso</button>
-      <button onclick="confirmarEliminarUsuario('${u.id}','${u.nombre} ${u.apellido||''}')" class="bmini" style="background:#fee2e2;color:#991b1b;opacity:0.7;">🗑 Eliminar</button>
+      <button onclick="reenviarCredenciales('${u.email||''}')" class="bmini" style="background:#f0fdf4;color:#166534;">Reenviar acceso</button>
+      <button onclick="confirmarEliminarUsuario('${u.id}','${u.nombre} ${u.apellido||''}')" class="bmini" style="background:#fee2e2;color:#991b1b;opacity:0.7;">Eliminar</button>
     </div>
   </div>`;
 }
@@ -555,23 +763,41 @@ async function reenviarCredenciales(email) {
   if (!email) { alert('Este usuario no tiene email registrado.'); return; }
   try {
     await auth.sendPasswordResetEmail(email);
-    alert('✓ Se envió un email de acceso a ' + email + '\nEl afiliado recibirá un link para ingresar o restablecer su contraseña.');
-  } catch(e) {
-    alert('Error al enviar: ' + e.message);
-  }
+    alert('Se envio un email de acceso a ' + email);
+  } catch(e) { alert('Error al enviar: ' + e.message); }
 }
 
 async function cambiarEstado(uid,estado){
   const update = {estado};
-  // Al activar, asignar número de socio si no tiene
   if (estado === 'activo') {
     const snap = await db.collection('usuarios').doc(uid).get();
-    if (!snap.data()?.nroSocio) {
+    const ud = snap.data();
+    if (!ud.nroSocio) {
       const nroSocio = await generarNroSocio();
       update.nroSocio = nroSocio;
     }
+    // Assign mascotaIds if missing and sync public docs
+    const nroSocio = ud.nroSocio || update.nroSocio;
+    const mascotas = ud.mascotas ? [...ud.mascotas] : [];
+    let mascotasChanged = false;
+    for (let i = 0; i < mascotas.length; i++) {
+      const r = ensureMascotaFields(mascotas[i], nroSocio, i);
+      if (r.changed) { mascotas[i] = r.mascota; mascotasChanged = true; }
+    }
+    if (mascotasChanged) update.mascotas = mascotas;
+    await db.collection('usuarios').doc(uid).update(update);
+    // Sync all mascotas to public
+    const updatedSnap = await db.collection('usuarios').doc(uid).get();
+    const updatedData = updatedSnap.data();
+    const updatedMascotas = updatedData.mascotas || [];
+    for (let i = 0; i < updatedMascotas.length; i++) {
+      if (updatedMascotas[i].token) {
+        await syncMascotaPublica(updatedData, updatedMascotas[i], i);
+      }
+    }
+  } else {
+    await db.collection('usuarios').doc(uid).update(update);
   }
-  await db.collection('usuarios').doc(uid).update(update);
   cargarUsuariosAdmin();
 }
 
@@ -588,43 +814,47 @@ async function generarNroSocio() {
 
 // ── ELIMINAR MASCOTA ──
 async function confirmarEliminarMascota(uid, index, nombre) {
-  if (!confirm(`¿Eliminás a ${nombre}? Esta acción no se puede deshacer.`)) return;
+  if (!confirm(`Eliminas a ${nombre}? Esta accion no se puede deshacer.`)) return;
   try {
     const snap = await db.collection('usuarios').doc(uid).get();
     const ud = snap.data();
-    const mascotas = ud.mascotas ? [...ud.mascotas] : (ud.mascota ? [ud.mascota] : []);
+    const mascotas = ud.mascotas ? [...ud.mascotas] : [];
+    const oldToken = mascotas[index]?.token;
     mascotas.splice(index, 1);
     await db.collection('usuarios').doc(uid).update({ mascotas });
+    // Delete public doc
+    if (oldToken) {
+      try { await db.collection('mascotas_publicas').doc(oldToken).delete(); } catch(e) {}
+    }
     const snapNew = await db.collection('usuarios').doc(uid).get();
     renderPanel({ uid, ...snapNew.data() });
   } catch(e) { alert('Error al eliminar: ' + e.message); }
 }
 
-// ── ELIMINAR USUARIO (solo admin) ──
+// ── ELIMINAR USUARIO ──
 function confirmarEliminarUsuario(uid, nombre) {
-  if (!confirm(`¿Eliminás el usuario ${nombre}?\n\nEsta acción elimina todos sus datos de MEDIPaw. No se puede deshacer.`)) return;
+  if (!confirm(`Eliminas el usuario ${nombre}?\n\nEsta accion elimina todos sus datos de MEDIPaw.`)) return;
   eliminarUsuario(uid);
 }
 
 async function eliminarUsuario(uid) {
   try {
-    // 1. Obtener el email del usuario antes de borrar
     const snap = await db.collection('usuarios').doc(uid).get();
-    const email = snap.data()?.email || '';
-    
-    // 2. Borrar documento de Firestore
-    await db.collection('usuarios').doc(uid).delete();
-    
-    // 3. Enviar reset de contraseña para invalidar la sesión
-    // y liberar el email para re-registro
-    if (email) {
-      try {
-        await auth.sendPasswordResetEmail(email);
-      } catch(e) { /* no critical */ }
+    const ud = snap.data();
+    const email = ud?.email || '';
+    // Delete public docs for all mascotas
+    const mascotas = ud?.mascotas || [];
+    for (const m of mascotas) {
+      if (m.token) {
+        try { await db.collection('mascotas_publicas').doc(m.token).delete(); } catch(e) {}
+      }
     }
-    
+    await db.collection('usuarios').doc(uid).delete();
+    if (email) {
+      try { await auth.sendPasswordResetEmail(email); } catch(e) {}
+    }
     cargarUsuariosAdmin();
-    alert('Usuario eliminado. Si quiere registrarse de nuevo con el mismo email, primero debe hacer clic en el link que recibió por email para resetear la contraseña, o contactar a MEDIPaw.');
+    alert('Usuario eliminado.');
   } catch(e) { alert('Error al eliminar: ' + e.message); }
 }
 
@@ -635,19 +865,29 @@ async function crearAfiliado(){
   const mascotaNombre=v('afilMascota'),mascotaRaza=v('afilRaza'),plan=v('afilPlan');
   const afilFechaMascota=document.getElementById('afilFechaMascota')?.value||'';
   setMsg('afilMsg','',true);
-  if(!nombre||!email||!pass||!mascotaNombre){setMsg('afilMsg','Completá los campos obligatorios.',false);return;}
+  if(!nombre||!email||!pass||!mascotaNombre){setMsg('afilMsg','Completa los campos obligatorios.',false);return;}
   try{
     const nroSocio = await generarNroSocio();
     const cred=await auth.createUserWithEmailAndPassword(email,pass);
-    await db.collection('usuarios').doc(cred.user.uid).set({
+    const token = generarToken();
+    const mascotaId = generarMascotaId(nroSocio, 0);
+    const mascota = {
+      nombre:mascotaNombre, raza:mascotaRaza, fechaNacimiento:afilFechaMascota, foto:'',
+      mascotaId, token,
+      servicios: CATALOGO_SERVICIOS.map(s => ({...s}))
+    };
+    const userData = {
       uid:cred.user.uid,nombre,apellido,email,telefono:tel,fechaNacimiento:'',
       rol:'afiliado',estado:'activo',
       nroSocio,
       plan:plan||'Sin definir',
-      mascotas:[{nombre:mascotaNombre,raza:mascotaRaza,fechaNacimiento:afilFechaMascota,foto:''}],
+      mascotas:[{...mascota, plan:plan||'Sin definir'}],
       creadoEn:TS()
-    });
-    setMsg('afilMsg','✓ Afiliado '+nombre+' creado y activado.',true);
+    };
+    await db.collection('usuarios').doc(cred.user.uid).set(userData);
+    // Sync public
+    await syncMascotaPublica(userData, {...mascota, plan:plan||'Sin definir'}, 0);
+    setMsg('afilMsg','Afiliado '+nombre+' creado y activado.',true);
     ['afilNombre','afilApellido','afilEmail','afilTel','afilPass','afilMascota','afilRaza','afilPlan'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('formNuevoAfiliado').style.display='none';
     cargarUsuariosAdmin();
@@ -661,14 +901,14 @@ async function crearPrestador(){
   const nombre=v('prestNombre'),apellido=v('prestApellido'),email=v('prestEmail');
   const clinica=v('prestClinica'),pass=document.getElementById('prestPass').value;
   setMsg('prestMsg','',true);
-  if(!nombre||!email||!pass){setMsg('prestMsg','Completá los campos.',false);return;}
+  if(!nombre||!email||!pass){setMsg('prestMsg','Completa los campos.',false);return;}
   try{
     const cred=await auth.createUserWithEmailAndPassword(email,pass);
     await db.collection('usuarios').doc(cred.user.uid).set({
       uid:cred.user.uid,nombre,apellido,email,clinica,
       rol:'prestador',estado:'activo',creadoEn:TS()
     });
-    setMsg('prestMsg','✓ Prestador '+nombre+' creado.',true);
+    setMsg('prestMsg','Prestador '+nombre+' creado.',true);
     ['prestNombre','prestApellido','prestEmail','prestClinica','prestPass'].forEach(id=>document.getElementById(id).value='');
   }catch(e){setMsg('prestMsg',e.code==='auth/email-already-in-use'?'Email ya registrado.':'Error: '+e.message,false);}
 }
@@ -688,7 +928,7 @@ async function cargarAtencionesAdmin(){
           <div style="text-align:right;"><strong style="color:#1A5FB4;">$${a.monto?.toLocaleString('es-AR')}</strong><div style="margin-top:4px;"><span style="background:${col};color:white;font-size:.65rem;font-weight:700;padding:2px 9px;border-radius:100px;">${a.estado.toUpperCase()}</span></div></div>
         </div>
         ${a.estado==='pendiente'?`<div style="margin-top:8px;display:flex;gap:8px;">
-          <button onclick="procesarAtencion('${d.id}','pagado')" class="bmini bverde">✓ Aprobar</button>
+          <button onclick="procesarAtencion('${d.id}','pagado')" class="bmini bverde">Aprobar</button>
           <button onclick="procesarAtencion('${d.id}','rechazado')" class="bmini brojo">Rechazar</button>
         </div>`:''}
       </div>`;
@@ -722,46 +962,56 @@ async function cargarDashboard(){
     const afiliados = todos.filter(u=>u.rol==='afiliado');
     const activos = afiliados.filter(u=>u.estado==='activo');
     const pendientes = afiliados.filter(u=>u.estado==='pendiente');
-    const suspendidos = afiliados.filter(u=>u.estado==='suspendido');
 
-    // Mascotas
-    const todasMascotas = afiliados.flatMap(u=>u.mascotas||(u.mascota?[u.mascota]:[]));
+    const todasMascotas = afiliados.flatMap(u=>u.mascotas||[]);
 
-    // Distribución por plan
     const planCount = {};
     todasMascotas.forEach(m=>{
       const p = m.plan||'Sin definir';
       planCount[p] = (planCount[p]||0)+1;
     });
 
-    // Facturación estimada (solo activos)
     const PRECIOS = {'MEDIPaw Urgencias':23988,'MEDIPaw Joven':58788,'MEDIPaw Adulto':54388,'MEDIPaw Senior':70788};
     let facturacion = 0;
     activos.forEach(u=>{
-      const mascs = u.mascotas||(u.mascota?[u.mascota]:[]);
+      const mascs = u.mascotas||[];
       mascs.forEach(m=>{ facturacion += PRECIOS[m.plan]||0; });
     });
 
-    // Últimos registros
     const ultimos = [...afiliados].sort((a,b)=>{
       const ta = a.creadoEn?.seconds||0, tb = b.creadoEn?.seconds||0;
       return tb - ta;
     }).slice(0,5);
 
-    // Breakeven
     const COSTO_FIJO = 6500000;
     const pct = facturacion > 0 ? Math.min(Math.round((facturacion/COSTO_FIJO)*100),100) : 0;
 
     const planColors = {
-      'MEDIPaw Urgencias':'#ef4444',
-      'MEDIPaw Joven':'#22c55e',
-      'MEDIPaw Adulto':'#1A5FB4',
-      'MEDIPaw Senior':'#f59e0b',
-      'Sin definir':'#9ca3af'
+      'MEDIPaw Urgencias':'#ef4444','MEDIPaw Joven':'#22c55e',
+      'MEDIPaw Adulto':'#1A5FB4','MEDIPaw Senior':'#f59e0b','Sin definir':'#9ca3af'
     };
 
+    // Solicitudes pendientes
+    let solHtml = '';
+    try {
+      const solSnap = await db.collection('solicitudes').orderBy('creadoEn','desc').limit(10).get();
+      if (!solSnap.empty) {
+        solHtml = `<div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;border:1px solid rgba(26,95,180,.08);box-shadow:0 2px 8px rgba(26,95,180,.06);">
+          <div style="font-size:.75rem;font-weight:800;color:#0D1B3E;text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;">Solicitudes recientes</div>
+          ${solSnap.docs.map(d => {
+            const s = d.data();
+            const f = s.creadoEn?.toDate?.()?.toLocaleDateString('es-AR')||'';
+            return `<div style="padding:8px 0;border-bottom:1px solid #f5f7fa;font-size:.82rem;">
+              <strong>${s.solicitanteNombre||'—'}</strong> · ${s.solicitanteTel||''}<br>
+              <span style="color:var(--suave);">${s.mascotaNombre||''} · ${s.servicioKey||''} · ${f}</span>
+              ${s.nota?`<br><span style="color:#9ca3af;font-style:italic;">${s.nota}</span>`:''}
+            </div>`;
+          }).join('')}
+        </div>`;
+      }
+    } catch(e) {}
+
     el.innerHTML = `
-      <!-- KPIs principales -->
       <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:16px;">
         <div style="background:white;border-radius:16px;padding:20px;border:1px solid rgba(26,95,180,.08);box-shadow:0 2px 8px rgba(26,95,180,.06);">
           <div style="font-size:.7rem;font-weight:700;color:#5a6a8a;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Afiliados activos</div>
@@ -774,18 +1024,17 @@ async function cargarDashboard(){
           <div style="font-size:.72rem;color:#9ca3af;margin-top:4px;">en ${activos.length} titulares activos</div>
         </div>
         <div style="background:white;border-radius:16px;padding:20px;border:1px solid rgba(26,95,180,.08);box-shadow:0 2px 8px rgba(26,95,180,.06);">
-          <div style="font-size:.7rem;font-weight:700;color:#5a6a8a;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Pendientes activación</div>
+          <div style="font-size:.7rem;font-weight:700;color:#5a6a8a;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Pendientes activacion</div>
           <div style="font-size:2.5rem;font-weight:900;color:#f59e0b;line-height:1;">${pendientes.length}</div>
-          <div style="font-size:.72rem;color:#9ca3af;margin-top:4px;">requieren revisión</div>
+          <div style="font-size:.72rem;color:#9ca3af;margin-top:4px;">requieren revision</div>
         </div>
         <div style="background:white;border-radius:16px;padding:20px;border:1px solid rgba(26,95,180,.08);box-shadow:0 2px 8px rgba(26,95,180,.06);">
-          <div style="font-size:.7rem;font-weight:700;color:#5a6a8a;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Facturación estimada</div>
+          <div style="font-size:.7rem;font-weight:700;color:#5a6a8a;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Facturacion estimada</div>
           <div style="font-size:1.6rem;font-weight:900;color:#22c55e;line-height:1;">$${facturacion.toLocaleString('es-AR')}</div>
           <div style="font-size:.72rem;color:#9ca3af;margin-top:4px;">/mes · solo activos</div>
         </div>
       </div>
 
-      <!-- BREAKEVEN -->
       <div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;border:1px solid rgba(26,95,180,.08);box-shadow:0 2px 8px rgba(26,95,180,.06);">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
           <div style="font-size:.75rem;font-weight:800;color:#0D1B3E;text-transform:uppercase;letter-spacing:.5px;">Progreso al breakeven</div>
@@ -800,11 +1049,10 @@ async function cargarDashboard(){
         </div>
       </div>
 
-      <!-- DISTRIBUCIÓN POR PLAN -->
       <div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;border:1px solid rgba(26,95,180,.08);box-shadow:0 2px 8px rgba(26,95,180,.06);">
         <div style="font-size:.75rem;font-weight:800;color:#0D1B3E;text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;">Mascotas por plan</div>
         ${Object.entries(planCount).length === 0
-          ? '<p style="color:#9ca3af;font-size:.82rem;">Sin datos aún.</p>'
+          ? '<p style="color:#9ca3af;font-size:.82rem;">Sin datos aun.</p>'
           : Object.entries(planCount).map(([plan,count])=>{
               const total = todasMascotas.length || 1;
               const pctPlan = Math.round((count/total)*100);
@@ -821,11 +1069,12 @@ async function cargarDashboard(){
             }).join('')}
       </div>
 
-      <!-- ÚLTIMOS REGISTROS -->
+      ${solHtml}
+
       <div style="background:white;border-radius:16px;padding:20px;border:1px solid rgba(26,95,180,.08);box-shadow:0 2px 8px rgba(26,95,180,.06);">
-        <div style="font-size:.75rem;font-weight:800;color:#0D1B3E;text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;">Últimos registros</div>
+        <div style="font-size:.75rem;font-weight:800;color:#0D1B3E;text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;">Ultimos registros</div>
         ${ultimos.length === 0
-          ? '<p style="color:#9ca3af;font-size:.82rem;">Sin registros aún.</p>'
+          ? '<p style="color:#9ca3af;font-size:.82rem;">Sin registros aun.</p>'
           : ultimos.map(u=>{
               const col = u.estado==='activo'?'#22c55e':u.estado==='pendiente'?'#f59e0b':'#ef4444';
               const fecha = u.creadoEn?.toDate?.()?.toLocaleDateString('es-AR')||'—';
@@ -851,9 +1100,8 @@ function toggleFormAfiliado(){
 
 // RENDER
 function renderPanel(data){
-  const{rol,nombre,apellido,mascotas,mascota,plan,clinica}=data;
-  // Compatibilidad: soportar tanto mascota (viejo) como mascotas (nuevo)
-  const listaMascotas = mascotas || (mascota ? [mascota] : []);
+  const{rol,nombre,apellido,mascotas,plan,clinica}=data;
+  const listaMascotas = mascotas || [];
   const primeraMascota = listaMascotas[0] || {};
   let html='';
   if(rol==='afiliado'){
@@ -882,19 +1130,19 @@ function renderPanel(data){
           <div><label style="font-size:.8rem;font-weight:700;display:block;margin-bottom:4px;">Fecha de nacimiento</label><input type="date" id="newMascotaFecha" class="input-field"></div>
           <select id="newMascotaPlan" class="input-field" style="margin-top:4px;">
             <option value="">Plan de esta mascota...</option>
-            <option value="MEDIPaw Urgencias">MEDIPaw Urgencias — $23.988/mes (todas las edades)</option>
-            <option value="MEDIPaw Joven">MEDIPaw Joven — $58.788/mes (hasta 1 año)</option>
-            <option value="MEDIPaw Adulto">MEDIPaw Adulto — $54.388/mes (1 a 7 años)</option>
-            <option value="MEDIPaw Senior">MEDIPaw Senior — $70.788/mes (más de 7 años)</option>
+            <option value="MEDIPaw Urgencias">MEDIPaw Urgencias — $23.988/mes</option>
+            <option value="MEDIPaw Joven">MEDIPaw Joven — $58.788/mes</option>
+            <option value="MEDIPaw Adulto">MEDIPaw Adulto — $54.388/mes</option>
+            <option value="MEDIPaw Senior">MEDIPaw Senior — $70.788/mes</option>
           </select>
           <div>
-            <label class="foto-label" for="newMascotaFoto">📷 &nbsp;Foto (opcional)</label>
+            <label class="foto-label" for="newMascotaFoto">Foto (opcional)</label>
             <input type="file" id="newMascotaFoto" accept="image/*" style="display:none" onchange="previewFoto2(this)">
             <img id="newMascotaPreview" src="" style="width:64px;height:64px;border-radius:50%;object-fit:cover;margin-top:8px;display:none;border:3px solid #5BA3E8;">
           </div>
           <div style="display:flex;gap:8px;">
             <button onclick="agregarMascota('${data.uid}')" class="btn-primary" style="flex:1;">Agregar mascota</button>
-            <button onclick="toggleFormMascota()" class="bmini brojo" style="padding:10px 16px;">✕</button>
+            <button onclick="toggleFormMascota()" class="bmini brojo" style="padding:10px 16px;">X</button>
           </div>
           <p id="mascotaMsg" style="font-size:.8rem;"></p>
         </div>
@@ -923,14 +1171,14 @@ function renderPanel(data){
           </div>
           <div style="display:flex;gap:8px;margin-top:8px;align-items:center;">
             <select onchange="cambiarPlanMascota('${data.uid}',${i},this.value)" style="flex:1;padding:8px 12px;border:2px solid rgba(26,95,180,.15);border-radius:100px;font-family:'Nunito',sans-serif;font-size:.82rem;font-weight:700;color:#1A5FB4;background:#EBF3FC;outline:none;cursor:pointer;">
-              <option value="" ${!m.plan||m.plan==='Sin definir'?'selected':''}>Cambiar plan...</option>
-              <option value="MEDIPaw Urgencias" \${m.plan==='MEDIPaw Urgencias'?'selected':''}>MEDIPaw Urgencias</option>
-              <option value="MEDIPaw Joven" \${m.plan==='MEDIPaw Joven'?'selected':''}>MEDIPaw Joven</option>
-              <option value="MEDIPaw Adulto" \${m.plan==='MEDIPaw Adulto'?'selected':''}>MEDIPaw Adulto</option>
-              <option value="MEDIPaw Senior" \${m.plan==='MEDIPaw Senior'?'selected':''}>MEDIPaw Senior</option>
+              <option value="">Cambiar plan...</option>
+              <option value="MEDIPaw Urgencias" ${m.plan==='MEDIPaw Urgencias'?'selected':''}>MEDIPaw Urgencias</option>
+              <option value="MEDIPaw Joven" ${m.plan==='MEDIPaw Joven'?'selected':''}>MEDIPaw Joven</option>
+              <option value="MEDIPaw Adulto" ${m.plan==='MEDIPaw Adulto'?'selected':''}>MEDIPaw Adulto</option>
+              <option value="MEDIPaw Senior" ${m.plan==='MEDIPaw Senior'?'selected':''}>MEDIPaw Senior</option>
             </select>
-            <button onclick="descargarCarnet(${i},'${m.nombre}')" class="bmini" style="background:#EBF3FC;color:#1A5FB4;font-size:.8rem;padding:8px 12px;">⬇</button>
-            <button onclick="confirmarEliminarMascota('${data.uid}',${i},'${m.nombre}')" style="background:none;border:1px solid #fee2e2;color:#991b1b;border-radius:100px;padding:7px 12px;font-size:.8rem;cursor:pointer;">🗑</button>
+            <button onclick="descargarCarnet(${i},'${m.nombre}')" class="bmini" style="background:#EBF3FC;color:#1A5FB4;font-size:.8rem;padding:8px 12px;">DL</button>
+            <button onclick="confirmarEliminarMascota('${data.uid}',${i},'${m.nombre}')" style="background:none;border:1px solid #fee2e2;color:#991b1b;border-radius:100px;padding:7px 12px;font-size:.8rem;cursor:pointer;">X</button>
           </div>
         </div>`).join('')}
     </div>
@@ -938,47 +1186,47 @@ function renderPanel(data){
     <div class="seccion">
       <div class="stit">Mi foto de perfil</div>
       ${data.fotoTitular?`<img src="${data.fotoTitular}" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:3px solid #5BA3E8;margin-bottom:10px;">`:''}
-      <label class="foto-label" for="uploadFotoTitular">🧑 &nbsp;${data.fotoTitular?'Cambiar foto':'Subir mi foto'}</label>
+      <label class="foto-label" for="uploadFotoTitular">${data.fotoTitular?'Cambiar foto':'Subir mi foto'}</label>
       <input type="file" id="uploadFotoTitular" accept="image/*" style="display:none" onchange="actualizarFotoTitular(this,'${data.uid}')">
       <p id="fotoTitularMsg" style="font-size:.8rem;margin-top:6px;"></p>
     </div>
 
-    <div class="seccion"><div class="stit">Cambiar contraseña</div>
-      <input type="password" id="nuevaPass" placeholder="Nueva contraseña" class="input-field">
+    <div class="seccion"><div class="stit">Cambiar contrasena</div>
+      <input type="password" id="nuevaPass" placeholder="Nueva contrasena" class="input-field">
       <button onclick="cambiarPass()" class="btn-primary" style="margin-top:10px;">Actualizar</button>
       <p id="passMsg" style="font-size:.8rem;margin-top:8px;"></p>
     </div>`;
 
   }else if(rol==='prestador'){
-    html=`<div class="panel-header"><div><div class="panel-rol prestador">Prestador</div><div class="panel-nombre">${nombre} ${apellido||''}</div>${clinica?`<div style="font-size:.85rem;color:#5a6a8a;">${clinica}</div>`:''}</div><div style="font-size:3rem;">🏥</div></div>
-    <div class="seccion"><div class="stit">Registrar atención</div>
+    html=`<div class="panel-header"><div><div class="panel-rol prestador">Prestador</div><div class="panel-nombre">${nombre} ${apellido||''}</div>${clinica?`<div style="font-size:.85rem;color:#5a6a8a;">${clinica}</div>`:''}</div><div style="font-size:3rem;">&#x1F3E5;</div></div>
+    <div class="seccion"><div class="stit">Registrar atencion</div>
       <div class="fstack">
         <input type="email" id="atenAfiliado" placeholder="Email del afiliado *" class="input-field">
         <input type="text" id="atenMascota" placeholder="Nombre de la mascota" class="input-field">
-        <textarea id="atenDescripcion" placeholder="Descripción *" class="input-field" style="height:80px;resize:vertical;"></textarea>
+        <textarea id="atenDescripcion" placeholder="Descripcion *" class="input-field" style="height:80px;resize:vertical;"></textarea>
         <input type="number" id="atenMonto" placeholder="Monto ($) *" class="input-field">
-        <button onclick="cargarAtencion()" class="btn-primary">Registrar atención</button>
+        <button onclick="cargarAtencion()" class="btn-primary">Registrar atencion</button>
         <p id="atenMsg" style="font-size:.8rem;"></p>
       </div>
     </div>
     <div class="seccion"><div class="stit">Historial</div><div id="historialAtenciones"><p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p></div></div>
-    <div class="seccion"><div class="stit">Cambiar contraseña</div>
-      <input type="password" id="nuevaPass" placeholder="Nueva contraseña" class="input-field">
+    <div class="seccion"><div class="stit">Cambiar contrasena</div>
+      <input type="password" id="nuevaPass" placeholder="Nueva contrasena" class="input-field">
       <button onclick="cambiarPass()" class="btn-primary" style="margin-top:10px;">Actualizar</button>
       <p id="passMsg" style="font-size:.8rem;margin-top:8px;"></p>
     </div>`;
     setTimeout(cargarHistorial,300);
 
   }else if(rol==='admin'){
-    html=`<div class="panel-header"><div><div class="panel-rol admin">Administrador</div><div class="panel-nombre">Panel MEDIPaw</div></div><div style="font-size:2.5rem;">⚙️</div></div>
+    html=`<div class="panel-header"><div><div class="panel-rol admin">Administrador</div><div class="panel-nombre">Panel MEDIPaw</div></div><div style="font-size:2.5rem;">&#x2699;&#xFE0F;</div></div>
     <div class="tabs">
-      <button class="tab active" onclick="switchTab('dashboard',this)">📊 Dashboard</button>
+      <button class="tab active" onclick="switchTab('dashboard',this)">Dashboard</button>
       <button class="tab" onclick="switchTab('afiliados',this)">Afiliados</button>
       <button class="tab" onclick="switchTab('prestadores',this)">Prestadores</button>
       <button class="tab" onclick="switchTab('pagos',this)">Pagos</button>
     </div>
     <div id="tab-dashboard" class="tab-content">
-      <div id="dashboard-content"><p style="color:#5a6a8a;font-size:.85rem;padding:20px 0;">Cargando métricas...</p></div>
+      <div id="dashboard-content"><p style="color:#5a6a8a;font-size:.85rem;padding:20px 0;">Cargando metricas...</p></div>
     </div>
     <div id="tab-afiliados" class="tab-content" style="display:none;">
       <div class="seccion">
@@ -994,23 +1242,23 @@ function renderPanel(data){
               <input type="text" id="afilApellido" placeholder="Apellido" class="input-field">
             </div>
             <input type="email" id="afilEmail" placeholder="Email *" class="input-field">
-            <input type="tel" id="afilTel" placeholder="Teléfono" class="input-field">
-            <input type="password" id="afilPass" placeholder="Contraseña inicial *" class="input-field">
+            <input type="tel" id="afilTel" placeholder="Telefono" class="input-field">
+            <input type="password" id="afilPass" placeholder="Contrasena inicial *" class="input-field">
             <div class="frow">
               <input type="text" id="afilMascota" placeholder="Mascota *" class="input-field">
               <input type="text" id="afilRaza" placeholder="Raza" class="input-field">
             </div>
             <div><label style="font-size:0.75rem;font-weight:700;display:block;margin-bottom:4px;">Fecha nac. mascota</label><input type="date" id="afilFechaMascota" class="input-field"></div>
             <select id="afilPlan" class="input-field">
-                          <option value="">Plan...</option>
-            <option value="MEDIPaw Urgencias">MEDIPaw Urgencias</option>
-            <option value="MEDIPaw Joven">MEDIPaw Joven</option>
-            <option value="MEDIPaw Adulto">MEDIPaw Adulto</option>
-            <option value="MEDIPaw Senior">MEDIPaw Senior</option>
-          </select>
+              <option value="">Plan...</option>
+              <option value="MEDIPaw Urgencias">MEDIPaw Urgencias</option>
+              <option value="MEDIPaw Joven">MEDIPaw Joven</option>
+              <option value="MEDIPaw Adulto">MEDIPaw Adulto</option>
+              <option value="MEDIPaw Senior">MEDIPaw Senior</option>
+            </select>
             <div style="display:flex;gap:8px;">
               <button onclick="crearAfiliado()" class="btn-primary" style="flex:1;">Crear afiliado</button>
-              <button onclick="toggleFormAfiliado()" class="bmini brojo" style="padding:10px 16px;">✕</button>
+              <button onclick="toggleFormAfiliado()" class="bmini brojo" style="padding:10px 16px;">X</button>
             </div>
             <p id="afilMsg" style="font-size:.8rem;"></p>
           </div>
@@ -1026,8 +1274,8 @@ function renderPanel(data){
             <input type="text" id="prestApellido" placeholder="Apellido" class="input-field">
           </div>
           <input type="email" id="prestEmail" placeholder="Email *" class="input-field">
-          <input type="text" id="prestClinica" placeholder="Clínica / Consultorio" class="input-field">
-          <input type="password" id="prestPass" placeholder="Contraseña inicial *" class="input-field">
+          <input type="text" id="prestClinica" placeholder="Clinica / Consultorio" class="input-field">
+          <input type="password" id="prestPass" placeholder="Contrasena inicial *" class="input-field">
           <button onclick="crearPrestador()" class="btn-primary">Crear prestador</button>
           <p id="prestMsg" style="font-size:.8rem;"></p>
         </div>
