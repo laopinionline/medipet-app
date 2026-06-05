@@ -706,8 +706,142 @@ function switchTab(tab,btn){
   document.querySelectorAll('.tab-content').forEach(t=>t.style.display='none');
   document.getElementById('tab-'+tab).style.display='block';
   btn.classList.add('active');
+  if(tab==='dashboard')cargarDashboard();
   if(tab==='afiliados')cargarUsuariosAdmin();
   if(tab==='pagos')cargarAtencionesAdmin();
+}
+
+async function cargarDashboard(){
+  const el = document.getElementById('dashboard-content');
+  if(!el) return;
+  el.innerHTML = '<p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p>';
+
+  try {
+    const snap = await db.collection('usuarios').get();
+    const todos = snap.docs.map(d=>({id:d.id,...d.data()}));
+    const afiliados = todos.filter(u=>u.rol==='afiliado');
+    const activos = afiliados.filter(u=>u.estado==='activo');
+    const pendientes = afiliados.filter(u=>u.estado==='pendiente');
+    const suspendidos = afiliados.filter(u=>u.estado==='suspendido');
+
+    // Mascotas
+    const todasMascotas = afiliados.flatMap(u=>u.mascotas||(u.mascota?[u.mascota]:[]));
+
+    // Distribución por plan
+    const planCount = {};
+    todasMascotas.forEach(m=>{
+      const p = m.plan||'Sin definir';
+      planCount[p] = (planCount[p]||0)+1;
+    });
+
+    // Facturación estimada (solo activos)
+    const PRECIOS = {'MEDIPaw Urgencias':23988,'MEDIPaw Joven':58788,'MEDIPaw Adulto':54388,'MEDIPaw Senior':70788};
+    let facturacion = 0;
+    activos.forEach(u=>{
+      const mascs = u.mascotas||(u.mascota?[u.mascota]:[]);
+      mascs.forEach(m=>{ facturacion += PRECIOS[m.plan]||0; });
+    });
+
+    // Últimos registros
+    const ultimos = [...afiliados].sort((a,b)=>{
+      const ta = a.creadoEn?.seconds||0, tb = b.creadoEn?.seconds||0;
+      return tb - ta;
+    }).slice(0,5);
+
+    // Breakeven
+    const COSTO_FIJO = 6500000;
+    const pct = facturacion > 0 ? Math.min(Math.round((facturacion/COSTO_FIJO)*100),100) : 0;
+
+    const planColors = {
+      'MEDIPaw Urgencias':'#ef4444',
+      'MEDIPaw Joven':'#22c55e',
+      'MEDIPaw Adulto':'#1A5FB4',
+      'MEDIPaw Senior':'#f59e0b',
+      'Sin definir':'#9ca3af'
+    };
+
+    el.innerHTML = `
+      <!-- KPIs principales -->
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:16px;">
+        <div style="background:white;border-radius:16px;padding:20px;border:1px solid rgba(26,95,180,.08);box-shadow:0 2px 8px rgba(26,95,180,.06);">
+          <div style="font-size:.7rem;font-weight:700;color:#5a6a8a;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Afiliados activos</div>
+          <div style="font-size:2.5rem;font-weight:900;color:#1A5FB4;line-height:1;">${activos.length}</div>
+          <div style="font-size:.72rem;color:#9ca3af;margin-top:4px;">de ${afiliados.length} totales</div>
+        </div>
+        <div style="background:white;border-radius:16px;padding:20px;border:1px solid rgba(26,95,180,.08);box-shadow:0 2px 8px rgba(26,95,180,.06);">
+          <div style="font-size:.7rem;font-weight:700;color:#5a6a8a;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Mascotas afiliadas</div>
+          <div style="font-size:2.5rem;font-weight:900;color:#2272D9;line-height:1;">${todasMascotas.length}</div>
+          <div style="font-size:.72rem;color:#9ca3af;margin-top:4px;">en ${activos.length} titulares activos</div>
+        </div>
+        <div style="background:white;border-radius:16px;padding:20px;border:1px solid rgba(26,95,180,.08);box-shadow:0 2px 8px rgba(26,95,180,.06);">
+          <div style="font-size:.7rem;font-weight:700;color:#5a6a8a;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Pendientes activación</div>
+          <div style="font-size:2.5rem;font-weight:900;color:#f59e0b;line-height:1;">${pendientes.length}</div>
+          <div style="font-size:.72rem;color:#9ca3af;margin-top:4px;">requieren revisión</div>
+        </div>
+        <div style="background:white;border-radius:16px;padding:20px;border:1px solid rgba(26,95,180,.08);box-shadow:0 2px 8px rgba(26,95,180,.06);">
+          <div style="font-size:.7rem;font-weight:700;color:#5a6a8a;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Facturación estimada</div>
+          <div style="font-size:1.6rem;font-weight:900;color:#22c55e;line-height:1;">$${facturacion.toLocaleString('es-AR')}</div>
+          <div style="font-size:.72rem;color:#9ca3af;margin-top:4px;">/mes · solo activos</div>
+        </div>
+      </div>
+
+      <!-- BREAKEVEN -->
+      <div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;border:1px solid rgba(26,95,180,.08);box-shadow:0 2px 8px rgba(26,95,180,.06);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <div style="font-size:.75rem;font-weight:800;color:#0D1B3E;text-transform:uppercase;letter-spacing:.5px;">Progreso al breakeven</div>
+          <div style="font-size:.8rem;font-weight:700;color:#1A5FB4;">${pct}% — $${facturacion.toLocaleString('es-AR')} / $6.500.000</div>
+        </div>
+        <div style="background:#EBF3FC;border-radius:100px;height:12px;overflow:hidden;">
+          <div style="background:linear-gradient(90deg,#1A5FB4,#5BA3E8);height:100%;width:${pct}%;border-radius:100px;transition:width .5s;"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:.72rem;color:#9ca3af;">
+          <span>$0</span>
+          <span style="color:#f59e0b;font-weight:700;">Meta: $6.500.000/mes</span>
+        </div>
+      </div>
+
+      <!-- DISTRIBUCIÓN POR PLAN -->
+      <div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;border:1px solid rgba(26,95,180,.08);box-shadow:0 2px 8px rgba(26,95,180,.06);">
+        <div style="font-size:.75rem;font-weight:800;color:#0D1B3E;text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;">Mascotas por plan</div>
+        ${Object.entries(planCount).length === 0
+          ? '<p style="color:#9ca3af;font-size:.82rem;">Sin datos aún.</p>'
+          : Object.entries(planCount).map(([plan,count])=>{
+              const total = todasMascotas.length || 1;
+              const pctPlan = Math.round((count/total)*100);
+              const col = planColors[plan]||'#9ca3af';
+              return `<div style="margin-bottom:12px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                  <span style="font-size:.82rem;font-weight:700;color:#1a2340;">${plan}</span>
+                  <span style="font-size:.78rem;font-weight:800;color:${col};">${count} mascota${count>1?'s':''} · ${pctPlan}%</span>
+                </div>
+                <div style="background:#f5f7fa;border-radius:100px;height:8px;overflow:hidden;">
+                  <div style="background:${col};height:100%;width:${pctPlan}%;border-radius:100px;"></div>
+                </div>
+              </div>`;
+            }).join('')}
+      </div>
+
+      <!-- ÚLTIMOS REGISTROS -->
+      <div style="background:white;border-radius:16px;padding:20px;border:1px solid rgba(26,95,180,.08);box-shadow:0 2px 8px rgba(26,95,180,.06);">
+        <div style="font-size:.75rem;font-weight:800;color:#0D1B3E;text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;">Últimos registros</div>
+        ${ultimos.length === 0
+          ? '<p style="color:#9ca3af;font-size:.82rem;">Sin registros aún.</p>'
+          : ultimos.map(u=>{
+              const col = u.estado==='activo'?'#22c55e':u.estado==='pendiente'?'#f59e0b':'#ef4444';
+              const fecha = u.creadoEn?.toDate?.()?.toLocaleDateString('es-AR')||'—';
+              return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f5f7fa;">
+                <div>
+                  <div style="font-size:.85rem;font-weight:700;color:#1a2340;">${u.nombre||''} ${u.apellido||''}</div>
+                  <div style="font-size:.72rem;color:#9ca3af;">${u.email||''} · ${fecha}</div>
+                </div>
+                <span style="background:${col};color:white;font-size:.62rem;font-weight:700;padding:2px 8px;border-radius:100px;white-space:nowrap;">${(u.estado||'').toUpperCase()}</span>
+              </div>`;
+            }).join('')}
+      </div>
+    `;
+  } catch(e) {
+    el.innerHTML = '<p style="color:#ef4444;">Error al cargar el dashboard: '+e.message+'</p>';
+  }
 }
 
 function toggleFormAfiliado(){
@@ -838,11 +972,15 @@ function renderPanel(data){
   }else if(rol==='admin'){
     html=`<div class="panel-header"><div><div class="panel-rol admin">Administrador</div><div class="panel-nombre">Panel MEDIPaw</div></div><div style="font-size:2.5rem;">⚙️</div></div>
     <div class="tabs">
-      <button class="tab active" onclick="switchTab('afiliados',this)">Afiliados</button>
+      <button class="tab active" onclick="switchTab('dashboard',this)">📊 Dashboard</button>
+      <button class="tab" onclick="switchTab('afiliados',this)">Afiliados</button>
       <button class="tab" onclick="switchTab('prestadores',this)">Prestadores</button>
       <button class="tab" onclick="switchTab('pagos',this)">Pagos</button>
     </div>
-    <div id="tab-afiliados" class="tab-content">
+    <div id="tab-dashboard" class="tab-content">
+      <div id="dashboard-content"><p style="color:#5a6a8a;font-size:.85rem;padding:20px 0;">Cargando métricas...</p></div>
+    </div>
+    <div id="tab-afiliados" class="tab-content" style="display:none;">
       <div class="seccion">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
           <div class="stit" style="margin-bottom:0;">Afiliados</div>
@@ -898,7 +1036,7 @@ function renderPanel(data){
     <div id="tab-pagos" class="tab-content" style="display:none;">
       <div class="seccion"><div class="stit">Atenciones y pagos</div><div id="listaAtenciones"><p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p></div></div>
     </div>`;
-    setTimeout(cargarUsuariosAdmin,300);
+    setTimeout(cargarDashboard,300);
   }
   document.getElementById('panelContent').innerHTML=html;
 }
