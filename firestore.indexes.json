@@ -1,0 +1,21 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "atenciones",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "prestadorId", "order": "ASCENDING" },
+        { "fieldPath": "fecha", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "atenciones",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "mascotaId", "order": "ASCENDING" },
+        { "fieldPath": "fecha", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
