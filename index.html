@@ -40,7 +40,18 @@ body{font-family:'Nunito',sans-serif;background:var(--fondo);color:var(--texto);
 .app-nav .logo{display:flex;align-items:center;gap:8px}
 .app-nav .logo .marca{font-weight:900;font-size:1.2rem;color:white}
 .app-nav .logo .marca span{color:var(--azul-claro)}
+.nav-right{display:flex;align-items:center;gap:10px}
 .btn-logout{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:white;font-family:'Nunito',sans-serif;font-size:.8rem;font-weight:700;padding:7px 16px;border-radius:100px;cursor:pointer}
+/* ROLE SWITCHER */
+.role-switcher{position:relative}
+.role-switcher-btn{background:rgba(91,163,232,.15);border:1px solid rgba(91,163,232,.3);color:#5BA3E8;font-family:'Nunito',sans-serif;font-size:.75rem;font-weight:700;padding:5px 12px;border-radius:100px;cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap}
+.role-switcher-btn:hover{background:rgba(91,163,232,.25)}
+.role-menu{display:none;position:absolute;top:100%;right:0;margin-top:6px;background:white;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.2);min-width:180px;overflow:hidden;z-index:20}
+.role-menu.open{display:block}
+.role-menu-item{padding:10px 16px;font-size:.82rem;font-weight:700;color:var(--texto);cursor:pointer;border-bottom:1px solid #f5f7fa;display:flex;align-items:center;gap:8px}
+.role-menu-item:last-child{border-bottom:none}
+.role-menu-item:hover{background:var(--azul-pale)}
+.role-menu-item.active{color:var(--azul);background:var(--azul-pale)}
 .app-body{max-width:600px;margin:0 auto;padding:24px 16px 80px}
 .panel-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px}
 .panel-rol{display:inline-block;background:var(--azul-pale);color:var(--azul);font-size:.7rem;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;padding:4px 10px;border-radius:100px;margin-bottom:6px}
@@ -83,7 +94,31 @@ body{font-family:'Nunito',sans-serif;background:var(--fondo);color:var(--texto);
 .ficha-actions button{padding:6px 12px;border:none;border-radius:100px;font-family:'Nunito',sans-serif;font-size:.72rem;font-weight:800;cursor:pointer}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--noche);color:white;padding:10px 20px;border-radius:100px;font-size:.82rem;font-weight:700;z-index:999;opacity:0;transition:opacity .3s}
 .toast.show{opacity:1}
-@media(max-width:500px){.frow{grid-template-columns:1fr}.auth-card{padding:28px 18px}}
+/* VET STYLES */
+.vet-metric{background:white;border-radius:16px;padding:18px;border:1px solid rgba(26,95,180,.08);box-shadow:0 2px 8px rgba(26,95,180,.06)}
+.vet-metric .vm-label{font-size:.7rem;font-weight:700;color:#5a6a8a;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+.vet-metric .vm-value{font-size:2rem;font-weight:900;line-height:1}
+.vet-metric .vm-sub{font-size:.72rem;color:#9ca3af;margin-top:4px}
+.vet-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.vet-action-btn{background:white;border:2px solid rgba(26,95,180,.12);border-radius:16px;padding:20px 16px;text-align:center;cursor:pointer;transition:all .2s;font-family:'Nunito',sans-serif}
+.vet-action-btn:hover{border-color:var(--azul);background:var(--azul-pale)}
+.vet-action-btn .va-icon{font-size:1.8rem;margin-bottom:6px}
+.vet-action-btn .va-text{font-size:.85rem;font-weight:800;color:var(--noche)}
+.search-box{position:relative}
+.search-box input{width:100%;padding:14px 16px 14px 42px;border:2px solid rgba(26,95,180,.15);border-radius:14px;font-family:'Nunito',sans-serif;font-size:.9rem;font-weight:600;background:white;outline:none}
+.search-box input:focus{border-color:var(--azul-medio)}
+.search-box::before{content:'\\1F50D';position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:1rem}
+.hc-entry{padding:14px;border-radius:12px;background:var(--fondo);margin-bottom:10px;border:1px solid rgba(26,95,180,.06);cursor:pointer;transition:border-color .2s}
+.hc-entry:hover{border-color:var(--azul-claro)}
+.hc-tipo{display:inline-block;font-size:.65rem;font-weight:800;padding:2px 8px;border-radius:100px;text-transform:uppercase;letter-spacing:.5px}
+.tipo-consulta{background:#dbeafe;color:#1d4ed8}
+.tipo-vacuna{background:#dcfce7;color:#166534}
+.tipo-estudio{background:#fef3c7;color:#92400e}
+.tipo-cirugia{background:#fce7f3;color:#9d174d}
+.tipo-urgencia{background:#fee2e2;color:#991b1b}
+.cobertura-ok{background:#dcfce7;border:1px solid #86efac;border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:10px}
+.cobertura-no{background:#fee2e2;border:1px solid #fca5a5;border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:10px}
+@media(max-width:500px){.frow{grid-template-columns:1fr}.auth-card{padding:28px 18px}.vet-actions{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -190,7 +225,15 @@ body{font-family:'Nunito',sans-serif;background:var(--fondo);color:var(--texto);
 <div id="appScreen">
   <nav class="app-nav">
     <div class="logo"><svg width="32" height="32"><use href="#mp-iso-w"/></svg><div class="marca">MEDI<span>Paw</span></div></div>
-    <button onclick="doLogout()" class="btn-logout">Salir</button>
+    <div class="nav-right">
+      <div class="role-switcher" id="roleSwitcher" style="display:none;">
+        <button class="role-switcher-btn" id="roleSwitcherBtn" onclick="toggleRoleMenu()">
+          <span id="roleSwitcherLabel">Viendo como: —</span> <span style="font-size:.6rem;">&#9662;</span>
+        </button>
+        <div class="role-menu" id="roleMenu"></div>
+      </div>
+      <button onclick="doLogout()" class="btn-logout">Salir</button>
+    </div>
   </nav>
   <div class="app-body"><div id="panelContent"></div></div>
 </div>
@@ -219,6 +262,38 @@ const CATALOGO_SERVICIOS = [
   { key:'vacuna', nombre:'Recordatorio de vacunas', detalle:'Te avisamos cuando toque', estado:'disponible' }
 ];
 
+// ── ROLES ──
+// Prioridad para vista por defecto: admin > prestador > afiliado
+const ROLE_PRIORITY = ['admin','prestador','afiliado'];
+const ROLE_LABELS = {admin:'Administrador',prestador:'Veterinario',afiliado:'Mis mascotas'};
+let currentUserData = null;
+let activeRole = 'afiliado';
+
+// Obtener roles del usuario (backward-compatible con campo `rol` string)
+function getUserRoles(data) {
+  if (data.roles && Array.isArray(data.roles) && data.roles.length > 0) {
+    return data.roles;
+  }
+  // Migración: rol string → roles array
+  if (data.rol) {
+    const roles = [data.rol];
+    // Todos tienen base afiliado si no lo incluyen ya
+    if (data.rol !== 'afiliado' && !roles.includes('afiliado')) {
+      roles.push('afiliado');
+    }
+    return roles;
+  }
+  return ['afiliado'];
+}
+
+// Elegir rol por defecto al login
+function getDefaultRole(roles) {
+  for (const r of ROLE_PRIORITY) {
+    if (roles.includes(r)) return r;
+  }
+  return 'afiliado';
+}
+
 // ── UTILIDADES ──
 function generarToken() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -241,10 +316,9 @@ function toast(msg) {
   setTimeout(() => el.classList.remove('show'), 2500);
 }
 
-// Deep link
 const PUBLIC_BASE = 'https://medipaw.com.ar/m/';
 
-// Detectar si viene con ?plan=X o ?registro=1 desde la landing
+// Detectar si viene con ?plan=X o ?registro=1
 (function() {
   const params = new URLSearchParams(window.location.search);
   const plan = params.get('plan');
@@ -273,13 +347,70 @@ function showScreen(id){
 function v(id){return(document.getElementById(id)?.value||'').trim();}
 function setMsg(id,msg,ok){const el=document.getElementById(id);if(el){el.textContent=msg;el.style.color=ok?'#22c55e':'#ef4444';}}
 
+// ── ROLE SWITCHER ──
+function setupRoleSwitcher(roles) {
+  const switcher = document.getElementById('roleSwitcher');
+  const label = document.getElementById('roleSwitcherLabel');
+  const menu = document.getElementById('roleMenu');
+  if (roles.length <= 1) {
+    switcher.style.display = 'none';
+    return;
+  }
+  switcher.style.display = 'block';
+  label.textContent = 'Viendo como: ' + ROLE_LABELS[activeRole];
+  menu.innerHTML = roles.map(r =>
+    `<div class="role-menu-item ${r===activeRole?'active':''}" onclick="switchRole('${r}')">
+      ${r==='admin'?'&#9881;&#65039;':r==='prestador'?'&#127973;':'&#128062;'} ${ROLE_LABELS[r]}
+    </div>`
+  ).join('');
+}
+
+function toggleRoleMenu() {
+  const menu = document.getElementById('roleMenu');
+  menu.classList.toggle('open');
+}
+
+function switchRole(role) {
+  activeRole = role;
+  document.getElementById('roleMenu').classList.remove('open');
+  if (currentUserData) {
+    setupRoleSwitcher(getUserRoles(currentUserData));
+    renderPanel(currentUserData);
+  }
+}
+
+// Close menu on outside click
+document.addEventListener('click', function(e) {
+  const switcher = document.getElementById('roleSwitcher');
+  if (switcher && !switcher.contains(e.target)) {
+    document.getElementById('roleMenu').classList.remove('open');
+  }
+});
+
 // AUTH STATE
 auth.onAuthStateChanged(async user=>{
   if(user){
     try{
       const snap=await db.collection('usuarios').doc(user.uid).get();
-      if(snap.exists){showScreen('appScreen');renderPanel({uid:user.uid,...snap.data()});}
-      else{setMsg('loginError','Tu registro esta siendo procesado.',false);await auth.signOut();showScreen('loginScreen');}
+      if(snap.exists){
+        const data = {uid:user.uid,...snap.data()};
+        // Migración: si tiene rol pero no roles, migrar en Firestore
+        if (data.rol && (!data.roles || !Array.isArray(data.roles))) {
+          const roles = getUserRoles(data);
+          await db.collection('usuarios').doc(user.uid).update({ roles });
+          data.roles = roles;
+        }
+        currentUserData = data;
+        const roles = getUserRoles(data);
+        activeRole = getDefaultRole(roles);
+        showScreen('appScreen');
+        setupRoleSwitcher(roles);
+        renderPanel(data);
+      } else {
+        setMsg('loginError','Tu registro esta siendo procesado.',false);
+        await auth.signOut();
+        showScreen('loginScreen');
+      }
     }catch(e){setMsg('loginError','Error al cargar perfil: '+e.message,false);showScreen('loginScreen');}
   }else{showScreen('loginScreen');}
 });
@@ -332,7 +463,7 @@ function comprimirFoto(file,MAX=300){
   });
 }
 
-// REGISTRO
+// REGISTRO (auto-registro siempre como afiliado)
 async function doRegistro(){
   const nombre=v('regNombre'),apellido=v('regApellido'),email=v('regEmail'),tel=v('regTel');
   const pass=document.getElementById('regPass').value;
@@ -361,14 +492,15 @@ async function doRegistro(){
     const mascota = {
       nombre:mascotaNombre, raza:mascotaRaza, fechaNacimiento:fechaMascota,
       plan:plan||'Sin definir', foto:fotoURL,
-      mascotaId: '', // se asigna al activar (cuando hay nroSocio)
+      mascotaId: '',
       token: token,
       servicios: CATALOGO_SERVICIOS.map(s => ({...s}))
     };
     await db.collection('usuarios').doc(uid).set({
       uid,nombre,apellido,email,telefono:tel,fechaNacimiento:fechaNac,
       fotoTitular:fotoTitularURL,
-      rol:'afiliado',estado:'pendiente',
+      rol:'afiliado', roles:['afiliado'],
+      estado:'pendiente',
       mascotas:[mascota],
       creadoEn:TS()
     });
@@ -419,13 +551,13 @@ async function agregarMascota(uid){
       servicios: CATALOGO_SERVICIOS.map(s => ({...s}))
     });
     await db.collection('usuarios').doc(uid).update({mascotas});
-    // Sync public if active and has mascotaId
     if (ud.estado === 'activo' && mascotaId) {
       await syncMascotaPublica(ud, mascotas[idx], idx);
     }
     if(msg){msg.textContent='+ '+nombre+' agregada.';msg.style.color='#22c55e';}
     const snapNew=await db.collection('usuarios').doc(uid).get();
-    renderPanel({uid,...snapNew.data()});
+    currentUserData = {uid,...snapNew.data()};
+    renderPanel(currentUserData);
   }catch(e){if(msg){msg.textContent='Error: '+e.message;msg.style.color='#ef4444';}}
 }
 
@@ -437,7 +569,6 @@ async function cambiarPlanMascota(uid, index, nuevoPlan) {
     const mascotas = [...(ud.mascotas || [])];
     mascotas[index] = { ...mascotas[index], plan: nuevoPlan };
     await db.collection('usuarios').doc(uid).update({ mascotas });
-    // Sync public
     if (mascotas[index].token && ud.estado === 'activo') {
       await syncMascotaPublica(ud, mascotas[index], index);
     }
@@ -455,7 +586,8 @@ async function actualizarFotoTitular(input, uid) {
     await db.collection('usuarios').doc(uid).update({ fotoTitular: foto });
     if(msg) { msg.textContent = 'Foto actualizada.'; msg.style.color = '#22c55e'; }
     const snap = await db.collection('usuarios').doc(uid).get();
-    renderPanel({ uid, ...snap.data() });
+    currentUserData = { uid, ...snap.data() };
+    renderPanel(currentUserData);
   } catch(e) {
     if(msg) { msg.textContent = 'Error: ' + e.message; msg.style.color = '#ef4444'; }
   }
@@ -507,7 +639,6 @@ async function syncMascotaPublica(userData, mascota, index) {
 }
 
 // ── ADMIN: FICHA DE MASCOTA ──
-// Ensure mascota has id+token; returns updated mascota
 function ensureMascotaFields(mascota, nroSocio, index) {
   let changed = false;
   if (!mascota.token) { mascota.token = generarToken(); changed = true; }
@@ -525,7 +656,6 @@ async function adminGuardarServicios(uid, index) {
     const ud = snap.data();
     const mascotas = [...(ud.mascotas || [])];
     const m = mascotas[index];
-    // Read states from selects
     const srvEls = document.querySelectorAll(`[data-srv-uid="${uid}"][data-srv-idx="${index}"]`);
     srvEls.forEach(sel => {
       const key = sel.dataset.srvKey;
@@ -534,7 +664,6 @@ async function adminGuardarServicios(uid, index) {
     });
     mascotas[index] = m;
     await db.collection('usuarios').doc(uid).update({ mascotas });
-    // Sync public
     if (m.token && ud.estado === 'activo') {
       await syncMascotaPublica(ud, m, index);
     }
@@ -568,11 +697,9 @@ async function adminRegenerarToken(uid, index) {
     const newToken = generarToken();
     mascotas[index].token = newToken;
     await db.collection('usuarios').doc(uid).update({ mascotas });
-    // Delete old public doc
     if (oldToken) {
       try { await db.collection('mascotas_publicas').doc(oldToken).delete(); } catch(e) {}
     }
-    // Create new public doc
     if (ud.estado === 'activo') {
       await syncMascotaPublica(ud, mascotas[index], index);
     }
@@ -581,49 +708,433 @@ async function adminRegenerarToken(uid, index) {
   } catch(e) { alert('Error: ' + e.message); }
 }
 
-// ── PRESTADOR: CARGAR ATENCION ──
-async function cargarAtencion(){
-  const afiliado=v('atenAfiliado'),mascota=v('atenMascota'),descripcion=v('atenDescripcion');
-  const monto=parseFloat(document.getElementById('atenMonto').value);
-  setMsg('atenMsg','',true);
-  if(!afiliado||!descripcion||!monto){setMsg('atenMsg','Completa todos los campos.',false);return;}
-  try{
-    const snap=await db.collection('usuarios').doc(auth.currentUser.uid).get();
-    const p=snap.data();
-    await db.collection('atenciones').add({
-      prestadorId:auth.currentUser.uid,
-      prestadorNombre:(p.nombre||'')+' '+(p.apellido||''),
-      afiliadoEmail:afiliado,mascota,descripcion,monto,
-      estado:'pendiente',fecha:TS()
+// ══════════════════════════════════════════════
+// ══  PORTAL DEL VETERINARIO (prestador)     ══
+// ══════════════════════════════════════════════
+
+// ── VET: DASHBOARD ──
+async function cargarDashboardVet() {
+  const el = document.getElementById('vet-dashboard-content');
+  if (!el) return;
+  el.innerHTML = '<p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p>';
+  try {
+    const uid = auth.currentUser.uid;
+    const now = new Date();
+    const mesInicio = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const snap = await db.collection('atenciones')
+      .where('prestadorId','==',uid)
+      .orderBy('fecha','desc')
+      .get();
+
+    const todas = snap.docs.map(d => ({id:d.id,...d.data()}));
+    const delMes = todas.filter(a => {
+      const f = a.fecha?.toDate?.();
+      return f && f >= mesInicio;
     });
-    setMsg('atenMsg','Atencion registrada. MEDIPaw procesara el pago.',true);
-    ['atenAfiliado','atenMascota','atenDescripcion','atenMonto'].forEach(id=>document.getElementById(id).value='');
-    cargarHistorial();
-  }catch(e){setMsg('atenMsg','Error: '+e.message,false);}
+
+    const pacientesDistintos = new Set(delMes.map(a => a.mascotaId).filter(Boolean)).size;
+    const montoMes = delMes.reduce((s,a) => s + (a.monto||0), 0);
+    const recientes = todas.slice(0, 8);
+
+    el.innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;">
+        <div class="vet-metric">
+          <div class="vm-label">Atenciones del mes</div>
+          <div class="vm-value" style="color:var(--azul);">${delMes.length}</div>
+          <div class="vm-sub">${now.toLocaleDateString('es-AR',{month:'long'})}</div>
+        </div>
+        <div class="vet-metric">
+          <div class="vm-label">Pacientes distintos</div>
+          <div class="vm-value" style="color:#2272D9;">${pacientesDistintos}</div>
+          <div class="vm-sub">este mes</div>
+        </div>
+        <div class="vet-metric">
+          <div class="vm-label">A liquidar</div>
+          <div class="vm-value" style="color:#22c55e;font-size:1.4rem;">$${montoMes.toLocaleString('es-AR')}</div>
+          <div class="vm-sub">pendiente de pago</div>
+        </div>
+      </div>
+
+      <div style="font-size:.75rem;font-weight:800;color:var(--noche);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Atenciones recientes</div>
+      ${recientes.length === 0
+        ? '<p style="color:#9ca3af;font-size:.85rem;">Sin atenciones registradas aun.</p>'
+        : recientes.map(a => {
+            const fecha = a.fecha?.toDate?.()?.toLocaleDateString('es-AR')||'';
+            const tipo = a.tipo || 'consulta';
+            return `<div class="hc-entry" onclick="vetVerHistoria('${a.mascotaId||''}')">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                <div>
+                  <span class="hc-tipo tipo-${tipo}">${tipo}</span>
+                  <div style="font-size:.85rem;font-weight:700;margin-top:4px;">${a.mascotaNombre||a.mascota||'—'}</div>
+                  <div style="font-size:.78rem;color:var(--suave);">${a.diagnostico||a.descripcion||''}</div>
+                </div>
+                <div style="text-align:right;">
+                  <div style="font-size:.78rem;color:#9ca3af;">${fecha}</div>
+                  <div style="font-size:.85rem;font-weight:800;color:var(--azul);margin-top:2px;">$${(a.monto||0).toLocaleString('es-AR')}</div>
+                </div>
+              </div>
+            </div>`;
+          }).join('')}
+    `;
+  } catch(e) {
+    el.innerHTML = '<p style="color:#ef4444;">Error: '+e.message+'</p>';
+  }
 }
 
-async function cargarHistorial(){
-  const lista=document.getElementById('historialAtenciones');if(!lista)return;
-  try{
-    const snap=await db.collection('atenciones').where('prestadorId','==',auth.currentUser.uid).orderBy('fecha','desc').get();
-    if(snap.empty){lista.innerHTML='<p style="color:#5a6a8a;font-size:.85rem;">Sin atenciones aun.</p>';return;}
-    lista.innerHTML=snap.docs.map(d=>{
-      const a=d.data(),fecha=a.fecha?.toDate?.()?.toLocaleDateString('es-AR')||'',
-        col=a.estado==='pagado'?'#22c55e':a.estado==='rechazado'?'#ef4444':'#f59e0b';
-      return `<div class="aitem"><div style="display:flex;justify-content:space-between;"><strong>${a.mascota||'—'}</strong><span style="background:${col};color:white;font-size:.65rem;font-weight:700;padding:2px 9px;border-radius:100px;">${a.estado.toUpperCase()}</span></div>
-        <div style="font-size:.8rem;color:#5a6a8a;margin-top:3px;">${a.descripcion}</div>
-        <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:.8rem;"><span style="color:#5a6a8a;">${fecha}</span><strong style="color:#1A5FB4;">$${a.monto?.toLocaleString('es-AR')}</strong></div></div>`;
+// ── VET: BUSCAR PACIENTE ──
+let vetSearchTimeout = null;
+function vetBuscar() {
+  clearTimeout(vetSearchTimeout);
+  vetSearchTimeout = setTimeout(vetEjecutarBusqueda, 400);
+}
+
+async function vetEjecutarBusqueda() {
+  const q = v('vetSearchInput').toLowerCase();
+  const lista = document.getElementById('vetSearchResults');
+  if (!lista) return;
+  if (q.length < 2) { lista.innerHTML = '<p style="color:#9ca3af;font-size:.82rem;">Ingresa al menos 2 caracteres.</p>'; return; }
+  lista.innerHTML = '<p style="color:#5a6a8a;font-size:.82rem;">Buscando...</p>';
+
+  try {
+    const snap = await db.collection('usuarios').get();
+    const resultados = snap.docs.map(d => ({id:d.id,...d.data()}))
+      .filter(u => {
+        const roles = getUserRoles(u);
+        if (!roles.includes('afiliado')) return false;
+        const nombre = ((u.nombre||'') + ' ' + (u.apellido||'')).toLowerCase();
+        const nro = (u.nroSocio||'').toLowerCase();
+        return nombre.includes(q) || nro.includes(q);
+      });
+
+    if (resultados.length === 0) {
+      lista.innerHTML = '<p style="color:#9ca3af;font-size:.82rem;">No se encontraron afiliados.</p>';
+      return;
+    }
+
+    lista.innerHTML = resultados.map(u => {
+      const mascotas = u.mascotas || [];
+      const estadoOk = u.estado === 'activo';
+      return `<div class="uitem">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <div>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+              <strong>${u.nombre||''} ${u.apellido||''}</strong>
+              ${u.nroSocio?`<span style="background:#EBF3FC;color:#1A5FB4;font-size:.68rem;font-weight:800;padding:2px 8px;border-radius:100px;">${u.nroSocio}</span>`:''}
+            </div>
+          </div>
+        </div>
+        <div class="${estadoOk?'cobertura-ok':'cobertura-no'}" style="margin-top:10px;">
+          <span style="font-size:1.2rem;">${estadoOk?'&#9989;':'&#10060;'}</span>
+          <div>
+            <div style="font-size:.82rem;font-weight:800;">${estadoOk?'Plan activo — cobertura vigente':'Plan inactivo — sin cobertura'}</div>
+            <div style="font-size:.72rem;color:${estadoOk?'#166534':'#991b1b'};">Estado: ${u.estado||'desconocido'}</div>
+          </div>
+        </div>
+        ${mascotas.length > 0 ? `
+          <div style="margin-top:12px;">
+            <div style="font-size:.72rem;font-weight:800;color:var(--suave);text-transform:uppercase;margin-bottom:8px;">Mascotas (${mascotas.length})</div>
+            ${mascotas.map(m => `
+              <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--fondo);border-radius:12px;margin-bottom:6px;cursor:pointer;border:1px solid rgba(26,95,180,.06);" onclick="vetVerHistoria('${m.mascotaId||''}')">
+                ${m.foto
+                  ? `<img src="${m.foto}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid #5BA3E8;">`
+                  : `<div style="width:36px;height:36px;border-radius:50%;background:#EBF3FC;display:flex;align-items:center;justify-content:center;font-size:.9rem;">&#128062;</div>`}
+                <div style="flex:1;">
+                  <div style="font-size:.85rem;font-weight:700;">${m.nombre||'—'}</div>
+                  <div style="font-size:.72rem;color:var(--suave);">${m.raza||''} ${m.mascotaId?'· '+m.mascotaId:''}</div>
+                </div>
+                <div style="font-size:.72rem;font-weight:700;color:var(--azul);">${m.plan||'Sin plan'}</div>
+                <span style="font-size:.8rem;color:var(--suave);">&#10145;</span>
+              </div>
+            `).join('')}
+          </div>
+        ` : ''}
+      </div>`;
     }).join('');
-  }catch(e){lista.innerHTML='<p style="color:#ef4444;">Error al cargar.</p>';}
+  } catch(e) {
+    lista.innerHTML = '<p style="color:#ef4444;">Error: '+e.message+'</p>';
+  }
 }
 
-// ── ADMIN: USUARIOS ──
+// ── VET: HISTORIA CLINICA ──
+async function vetVerHistoria(mascotaId) {
+  if (!mascotaId) { toast('Esta mascota no tiene ID asignado aun.'); return; }
+  vetCurrentMascotaId = mascotaId;
+  // Cambiar a tab historia
+  const tabs = document.querySelectorAll('.vet-tab');
+  tabs.forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.vet-tab-content').forEach(t => t.style.display = 'none');
+  const tabHistoria = document.getElementById('vet-tab-historia');
+  if (tabHistoria) tabHistoria.style.display = 'block';
+  // Marcar tab
+  const tabBtns = document.querySelectorAll('.vet-tab-btn');
+  tabBtns.forEach(b => { if(b.dataset.tab==='historia') b.classList.add('active'); });
+
+  const el = document.getElementById('vet-historia-content');
+  if (!el) return;
+  el.innerHTML = '<p style="color:#5a6a8a;font-size:.85rem;">Cargando historia clinica...</p>';
+
+  try {
+    // Buscar datos de la mascota
+    let mascotaNombre = mascotaId;
+    let titularNombre = '';
+    let mascotaFoto = '';
+    let mascotaRaza = '';
+    let mascotaPlan = '';
+    const usSnap = await db.collection('usuarios').get();
+    for (const d of usSnap.docs) {
+      const u = d.data();
+      const mascotas = u.mascotas || [];
+      const m = mascotas.find(m => m.mascotaId === mascotaId);
+      if (m) {
+        mascotaNombre = m.nombre || mascotaId;
+        mascotaFoto = m.foto || '';
+        mascotaRaza = m.raza || '';
+        mascotaPlan = m.plan || '';
+        titularNombre = (u.nombre||'') + ' ' + (u.apellido||'');
+        break;
+      }
+    }
+
+    // Cargar atenciones de esta mascota
+    const snap = await db.collection('atenciones')
+      .where('mascotaId','==',mascotaId)
+      .orderBy('fecha','desc')
+      .get();
+
+    const atenciones = snap.docs.map(d => ({id:d.id,...d.data()}));
+
+    el.innerHTML = `
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+        ${mascotaFoto
+          ? `<img src="${mascotaFoto}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid #5BA3E8;">`
+          : `<div style="width:48px;height:48px;border-radius:50%;background:#EBF3FC;display:flex;align-items:center;justify-content:center;font-size:1.4rem;">&#128062;</div>`}
+        <div style="flex:1;">
+          <div style="font-size:1.1rem;font-weight:900;color:var(--noche);">${mascotaNombre}</div>
+          <div style="font-size:.78rem;color:var(--suave);">${mascotaRaza} · ${mascotaPlan} · ${mascotaId}</div>
+          <div style="font-size:.72rem;color:#9ca3af;">Titular: ${titularNombre}</div>
+        </div>
+        <button onclick="vetMostrarFormAtencion('${mascotaId}','${mascotaNombre.replace(/'/g,"\\'")}')" class="bmini bverde" style="font-size:.8rem;padding:8px 14px;">+ Nueva atencion</button>
+      </div>
+      <div id="formNuevaAtencionWrap" style="display:none;"></div>
+      ${atenciones.length === 0
+        ? '<p style="color:#9ca3af;font-size:.85rem;padding:20px 0;">Sin atenciones registradas para esta mascota.</p>'
+        : atenciones.map(a => {
+            const fecha = a.fecha?.toDate?.();
+            const fechaStr = fecha ? fecha.toLocaleDateString('es-AR') : '';
+            const tipo = a.tipo || 'consulta';
+            return `<div class="hc-entry" style="cursor:default;">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                <div style="flex:1;">
+                  <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                    <span class="hc-tipo tipo-${tipo}">${tipo}</span>
+                    <span style="font-size:.72rem;color:#9ca3af;">${fechaStr}</span>
+                  </div>
+                  ${a.diagnostico?`<div style="font-size:.85rem;font-weight:700;margin-top:6px;color:var(--noche);">Diagnostico: ${a.diagnostico}</div>`:''}
+                  ${a.tratamiento?`<div style="font-size:.82rem;color:var(--suave);margin-top:2px;">Tratamiento: ${a.tratamiento}</div>`:''}
+                  ${a.descripcion && !a.diagnostico?`<div style="font-size:.82rem;color:var(--suave);margin-top:4px;">${a.descripcion}</div>`:''}
+                  <div style="font-size:.72rem;color:#9ca3af;margin-top:4px;">Atendido por: ${a.prestadorNombre||'—'}</div>
+                  ${a.adjuntos && a.adjuntos.length > 0 ? `<div style="font-size:.72rem;color:var(--azul);margin-top:4px;">&#128206; ${a.adjuntos.length} adjunto${a.adjuntos.length>1?'s':''}</div>` : ''}
+                </div>
+                <div style="text-align:right;">
+                  <div style="font-size:.9rem;font-weight:800;color:var(--azul);">$${(a.monto||0).toLocaleString('es-AR')}</div>
+                  ${a.estado?`<div style="font-size:.65rem;font-weight:700;padding:2px 8px;border-radius:100px;margin-top:4px;background:${a.estado==='pagado'?'#dcfce7':a.estado==='rechazado'?'#fee2e2':'#fef3c7'};color:${a.estado==='pagado'?'#166534':a.estado==='rechazado'?'#991b1b':'#92400e'};">${a.estado.toUpperCase()}</div>`:''}
+                </div>
+              </div>
+            </div>`;
+          }).join('')}
+    `;
+  } catch(e) {
+    el.innerHTML = '<p style="color:#ef4444;">Error: '+e.message+'</p>';
+  }
+}
+
+let vetCurrentMascotaId = '';
+
+function vetMostrarFormAtencion(mascotaId, mascotaNombre) {
+  const wrap = document.getElementById('formNuevaAtencionWrap');
+  if (!wrap) return;
+  if (wrap.style.display !== 'none') { wrap.style.display = 'none'; return; }
+
+  // Verificar auto-atencion: vet no puede cargar atencion a su propia mascota
+  const uid = auth.currentUser.uid;
+  const userData = currentUserData;
+  const propiasMascotas = (userData?.mascotas || []).map(m => m.mascotaId).filter(Boolean);
+  if (propiasMascotas.includes(mascotaId)) {
+    toast('No podes cargar atenciones a tu propia mascota.');
+    return;
+  }
+
+  wrap.style.display = 'block';
+  wrap.innerHTML = `
+    <div class="form-box" style="margin-bottom:16px;">
+      <div style="font-size:.75rem;font-weight:800;color:var(--noche);margin-bottom:10px;text-transform:uppercase;">Nueva atencion — ${mascotaNombre}</div>
+      <div class="fstack">
+        <select id="vetAtenTipo" class="input-field">
+          <option value="consulta">Consulta</option>
+          <option value="vacuna">Vacuna</option>
+          <option value="estudio">Estudio</option>
+          <option value="cirugia">Cirugia</option>
+          <option value="urgencia">Urgencia</option>
+        </select>
+        <textarea id="vetAtenDiag" placeholder="Diagnostico *" class="input-field" style="height:70px;resize:vertical;"></textarea>
+        <textarea id="vetAtenTrat" placeholder="Tratamiento" class="input-field" style="height:60px;resize:vertical;"></textarea>
+        <input type="number" id="vetAtenMonto" placeholder="Monto ($) *" class="input-field">
+        <div>
+          <label class="foto-label" for="vetAtenAdj">Adjuntar archivos (opcional)</label>
+          <input type="file" id="vetAtenAdj" multiple accept="image/*,.pdf" style="display:none">
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button onclick="vetGuardarAtencion('${mascotaId}','${mascotaNombre.replace(/'/g,"\\'")}')" class="btn-primary" style="flex:1;">Guardar atencion</button>
+          <button onclick="document.getElementById('formNuevaAtencionWrap').style.display='none'" class="bmini brojo" style="padding:10px 16px;">X</button>
+        </div>
+        <p id="vetAtenMsg" style="font-size:.8rem;"></p>
+      </div>
+    </div>
+  `;
+}
+
+async function vetGuardarAtencion(mascotaId, mascotaNombre) {
+  const tipo = v('vetAtenTipo');
+  const diagnostico = v('vetAtenDiag');
+  const tratamiento = v('vetAtenTrat');
+  const monto = parseFloat(document.getElementById('vetAtenMonto')?.value || '0');
+  setMsg('vetAtenMsg','',true);
+
+  if (!diagnostico || !monto) {
+    setMsg('vetAtenMsg','Completa diagnostico y monto.',false);
+    return;
+  }
+
+  try {
+    const uid = auth.currentUser.uid;
+    const p = currentUserData;
+
+    // Adjuntos (base64, solo imagenes por ahora)
+    const adjuntos = [];
+    const adjInput = document.getElementById('vetAtenAdj');
+    if (adjInput && adjInput.files) {
+      for (let i = 0; i < Math.min(adjInput.files.length, 3); i++) {
+        const file = adjInput.files[i];
+        if (file.type.startsWith('image/')) {
+          try {
+            const b64 = await comprimirFoto(file, 600);
+            adjuntos.push({ nombre: file.name, tipo: file.type, data: b64 });
+          } catch(e) {}
+        }
+      }
+    }
+
+    await db.collection('atenciones').add({
+      prestadorId: uid,
+      prestadorNombre: (p.nombre||'') + ' ' + (p.apellido||''),
+      mascotaId: mascotaId,
+      mascotaNombre: mascotaNombre,
+      tipo: tipo,
+      diagnostico: diagnostico,
+      tratamiento: tratamiento,
+      monto: monto,
+      adjuntos: adjuntos,
+      estado: 'pendiente',
+      fecha: TS()
+    });
+
+    toast('Atencion registrada correctamente.');
+    document.getElementById('formNuevaAtencionWrap').style.display = 'none';
+    vetVerHistoria(mascotaId);
+  } catch(e) {
+    setMsg('vetAtenMsg','Error: '+e.message,false);
+  }
+}
+
+// ── VET: MIS PACIENTES ──
+async function cargarMisPacientes() {
+  const el = document.getElementById('vet-pacientes-content');
+  if (!el) return;
+  el.innerHTML = '<p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p>';
+
+  try {
+    const uid = auth.currentUser.uid;
+    const snap = await db.collection('atenciones')
+      .where('prestadorId','==',uid)
+      .get();
+
+    const mascotaIds = [...new Set(snap.docs.map(d => d.data().mascotaId).filter(Boolean))];
+
+    if (mascotaIds.length === 0) {
+      el.innerHTML = '<p style="color:#9ca3af;font-size:.85rem;">Todavia no atendiste a ninguna mascota.</p>';
+      return;
+    }
+
+    // Buscar info de cada mascota
+    const usSnap = await db.collection('usuarios').get();
+    const pacientes = [];
+    for (const d of usSnap.docs) {
+      const u = d.data();
+      const mascotas = u.mascotas || [];
+      for (const m of mascotas) {
+        if (m.mascotaId && mascotaIds.includes(m.mascotaId)) {
+          const atencionesCount = snap.docs.filter(ad => ad.data().mascotaId === m.mascotaId).length;
+          const ultimaAtencion = snap.docs
+            .filter(ad => ad.data().mascotaId === m.mascotaId)
+            .map(ad => ad.data().fecha?.toDate?.())
+            .filter(Boolean)
+            .sort((a,b) => b-a)[0];
+          pacientes.push({
+            ...m,
+            titularNombre: (u.nombre||'') + ' ' + (u.apellido||''),
+            nroSocio: u.nroSocio || '',
+            estadoTitular: u.estado || '',
+            atencionesCount,
+            ultimaAtencion
+          });
+        }
+      }
+    }
+
+    el.innerHTML = pacientes.map(p => `
+      <div style="display:flex;align-items:center;gap:10px;padding:14px;background:var(--fondo);border-radius:12px;margin-bottom:8px;cursor:pointer;border:1px solid rgba(26,95,180,.06);" onclick="vetVerHistoria('${p.mascotaId}')">
+        ${p.foto
+          ? `<img src="${p.foto}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:2px solid #5BA3E8;">`
+          : `<div style="width:40px;height:40px;border-radius:50%;background:#EBF3FC;display:flex;align-items:center;justify-content:center;font-size:1rem;">&#128062;</div>`}
+        <div style="flex:1;">
+          <div style="font-size:.85rem;font-weight:700;">${p.nombre||'—'} <span style="font-size:.72rem;color:#9ca3af;font-weight:400;">${p.mascotaId}</span></div>
+          <div style="font-size:.72rem;color:var(--suave);">${p.raza||''} · Titular: ${p.titularNombre} ${p.nroSocio?'('+p.nroSocio+')':''}</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:.82rem;font-weight:800;color:var(--azul);">${p.atencionesCount} at.</div>
+          <div style="font-size:.68rem;color:#9ca3af;">${p.ultimaAtencion?p.ultimaAtencion.toLocaleDateString('es-AR'):''}</div>
+        </div>
+      </div>
+    `).join('');
+  } catch(e) {
+    el.innerHTML = '<p style="color:#ef4444;">Error: '+e.message+'</p>';
+  }
+}
+
+// VET: Tab switching
+function vetSwitchTab(tab, btn) {
+  document.querySelectorAll('.vet-tab-btn').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.vet-tab-content').forEach(t => t.style.display = 'none');
+  document.getElementById('vet-tab-' + tab).style.display = 'block';
+  btn.classList.add('active');
+  if (tab === 'inicio') cargarDashboardVet();
+  if (tab === 'pacientes') cargarMisPacientes();
+}
+
+// ══════════════════════════════════════════════
+// ══  ADMIN (sin cambios sustanciales)        ══
+// ══════════════════════════════════════════════
+
 async function cargarUsuariosAdmin(){
   const lista=document.getElementById('listaUsuarios');if(!lista)return;
   lista.innerHTML='<p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p>';
   try{
     const snap=await db.collection('usuarios').get();
-    const todos=snap.docs.map(d=>({id:d.id,...d.data()})).filter(u=>u.rol==='afiliado');
+    const todos=snap.docs.map(d=>({id:d.id,...d.data()})).filter(u=>{
+      const roles = getUserRoles(u);
+      return roles.includes('afiliado');
+    });
     if(todos.length===0){lista.innerHTML='<p style="color:#5a6a8a;font-size:.85rem;">No hay afiliados registrados aun.</p>';return;}
     const pend=todos.filter(u=>u.estado==='pendiente');
     const resto=todos.filter(u=>u.estado!=='pendiente');
@@ -655,13 +1166,11 @@ function cardUsuario(u){
     ? mascotas.map(m => m.plan && m.plan !== 'Sin definir' ? `${m.nombre}: ${m.plan}` : null).filter(Boolean).join(' · ')
     : '';
 
-  // Ensure fields for each mascota
   let needsSave = false;
   mascotas.forEach((m, i) => {
     const r = ensureMascotaFields(m, u.nroSocio, i);
     if (r.changed) { mascotas[i] = r.mascota; needsSave = true; }
   });
-  // Auto-save if fields were missing (async, fire-and-forget)
   if (needsSave && u.id) {
     db.collection('usuarios').doc(u.id).update({ mascotas }).catch(() => {});
   }
@@ -677,18 +1186,16 @@ function cardUsuario(u){
         ${u.fechaNacimiento?`<div style="font-size:.75rem;color:#5a6a8a;margin-top:2px;">${u.fechaNacimiento}</div>`:''}
         ${planesTexto?`<div style="font-size:.75rem;font-weight:700;color:#1A5FB4;margin-top:4px;">${planesTexto}</div>`:'<div style="font-size:.75rem;color:#9ca3af;margin-top:4px;">Sin plan asignado</div>'}
 
-        <!-- MASCOTAS CON FICHA -->
         <div style="margin-top:10px;display:flex;flex-direction:column;gap:12px;">
           ${mascotas.map((m,i)=>{
             const srvIcons = SRV_ICONS_ADMIN;
             const servicios = m.servicios || [];
             return `
             <div style="background:white;border-radius:14px;padding:12px;border:1px solid rgba(26,95,180,.1);">
-              <!-- Mascota header -->
               <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
                 ${m.foto
                   ? `<img src="${m.foto}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid #5BA3E8;">`
-                  : `<div style="width:40px;height:40px;border-radius:50%;background:#EBF3FC;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;">🐾</div>`}
+                  : `<div style="width:40px;height:40px;border-radius:50%;background:#EBF3FC;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;">&#128062;</div>`}
                 <div style="flex:1;">
                   <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
                     <strong style="font-size:.85rem;">${m.nombre||'—'}</strong>
@@ -698,8 +1205,6 @@ function cardUsuario(u){
                   ${m.mascotaId?`<div style="font-size:.68rem;color:#9ca3af;font-family:monospace;">ID: ${m.mascotaId}</div>`:''}
                 </div>
               </div>
-
-              <!-- Servicios -->
               <div style="font-size:.7rem;font-weight:800;color:var(--suave);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Servicios</div>
               ${servicios.map(s => {
                 const ic = srvIcons[s.key] || { icon:'*', bg:'#EBF3FC' };
@@ -716,8 +1221,6 @@ function cardUsuario(u){
                   </select>
                 </div>`;
               }).join('')}
-
-              <!-- Actions -->
               <div class="ficha-actions">
                 <button onclick="adminGuardarServicios('${u.id}',${i})" style="background:#dcfce7;color:#166534;">Guardar</button>
                 ${m.token?`<button onclick="adminCopiarEnlace('${m.token}')" style="background:#EBF3FC;color:#1A5FB4;">Copiar enlace</button>`:''}
@@ -728,7 +1231,6 @@ function cardUsuario(u){
           }).join('')}
         </div>
 
-        <!-- DATOS INTERNOS -->
         <details style="margin-top:10px;">
           <summary style="font-size:.72rem;font-weight:700;color:#9ca3af;cursor:pointer;list-style:none;display:flex;align-items:center;gap:4px;">
             <span>&#9656;</span> Datos internos
@@ -738,6 +1240,7 @@ function cardUsuario(u){
             <div><strong>UID Firebase:</strong> <span style="font-family:monospace;font-size:.68rem;">${u.uid||u.id}</span></div>
             <div><strong>Email:</strong> ${u.email||'—'}</div>
             <div><strong>Estado:</strong> ${u.estado||'—'}</div>
+            <div><strong>Roles:</strong> ${(getUserRoles(u)).join(', ')}</div>
             <div><strong>Fecha alta:</strong> ${fecha||'—'}</div>
             ${mascotas.map(m=>`<div><strong>${m.nombre||'mascota'}:</strong> ${m.plan||'Sin plan'} ${m.mascotaId?'('+m.mascotaId+')':''}</div>`).join('')}
           </div>
@@ -748,7 +1251,6 @@ function cardUsuario(u){
       <span style="background:${col};color:white;font-size:.65rem;font-weight:700;padding:3px 9px;border-radius:100px;white-space:nowrap;flex-shrink:0;">${(u.estado||'pendiente').toUpperCase()}</span>
     </div>
 
-    <!-- ACCIONES -->
     <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
       ${u.estado!=='activo'?`<button onclick="cambiarEstado('${u.id}','activo')" class="bmini bverde">Activar</button>`:''}
       ${u.estado==='activo'?`<button onclick="cambiarEstado('${u.id}','suspendido')" class="bmini brojo">Suspender</button>`:''}
@@ -776,7 +1278,6 @@ async function cambiarEstado(uid,estado){
       const nroSocio = await generarNroSocio();
       update.nroSocio = nroSocio;
     }
-    // Assign mascotaIds if missing and sync public docs
     const nroSocio = ud.nroSocio || update.nroSocio;
     const mascotas = ud.mascotas ? [...ud.mascotas] : [];
     let mascotasChanged = false;
@@ -786,7 +1287,6 @@ async function cambiarEstado(uid,estado){
     }
     if (mascotasChanged) update.mascotas = mascotas;
     await db.collection('usuarios').doc(uid).update(update);
-    // Sync all mascotas to public
     const updatedSnap = await db.collection('usuarios').doc(uid).get();
     const updatedData = updatedSnap.data();
     const updatedMascotas = updatedData.mascotas || [];
@@ -812,7 +1312,6 @@ async function generarNroSocio() {
   return 'MP-' + String(num).padStart(4, '0');
 }
 
-// ── ELIMINAR MASCOTA ──
 async function confirmarEliminarMascota(uid, index, nombre) {
   if (!confirm(`Eliminas a ${nombre}? Esta accion no se puede deshacer.`)) return;
   try {
@@ -822,16 +1321,15 @@ async function confirmarEliminarMascota(uid, index, nombre) {
     const oldToken = mascotas[index]?.token;
     mascotas.splice(index, 1);
     await db.collection('usuarios').doc(uid).update({ mascotas });
-    // Delete public doc
     if (oldToken) {
       try { await db.collection('mascotas_publicas').doc(oldToken).delete(); } catch(e) {}
     }
     const snapNew = await db.collection('usuarios').doc(uid).get();
-    renderPanel({ uid, ...snapNew.data() });
+    currentUserData = { uid, ...snapNew.data() };
+    renderPanel(currentUserData);
   } catch(e) { alert('Error al eliminar: ' + e.message); }
 }
 
-// ── ELIMINAR USUARIO ──
 function confirmarEliminarUsuario(uid, nombre) {
   if (!confirm(`Eliminas el usuario ${nombre}?\n\nEsta accion elimina todos sus datos de MEDIPaw.`)) return;
   eliminarUsuario(uid);
@@ -842,7 +1340,6 @@ async function eliminarUsuario(uid) {
     const snap = await db.collection('usuarios').doc(uid).get();
     const ud = snap.data();
     const email = ud?.email || '';
-    // Delete public docs for all mascotas
     const mascotas = ud?.mascotas || [];
     for (const m of mascotas) {
       if (m.token) {
@@ -878,14 +1375,14 @@ async function crearAfiliado(){
     };
     const userData = {
       uid:cred.user.uid,nombre,apellido,email,telefono:tel,fechaNacimiento:'',
-      rol:'afiliado',estado:'activo',
+      rol:'afiliado', roles:['afiliado'],
+      estado:'activo',
       nroSocio,
       plan:plan||'Sin definir',
       mascotas:[{...mascota, plan:plan||'Sin definir'}],
       creadoEn:TS()
     };
     await db.collection('usuarios').doc(cred.user.uid).set(userData);
-    // Sync public
     await syncMascotaPublica(userData, {...mascota, plan:plan||'Sin definir'}, 0);
     setMsg('afilMsg','Afiliado '+nombre+' creado y activado.',true);
     ['afilNombre','afilApellido','afilEmail','afilTel','afilPass','afilMascota','afilRaza','afilPlan'].forEach(id=>document.getElementById(id).value='');
@@ -906,7 +1403,10 @@ async function crearPrestador(){
     const cred=await auth.createUserWithEmailAndPassword(email,pass);
     await db.collection('usuarios').doc(cred.user.uid).set({
       uid:cred.user.uid,nombre,apellido,email,clinica,
-      rol:'prestador',estado:'activo',creadoEn:TS()
+      rol:'prestador', roles:['prestador','afiliado'],
+      estado:'activo',
+      mascotas:[],
+      creadoEn:TS()
     });
     setMsg('prestMsg','Prestador '+nombre+' creado.',true);
     ['prestNombre','prestApellido','prestEmail','prestClinica','prestPass'].forEach(id=>document.getElementById(id).value='');
@@ -922,9 +1422,15 @@ async function cargarAtencionesAdmin(){
     lista.innerHTML=snap.docs.map(d=>{
       const a=d.data(),fecha=a.fecha?.toDate?.()?.toLocaleDateString('es-AR')||'',
         col=a.estado==='pagado'?'#22c55e':a.estado==='rechazado'?'#ef4444':'#f59e0b';
+      const tipo = a.tipo || '';
       return `<div class="aitem">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-          <div><strong>${a.prestadorNombre}</strong><div style="font-size:.8rem;color:#5a6a8a;">${a.descripcion}</div><div style="font-size:.75rem;color:#9ca3af;">${fecha} · ${a.afiliadoEmail}</div></div>
+          <div>
+            <strong>${a.prestadorNombre}</strong>
+            ${tipo?`<span class="hc-tipo tipo-${tipo}" style="margin-left:6px;">${tipo}</span>`:''}
+            <div style="font-size:.8rem;color:#5a6a8a;">${a.diagnostico||a.descripcion||''}</div>
+            <div style="font-size:.75rem;color:#9ca3af;">${fecha} · ${a.mascotaNombre||a.mascota||''} ${a.mascotaId?'('+a.mascotaId+')':''}</div>
+          </div>
           <div style="text-align:right;"><strong style="color:#1A5FB4;">$${a.monto?.toLocaleString('es-AR')}</strong><div style="margin-top:4px;"><span style="background:${col};color:white;font-size:.65rem;font-weight:700;padding:2px 9px;border-radius:100px;">${a.estado.toUpperCase()}</span></div></div>
         </div>
         ${a.estado==='pendiente'?`<div style="margin-top:8px;display:flex;gap:8px;">
@@ -959,7 +1465,10 @@ async function cargarDashboard(){
   try {
     const snap = await db.collection('usuarios').get();
     const todos = snap.docs.map(d=>({id:d.id,...d.data()}));
-    const afiliados = todos.filter(u=>u.rol==='afiliado');
+    const afiliados = todos.filter(u=>{
+      const roles = getUserRoles(u);
+      return roles.includes('afiliado');
+    });
     const activos = afiliados.filter(u=>u.estado==='activo');
     const pendientes = afiliados.filter(u=>u.estado==='pendiente');
 
@@ -991,7 +1500,6 @@ async function cargarDashboard(){
       'MEDIPaw Adulto':'#1A5FB4','MEDIPaw Senior':'#f59e0b','Sin definir':'#9ca3af'
     };
 
-    // Solicitudes pendientes
     let solHtml = '';
     try {
       const solSnap = await db.collection('solicitudes').orderBy('creadoEn','desc').limit(10).get();
@@ -1098,22 +1606,28 @@ function toggleFormAfiliado(){
   f.style.display=f.style.display==='none'?'block':'none';
 }
 
-// RENDER
+// ══════════════════════════════════════════════
+// ══  RENDER PRINCIPAL (por rol activo)        ══
+// ══════════════════════════════════════════════
+
 function renderPanel(data){
-  const{rol,nombre,apellido,mascotas,plan,clinica}=data;
+  const roles = getUserRoles(data);
+  const{nombre,apellido,mascotas,clinica}=data;
   const listaMascotas = mascotas || [];
   const primeraMascota = listaMascotas[0] || {};
   let html='';
-  if(rol==='afiliado'){
+
+  // ── VISTA AFILIADO (Mis mascotas) ──
+  if(activeRole==='afiliado'){
     const fotoHeader = data.fotoTitular || primeraMascota?.foto || '';
     html=`
     <div class="panel-header">
       <div>
-        <div class="panel-rol">Afiliado</div>
+        <div class="panel-rol">Mis mascotas</div>
         <div class="panel-nombre">${nombre} ${apellido||''}</div>
         ${data.nroSocio?`<div style="font-size:.8rem;color:#1A5FB4;font-weight:700;margin-top:2px;">${data.nroSocio}</div>`:''}
       </div>
-      ${fotoHeader?`<img src="${fotoHeader}" class="mascota-foto" alt="${nombre}">`:`<div class="mascota-ph">🐾</div>`}
+      ${fotoHeader?`<img src="${fotoHeader}" class="mascota-foto" alt="${nombre}">`:`<div class="mascota-ph">&#128062;</div>`}
     </div>
 
     <div class="seccion">
@@ -1154,7 +1668,7 @@ function renderPanel(data){
             <div style="font-size:.6rem;font-weight:700;letter-spacing:2px;opacity:.6;text-transform:uppercase;margin-bottom:2px;">PLAN</div>
             <div style="font-size:.85rem;font-weight:800;color:#5BA3E8;margin-bottom:10px;">${m.plan||'Sin definir'}</div>
             <div style="display:flex;align-items:center;gap:12px;">
-              ${m.foto?`<img src="${m.foto}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,.4);">`:`<div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:1.3rem;">🐾</div>`}
+              ${m.foto?`<img src="${m.foto}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,.4);">`:`<div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:1.3rem;">&#128062;</div>`}
               <div>
                 <div style="font-size:1.2rem;font-weight:900;line-height:1;">${m.nombre||'—'}</div>
                 <div style="font-size:.65rem;opacity:.65;text-transform:uppercase;letter-spacing:1px;">${m.raza||''}</div>
@@ -1197,28 +1711,75 @@ function renderPanel(data){
       <p id="passMsg" style="font-size:.8rem;margin-top:8px;"></p>
     </div>`;
 
-  }else if(rol==='prestador'){
-    html=`<div class="panel-header"><div><div class="panel-rol prestador">Prestador</div><div class="panel-nombre">${nombre} ${apellido||''}</div>${clinica?`<div style="font-size:.85rem;color:#5a6a8a;">${clinica}</div>`:''}</div><div style="font-size:3rem;">&#x1F3E5;</div></div>
-    <div class="seccion"><div class="stit">Registrar atencion</div>
-      <div class="fstack">
-        <input type="email" id="atenAfiliado" placeholder="Email del afiliado *" class="input-field">
-        <input type="text" id="atenMascota" placeholder="Nombre de la mascota" class="input-field">
-        <textarea id="atenDescripcion" placeholder="Descripcion *" class="input-field" style="height:80px;resize:vertical;"></textarea>
-        <input type="number" id="atenMonto" placeholder="Monto ($) *" class="input-field">
-        <button onclick="cargarAtencion()" class="btn-primary">Registrar atencion</button>
-        <p id="atenMsg" style="font-size:.8rem;"></p>
+  // ── VISTA PRESTADOR (Veterinario) ──
+  }else if(activeRole==='prestador'){
+    html=`
+    <div class="panel-header">
+      <div>
+        <div class="panel-rol prestador">Veterinario</div>
+        <div class="panel-nombre">${nombre} ${apellido||''}</div>
+        ${clinica?`<div style="font-size:.85rem;color:#5a6a8a;">${clinica}</div>`:''}
+      </div>
+      <div style="font-size:3rem;">&#127973;</div>
+    </div>
+
+    <div class="tabs">
+      <button class="vet-tab-btn tab active" data-tab="inicio" onclick="vetSwitchTab('inicio',this)">Inicio</button>
+      <button class="vet-tab-btn tab" data-tab="buscar" onclick="vetSwitchTab('buscar',this)">Buscar</button>
+      <button class="vet-tab-btn tab" data-tab="historia" onclick="vetSwitchTab('historia',this)">Historia</button>
+      <button class="vet-tab-btn tab" data-tab="pacientes" onclick="vetSwitchTab('pacientes',this)">Pacientes</button>
+    </div>
+
+    <!-- TAB INICIO -->
+    <div id="vet-tab-inicio" class="vet-tab-content">
+      <div class="vet-actions">
+        <div class="vet-action-btn" onclick="vetSwitchTab('buscar',document.querySelector('[data-tab=buscar]'))">
+          <div class="va-icon">&#128269;</div>
+          <div class="va-text">Buscar paciente</div>
+        </div>
+        <div class="vet-action-btn" onclick="vetSwitchTab('buscar',document.querySelector('[data-tab=buscar]'))">
+          <div class="va-icon">&#10133;</div>
+          <div class="va-text">Nueva atencion</div>
+        </div>
+      </div>
+      <div id="vet-dashboard-content"><p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p></div>
+    </div>
+
+    <!-- TAB BUSCAR -->
+    <div id="vet-tab-buscar" class="vet-tab-content" style="display:none;">
+      <div class="seccion">
+        <div class="stit">Buscar afiliado</div>
+        <div class="search-box">
+          <input type="text" id="vetSearchInput" placeholder="Nro socio (MP-0042) o nombre..." class="input-field" style="padding-left:42px;" oninput="vetBuscar()">
+        </div>
+        <div id="vetSearchResults" style="margin-top:14px;">
+          <p style="color:#9ca3af;font-size:.82rem;">Busca por numero de socio o nombre del titular.</p>
+        </div>
       </div>
     </div>
-    <div class="seccion"><div class="stit">Historial</div><div id="historialAtenciones"><p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p></div></div>
-    <div class="seccion"><div class="stit">Cambiar contrasena</div>
-      <input type="password" id="nuevaPass" placeholder="Nueva contrasena" class="input-field">
-      <button onclick="cambiarPass()" class="btn-primary" style="margin-top:10px;">Actualizar</button>
-      <p id="passMsg" style="font-size:.8rem;margin-top:8px;"></p>
-    </div>`;
-    setTimeout(cargarHistorial,300);
 
-  }else if(rol==='admin'){
-    html=`<div class="panel-header"><div><div class="panel-rol admin">Administrador</div><div class="panel-nombre">Panel MEDIPaw</div></div><div style="font-size:2.5rem;">&#x2699;&#xFE0F;</div></div>
+    <!-- TAB HISTORIA -->
+    <div id="vet-tab-historia" class="vet-tab-content" style="display:none;">
+      <div class="seccion">
+        <div class="stit">Historia clinica</div>
+        <div id="vet-historia-content">
+          <p style="color:#9ca3af;font-size:.82rem;">Busca un paciente y selecciona una mascota para ver su historia.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB PACIENTES -->
+    <div id="vet-tab-pacientes" class="vet-tab-content" style="display:none;">
+      <div class="seccion">
+        <div class="stit">Mis pacientes</div>
+        <div id="vet-pacientes-content"><p style="color:#9ca3af;font-size:.82rem;">Cargando...</p></div>
+      </div>
+    </div>`;
+    setTimeout(cargarDashboardVet, 300);
+
+  // ── VISTA ADMIN ──
+  }else if(activeRole==='admin'){
+    html=`<div class="panel-header"><div><div class="panel-rol admin">Administrador</div><div class="panel-nombre">Panel MEDIPaw</div></div><div style="font-size:2.5rem;">&#9881;&#65039;</div></div>
     <div class="tabs">
       <button class="tab active" onclick="switchTab('dashboard',this)">Dashboard</button>
       <button class="tab" onclick="switchTab('afiliados',this)">Afiliados</button>
