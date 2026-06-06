@@ -1025,11 +1025,23 @@ async function vetGuardarAtencion(mascotaId, mascotaNombre) {
       }
     }
 
+    // Buscar titularUid (dueño de la mascota)
+    let titularUid = '';
+    const usSnap = await db.collection('usuarios').get();
+    for (const d of usSnap.docs) {
+      const u = d.data();
+      if ((u.mascotas || []).some(m => m.mascotaId === mascotaId)) {
+        titularUid = d.id;
+        break;
+      }
+    }
+
     await db.collection('atenciones').add({
       prestadorId: uid,
       prestadorNombre: (p.nombre||'') + ' ' + (p.apellido||''),
       mascotaId: mascotaId,
       mascotaNombre: mascotaNombre,
+      titularUid: titularUid,
       tipo: tipo,
       diagnostico: diagnostico,
       tratamiento: tratamiento,
