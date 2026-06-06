@@ -1,0 +1,105 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helper: obtener roles del usuario ──
+    function getUserRoles() {
+      let userData = get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data;
+      return userData.roles;
+    }
+
+    function isAdmin() {
+      return request.auth != null && 'admin' in getUserRoles();
+    }
+
+    function isPrestador() {
+      return request.auth != null && 'prestador' in getUserRoles();
+    }
+
+    // ══════════════════════════════════════
+    // ══  USUARIOS                        ══
+    // ══════════════════════════════════════
+    // Cualquier usuario autenticado puede leer cualquier doc de usuarios
+    // (necesario para: búsqueda de pacientes por vet, listado admin,
+    //  lectura del propio perfil al login, generarNroSocio).
+    // Write: cada usuario escribe su propio doc; admin puede escribir cualquiera.
+    match /usuarios/{userId} {
+      allow get: if request.auth != null;
+      allow list: if request.auth != null;
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow update: if request.auth != null
+        && (request.auth.uid == userId || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    // ══════════════════════════════════════
+    // ══  MASCOTAS PUBLICAS               ══
+    // ══════════════════════════════════════
+    // Get público (ficha /m/{token}), list prohibido (no se puede enumerar).
+    // Write solo con auth (admin/portal sincronizan desde el portal).
+    match /mascotas_publicas/{token} {
+      allow get: if true;
+      allow list: if false;
+      allow write: if request.auth != null;
+    }
+
+    // ══════════════════════════════════════
+    // ══  SOLICITUDES                     ══
+    // ══════════════════════════════════════
+    // Create público (formulario "Me interesa" en la ficha pública).
+    // Read/update/delete solo con auth (admin gestiona).
+    match /solicitudes/{id} {
+      allow create: if true;
+      allow read, update, delete: if request.auth != null;
+    }
+
+    // ══════════════════════════════════════
+    // ══  ATENCIONES                      ══
+    // ══════════════════════════════════════
+    //
+    // Create: solo prestadores, y prestadorId debe ser el uid del vet.
+    //
+    // Read (get + list):
+    //   - Admin: lee todas (query sin filtro, para tab Pagos).
+    //   - Prestador: lee las que creó (query por prestadorId == uid)
+    //     y las de cualquier mascota (query por mascotaId, para HC).
+    //   - Afiliado: lee las de sus mascotas (query por titularUid == uid).
+    //
+    // Update: admin (procesar pagos) o el vet que la creó.
+    // Delete: solo admin.
+    //
+    // Nota: Firestore evalúa rules contra cada doc del resultado.
+    // Para que list funcione, la query del cliente DEBE incluir un filtro
+    // que satisfaga la regla (ej: .where('prestadorId','==',uid)).
+    // Las queries sin filtro solo funcionan para admin.
+    //
+    match /atenciones/{id} {
+      allow create: if request.auth != null
+        && isPrestador()
+        && request.resource.data.prestadorId == request.auth.uid;
+
+      allow get: if request.auth != null
+        && (isAdmin()
+            || isPrestador()
+            || resource.data.titularUid == request.auth.uid);
+
+      allow list: if request.auth != null
+        && (isAdmin()
+            || isPrestador()
+            || resource.data.titularUid == request.auth.uid);
+
+      allow update: if request.auth != null
+        && (isAdmin()
+            || resource.data.prestadorId == request.auth.uid);
+
+      allow delete: if isAdmin();
+    }
+
+    // ══════════════════════════════════════
+    // ══  CATCH-ALL: DENEGAR              ══
+    // ══════════════════════════════════════
+    // Cualquier colección no listada arriba queda bloqueada.
+    // NO hay catch-all permisivo.
+  }
+}
