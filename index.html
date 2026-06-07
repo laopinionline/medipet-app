@@ -1138,15 +1138,21 @@ function vetSwitchTab(tab, btn) {
 // ══  ADMIN (sin cambios sustanciales)        ══
 // ══════════════════════════════════════════════
 
+// Email de sistema excluido de listados de clientes
+const ADMIN_EMAIL = 'admin@medipet.com.ar';
+
+function esAfiliado(u) {
+  const roles = getUserRoles(u);
+  const mascotas = (u.mascotas || []).filter(Boolean);
+  return roles.includes('afiliado') && mascotas.length > 0 && u.email !== ADMIN_EMAIL;
+}
+
 async function cargarUsuariosAdmin(){
   const lista=document.getElementById('listaUsuarios');if(!lista)return;
   lista.innerHTML='<p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p>';
   try{
     const snap=await db.collection('usuarios').get();
-    const todos=snap.docs.map(d=>({id:d.id,...d.data()})).filter(u=>{
-      const roles = getUserRoles(u);
-      return roles.includes('afiliado');
-    });
+    const todos=snap.docs.map(d=>({id:d.id,...d.data()})).filter(u=> esAfiliado(u));
     if(todos.length===0){lista.innerHTML='<p style="color:#5a6a8a;font-size:.85rem;">No hay afiliados registrados aun.</p>';return;}
     const pend=todos.filter(u=>u.estado==='pendiente');
     const resto=todos.filter(u=>u.estado!=='pendiente');
@@ -1159,6 +1165,41 @@ async function cargarUsuariosAdmin(){
       html+=resto.map(u=>cardUsuario(u)).join('');
     }
     lista.innerHTML=html;
+  }catch(e){lista.innerHTML='<p style="color:#ef4444;">Error: '+e.message+'</p>';}
+}
+
+async function cargarPrestadoresAdmin(){
+  const lista=document.getElementById('listaPrestadores');if(!lista)return;
+  lista.innerHTML='<p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p>';
+  try{
+    const snap=await db.collection('usuarios').get();
+    const prestadores=snap.docs.map(d=>({id:d.id,...d.data()})).filter(u=>{
+      const roles = getUserRoles(u);
+      return roles.includes('prestador');
+    });
+    if(prestadores.length===0){lista.innerHTML='<p style="color:#5a6a8a;font-size:.85rem;">No hay prestadores registrados aun.</p>';return;}
+    lista.innerHTML=prestadores.map(u=>{
+      const col=u.estado==='activo'?'#22c55e':'#ef4444';
+      const fecha=u.creadoEn?.toDate?.()?.toLocaleDateString('es-AR')||'';
+      return `<div class="uitem">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+          <div style="flex:1;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;">
+              <strong style="font-size:1rem;">&#127973; ${u.nombre||''} ${u.apellido||''}</strong>
+            </div>
+            ${u.clinica?`<div style="font-size:.82rem;color:var(--azul);font-weight:700;">${u.clinica}</div>`:''}
+            <div style="font-size:.8rem;color:#5a6a8a;">${u.email||''}${u.telefono?' · '+u.telefono:''}</div>
+            <div style="font-size:.72rem;color:#9ca3af;margin-top:4px;">Roles: ${getUserRoles(u).join(', ')} · Alta: ${fecha||'—'}</div>
+          </div>
+          <span style="background:${col};color:white;font-size:.65rem;font-weight:700;padding:3px 9px;border-radius:100px;white-space:nowrap;flex-shrink:0;">${(u.estado||'—').toUpperCase()}</span>
+        </div>
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+          ${u.estado!=='activo'?`<button onclick="cambiarEstado('${u.id}','activo')" class="bmini bverde">Activar</button>`:''}
+          ${u.estado==='activo'?`<button onclick="cambiarEstado('${u.id}','suspendido')" class="bmini brojo">Suspender</button>`:''}
+          <button onclick="reenviarCredenciales('${u.email||''}')" class="bmini" style="background:#f0fdf4;color:#166534;">Reenviar acceso</button>
+        </div>
+      </div>`;
+    }).join('');
   }catch(e){lista.innerHTML='<p style="color:#ef4444;">Error: '+e.message+'</p>';}
 }
 
@@ -1188,62 +1229,63 @@ function cardUsuario(u){
   }
 
   return `<div class="uitem">
+    <!-- MASCOTAS PRIMERO -->
+    <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:12px;">
+      ${mascotas.map((m,i)=>{
+        const srvIcons = SRV_ICONS_ADMIN;
+        const servicios = m.servicios || [];
+        return `
+        <div style="background:white;border-radius:14px;padding:12px;border:1px solid rgba(26,95,180,.1);">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+            ${m.foto
+              ? `<img src="${m.foto}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid #5BA3E8;">`
+              : `<div style="width:40px;height:40px;border-radius:50%;background:#EBF3FC;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;">&#128062;</div>`}
+            <div style="flex:1;">
+              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                <strong style="font-size:.85rem;">${m.nombre||'—'}</strong>
+                ${m.plan&&m.plan!=='Sin definir'?`<span style="background:#EBF3FC;color:#1A5FB4;font-size:.65rem;font-weight:700;padding:1px 7px;border-radius:100px;">${m.plan}</span>`:''}
+              </div>
+              ${m.raza?`<div style="font-size:.75rem;color:#5a6a8a;">${m.raza}</div>`:''}
+              ${m.mascotaId?`<div style="font-size:.68rem;color:#9ca3af;font-family:monospace;">ID: ${m.mascotaId}</div>`:''}
+            </div>
+          </div>
+          <div style="font-size:.7rem;font-weight:800;color:var(--suave);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Servicios</div>
+          ${servicios.map(s => {
+            const ic = srvIcons[s.key] || { icon:'*', bg:'#EBF3FC' };
+            return `<div class="ficha-srv">
+              <div class="srv-ico" style="background:${ic.bg}">${ic.icon}</div>
+              <div class="srv-body">
+                <div class="srv-nm">${s.nombre}</div>
+                <div class="srv-dt">${s.detalle||''}</div>
+              </div>
+              <select data-srv-uid="${u.id}" data-srv-idx="${i}" data-srv-key="${s.key}">
+                <option value="activo" ${s.estado==='activo'?'selected':''}>Activo</option>
+                <option value="disponible" ${s.estado==='disponible'?'selected':''}>Disponible</option>
+                <option value="oculto" ${s.estado==='oculto'?'selected':''}>Oculto</option>
+              </select>
+            </div>`;
+          }).join('')}
+          <div class="ficha-actions">
+            <button onclick="adminGuardarServicios('${u.id}',${i})" style="background:#dcfce7;color:#166534;">Guardar</button>
+            ${m.token?`<button onclick="adminCopiarEnlace('${m.token}')" style="background:#EBF3FC;color:#1A5FB4;">Copiar enlace</button>`:''}
+            ${m.token?`<button onclick="adminWhatsApp('${m.token}','${(m.nombre||'').replace(/'/g,"\\'")}')" style="background:#dcfce7;color:#166534;">WhatsApp</button>`:''}
+            ${m.token?`<button onclick="adminRegenerarToken('${u.id}',${i})" style="background:#fef3c7;color:#92400e;">Regenerar token</button>`:''}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+
+    <!-- TITULAR DEBAJO -->
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
       <div style="flex:1;">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;">
-          <strong style="font-size:1rem;">${u.nombre||''} ${u.apellido||''}</strong>
+          <strong style="font-size:.9rem;">${u.nombre||''} ${u.apellido||''}</strong>
           ${u.nroSocio?`<span style="background:#EBF3FC;color:#1A5FB4;font-size:.68rem;font-weight:800;padding:2px 8px;border-radius:100px;">${u.nroSocio}</span>`:''}
         </div>
-        <div style="font-size:.8rem;color:#5a6a8a;">${u.email||''}${u.telefono?' · '+u.telefono:''}</div>
+        <div style="font-size:.78rem;color:#5a6a8a;">${u.email||''}${u.telefono?' · '+u.telefono:''}</div>
         ${u.fechaNacimiento?`<div style="font-size:.75rem;color:#5a6a8a;margin-top:2px;">${u.fechaNacimiento}</div>`:''}
-        ${planesTexto?`<div style="font-size:.75rem;font-weight:700;color:#1A5FB4;margin-top:4px;">${planesTexto}</div>`:'<div style="font-size:.75rem;color:#9ca3af;margin-top:4px;">Sin plan asignado</div>'}
 
-        <div style="margin-top:10px;display:flex;flex-direction:column;gap:12px;">
-          ${mascotas.map((m,i)=>{
-            const srvIcons = SRV_ICONS_ADMIN;
-            const servicios = m.servicios || [];
-            return `
-            <div style="background:white;border-radius:14px;padding:12px;border:1px solid rgba(26,95,180,.1);">
-              <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-                ${m.foto
-                  ? `<img src="${m.foto}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid #5BA3E8;">`
-                  : `<div style="width:40px;height:40px;border-radius:50%;background:#EBF3FC;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;">&#128062;</div>`}
-                <div style="flex:1;">
-                  <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-                    <strong style="font-size:.85rem;">${m.nombre||'—'}</strong>
-                    ${m.plan&&m.plan!=='Sin definir'?`<span style="background:#EBF3FC;color:#1A5FB4;font-size:.65rem;font-weight:700;padding:1px 7px;border-radius:100px;">${m.plan}</span>`:''}
-                  </div>
-                  ${m.raza?`<div style="font-size:.75rem;color:#5a6a8a;">${m.raza}</div>`:''}
-                  ${m.mascotaId?`<div style="font-size:.68rem;color:#9ca3af;font-family:monospace;">ID: ${m.mascotaId}</div>`:''}
-                </div>
-              </div>
-              <div style="font-size:.7rem;font-weight:800;color:var(--suave);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Servicios</div>
-              ${servicios.map(s => {
-                const ic = srvIcons[s.key] || { icon:'*', bg:'#EBF3FC' };
-                return `<div class="ficha-srv">
-                  <div class="srv-ico" style="background:${ic.bg}">${ic.icon}</div>
-                  <div class="srv-body">
-                    <div class="srv-nm">${s.nombre}</div>
-                    <div class="srv-dt">${s.detalle||''}</div>
-                  </div>
-                  <select data-srv-uid="${u.id}" data-srv-idx="${i}" data-srv-key="${s.key}">
-                    <option value="activo" ${s.estado==='activo'?'selected':''}>Activo</option>
-                    <option value="disponible" ${s.estado==='disponible'?'selected':''}>Disponible</option>
-                    <option value="oculto" ${s.estado==='oculto'?'selected':''}>Oculto</option>
-                  </select>
-                </div>`;
-              }).join('')}
-              <div class="ficha-actions">
-                <button onclick="adminGuardarServicios('${u.id}',${i})" style="background:#dcfce7;color:#166534;">Guardar</button>
-                ${m.token?`<button onclick="adminCopiarEnlace('${m.token}')" style="background:#EBF3FC;color:#1A5FB4;">Copiar enlace</button>`:''}
-                ${m.token?`<button onclick="adminWhatsApp('${m.token}','${(m.nombre||'').replace(/'/g,"\\'")}')" style="background:#dcfce7;color:#166534;">WhatsApp</button>`:''}
-                ${m.token?`<button onclick="adminRegenerarToken('${u.id}',${i})" style="background:#fef3c7;color:#92400e;">Regenerar token</button>`:''}
-              </div>
-            </div>`;
-          }).join('')}
-        </div>
-
-        <details style="margin-top:10px;">
+        <details style="margin-top:8px;">
           <summary style="font-size:.72rem;font-weight:700;color:#9ca3af;cursor:pointer;list-style:none;display:flex;align-items:center;gap:4px;">
             <span>&#9656;</span> Datos internos
           </summary>
@@ -1258,7 +1300,7 @@ function cardUsuario(u){
           </div>
         </details>
 
-        ${fecha?`<div style="font-size:.72rem;color:#9ca3af;margin-top:6px;">Registrado: ${fecha}</div>`:''}
+        ${fecha?`<div style="font-size:.72rem;color:#9ca3af;margin-top:4px;">Registrado: ${fecha}</div>`:''}
       </div>
       <span style="background:${col};color:white;font-size:.65rem;font-weight:700;padding:3px 9px;border-radius:100px;white-space:nowrap;flex-shrink:0;">${(u.estado||'pendiente').toUpperCase()}</span>
     </div>
@@ -1422,6 +1464,8 @@ async function crearPrestador(){
     });
     setMsg('prestMsg','Prestador '+nombre+' creado.',true);
     ['prestNombre','prestApellido','prestEmail','prestClinica','prestPass'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('formNuevoPrestador').style.display='none';
+    cargarPrestadoresAdmin();
   }catch(e){setMsg('prestMsg',e.code==='auth/email-already-in-use'?'Email ya registrado.':'Error: '+e.message,false);}
 }
 
@@ -1466,6 +1510,7 @@ function switchTab(tab,btn){
   btn.classList.add('active');
   if(tab==='dashboard')cargarDashboard();
   if(tab==='afiliados')cargarUsuariosAdmin();
+  if(tab==='prestadores')cargarPrestadoresAdmin();
   if(tab==='pagos')cargarAtencionesAdmin();
 }
 
@@ -1477,10 +1522,8 @@ async function cargarDashboard(){
   try {
     const snap = await db.collection('usuarios').get();
     const todos = snap.docs.map(d=>({id:d.id,...d.data()}));
-    const afiliados = todos.filter(u=>{
-      const roles = getUserRoles(u);
-      return roles.includes('afiliado');
-    });
+    const afiliados = todos.filter(u => esAfiliado(u));
+    const prestadores = todos.filter(u => getUserRoles(u).includes('prestador'));
     const activos = afiliados.filter(u=>u.estado==='activo');
     const pendientes = afiliados.filter(u=>u.estado==='pendiente');
 
@@ -1544,9 +1587,9 @@ async function cargarDashboard(){
           <div style="font-size:.72rem;color:#9ca3af;margin-top:4px;">en ${activos.length} titulares activos</div>
         </div>
         <div style="background:white;border-radius:16px;padding:20px;border:1px solid rgba(26,95,180,.08);box-shadow:0 2px 8px rgba(26,95,180,.06);">
-          <div style="font-size:.7rem;font-weight:700;color:#5a6a8a;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Pendientes activacion</div>
-          <div style="font-size:2.5rem;font-weight:900;color:#f59e0b;line-height:1;">${pendientes.length}</div>
-          <div style="font-size:.72rem;color:#9ca3af;margin-top:4px;">requieren revision</div>
+          <div style="font-size:.7rem;font-weight:700;color:#5a6a8a;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Prestadores</div>
+          <div style="font-size:2.5rem;font-weight:900;color:#1d4ed8;line-height:1;">${prestadores.length}</div>
+          <div style="font-size:.72rem;color:#9ca3af;margin-top:4px;">veterinarios activos</div>
         </div>
         <div style="background:white;border-radius:16px;padding:20px;border:1px solid rgba(26,95,180,.08);box-shadow:0 2px 8px rgba(26,95,180,.06);">
           <div style="font-size:.7rem;font-weight:700;color:#5a6a8a;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Facturacion estimada</div>
@@ -1554,6 +1597,14 @@ async function cargarDashboard(){
           <div style="font-size:.72rem;color:#9ca3af;margin-top:4px;">/mes · solo activos</div>
         </div>
       </div>
+
+      ${pendientes.length > 0 ? `<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:12px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;">
+        <span style="font-size:1.2rem;">&#9888;&#65039;</span>
+        <div>
+          <div style="font-size:.82rem;font-weight:800;color:#92400e;">${pendientes.length} afiliado${pendientes.length>1?'s':''} pendiente${pendientes.length>1?'s':''} de activacion</div>
+          <div style="font-size:.72rem;color:#92400e;opacity:.7;">Requieren revision en la tab Afiliados</div>
+        </div>
+      </div>` : ''}
 
       <div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;border:1px solid rgba(26,95,180,.08);box-shadow:0 2px 8px rgba(26,95,180,.06);">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
@@ -1616,6 +1667,11 @@ async function cargarDashboard(){
 function toggleFormAfiliado(){
   const f=document.getElementById('formNuevoAfiliado');
   f.style.display=f.style.display==='none'?'block':'none';
+}
+
+function toggleFormPrestador(){
+  const f=document.getElementById('formNuevoPrestador');
+  if(f) f.style.display=f.style.display==='none'?'block':'none';
 }
 
 // ══════════════════════════════════════════════
@@ -1840,18 +1896,29 @@ function renderPanel(data){
       </div>
     </div>
     <div id="tab-prestadores" class="tab-content" style="display:none;">
-      <div class="seccion"><div class="stit">Crear prestador</div>
-        <div class="fstack">
-          <div class="frow">
-            <input type="text" id="prestNombre" placeholder="Nombre *" class="input-field">
-            <input type="text" id="prestApellido" placeholder="Apellido" class="input-field">
-          </div>
-          <input type="email" id="prestEmail" placeholder="Email *" class="input-field">
-          <input type="text" id="prestClinica" placeholder="Clinica / Consultorio" class="input-field">
-          <input type="password" id="prestPass" placeholder="Contrasena inicial *" class="input-field">
-          <button onclick="crearPrestador()" class="btn-primary">Crear prestador</button>
-          <p id="prestMsg" style="font-size:.8rem;"></p>
+      <div class="seccion">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+          <div class="stit" style="margin-bottom:0;">Prestadores</div>
+          <button onclick="toggleFormPrestador()" class="bmini" style="background:#dbeafe;color:#1d4ed8;font-size:.8rem;padding:7px 14px;">+ Nuevo</button>
         </div>
+        <div id="formNuevoPrestador" style="display:none;" class="form-box">
+          <p style="font-size:.75rem;font-weight:800;color:var(--noche);margin-bottom:10px;text-transform:uppercase;">Crear prestador</p>
+          <div class="fstack">
+            <div class="frow">
+              <input type="text" id="prestNombre" placeholder="Nombre *" class="input-field">
+              <input type="text" id="prestApellido" placeholder="Apellido" class="input-field">
+            </div>
+            <input type="email" id="prestEmail" placeholder="Email *" class="input-field">
+            <input type="text" id="prestClinica" placeholder="Clinica / Consultorio" class="input-field">
+            <input type="password" id="prestPass" placeholder="Contrasena inicial *" class="input-field">
+            <div style="display:flex;gap:8px;">
+              <button onclick="crearPrestador()" class="btn-primary" style="flex:1;">Crear prestador</button>
+              <button onclick="toggleFormPrestador()" class="bmini brojo" style="padding:10px 16px;">X</button>
+            </div>
+            <p id="prestMsg" style="font-size:.8rem;"></p>
+          </div>
+        </div>
+        <div id="listaPrestadores"><p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p></div>
       </div>
     </div>
     <div id="tab-pagos" class="tab-content" style="display:none;">
