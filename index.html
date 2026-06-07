@@ -105,9 +105,8 @@ body{font-family:'Nunito',sans-serif;background:var(--fondo);color:var(--texto);
 .vet-action-btn .va-icon{font-size:1.8rem;margin-bottom:6px}
 .vet-action-btn .va-text{font-size:.85rem;font-weight:800;color:var(--noche)}
 .search-box{position:relative}
-.search-box input{width:100%;padding:14px 16px 14px 42px;border:2px solid rgba(26,95,180,.15);border-radius:14px;font-family:'Nunito',sans-serif;font-size:.9rem;font-weight:600;background:white;outline:none}
+.search-box input{width:100%;padding:14px 16px;border:2px solid rgba(26,95,180,.15);border-radius:14px;font-family:'Nunito',sans-serif;font-size:.9rem;font-weight:600;background:white;outline:none}
 .search-box input:focus{border-color:var(--azul-medio)}
-.search-box::before{content:'\\1F50D';position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:1rem}
 .hc-entry{padding:14px;border-radius:12px;background:var(--fondo);margin-bottom:10px;border:1px solid rgba(26,95,180,.06);cursor:pointer;transition:border-color .2s}
 .hc-entry:hover{border-color:var(--azul-claro)}
 .hc-tipo{display:inline-block;font-size:.65rem;font-weight:800;padding:2px 8px;border-radius:100px;text-transform:uppercase;letter-spacing:.5px}
@@ -789,8 +788,12 @@ function vetBuscar() {
   vetSearchTimeout = setTimeout(vetEjecutarBusqueda, 400);
 }
 
+function normBusqueda(str) {
+  return (str||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
 async function vetEjecutarBusqueda() {
-  const q = v('vetSearchInput').toLowerCase();
+  const q = normBusqueda(v('vetSearchInput'));
   const lista = document.getElementById('vetSearchResults');
   if (!lista) return;
   if (q.length < 2) { lista.innerHTML = '<p style="color:#9ca3af;font-size:.82rem;">Ingresa al menos 2 caracteres.</p>'; return; }
@@ -802,7 +805,7 @@ async function vetEjecutarBusqueda() {
       .filter(u => {
         const roles = getUserRoles(u);
         if (!roles.includes('afiliado')) return false;
-        const nombre = ((u.nombre||'') + ' ' + (u.apellido||'')).toLowerCase();
+        const nombre = normBusqueda((u.nombre||'') + ' ' + (u.apellido||''));
         const nro = (u.nroSocio||'').toLowerCase();
         return nombre.includes(q) || nro.includes(q);
       });
@@ -1818,7 +1821,7 @@ function renderPanel(data){
       <div class="seccion">
         <div class="stit">Buscar afiliado</div>
         <div class="search-box">
-          <input type="text" id="vetSearchInput" placeholder="Nro socio (MP-0042) o nombre..." class="input-field" style="padding-left:42px;" oninput="vetBuscar()">
+          <input type="text" id="vetSearchInput" placeholder="Nro socio (MP-0042) o nombre..." class="input-field" oninput="vetBuscar()">
         </div>
         <div id="vetSearchResults" style="margin-top:14px;">
           <p style="color:#9ca3af;font-size:.82rem;">Busca por numero de socio o nombre del titular.</p>
