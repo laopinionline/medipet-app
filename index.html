@@ -733,11 +733,11 @@ async function cargarDashboardVet() {
     });
 
     const pacientesDistintos = new Set(delMes.map(a => a.mascotaId).filter(Boolean)).size;
-    const montoMes = delMes.reduce((s,a) => s + (a.monto||0), 0);
+    const totalPacientes = new Set(todas.map(a => a.mascotaId).filter(Boolean)).size;
     const recientes = todas.slice(0, 8);
 
     el.innerHTML = `
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;">
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px;">
         <div class="vet-metric">
           <div class="vm-label">Atenciones del mes</div>
           <div class="vm-value" style="color:var(--azul);">${delMes.length}</div>
@@ -746,12 +746,7 @@ async function cargarDashboardVet() {
         <div class="vet-metric">
           <div class="vm-label">Pacientes distintos</div>
           <div class="vm-value" style="color:#2272D9;">${pacientesDistintos}</div>
-          <div class="vm-sub">este mes</div>
-        </div>
-        <div class="vet-metric">
-          <div class="vm-label">A liquidar</div>
-          <div class="vm-value" style="color:#22c55e;font-size:1.4rem;">$${montoMes.toLocaleString('es-AR')}</div>
-          <div class="vm-sub">pendiente de pago</div>
+          <div class="vm-sub">este mes · ${totalPacientes} total</div>
         </div>
       </div>
 
@@ -770,7 +765,6 @@ async function cargarDashboardVet() {
                 </div>
                 <div style="text-align:right;">
                   <div style="font-size:.78rem;color:#9ca3af;">${fecha}</div>
-                  <div style="font-size:.85rem;font-weight:800;color:var(--azul);margin-top:2px;">$${(a.monto||0).toLocaleString('es-AR')}</div>
                 </div>
               </div>
             </div>`;
@@ -807,7 +801,8 @@ async function vetEjecutarBusqueda() {
         if (!roles.includes('afiliado')) return false;
         const nombre = normBusqueda((u.nombre||'') + ' ' + (u.apellido||''));
         const nro = (u.nroSocio||'').toLowerCase();
-        return nombre.includes(q) || nro.includes(q);
+        const mascotasMatch = (u.mascotas||[]).some(m => normBusqueda(m.nombre||'').includes(q));
+        return nombre.includes(q) || nro.includes(q) || mascotasMatch;
       });
 
     if (resultados.length === 0) {
@@ -837,19 +832,22 @@ async function vetEjecutarBusqueda() {
         ${mascotas.length > 0 ? `
           <div style="margin-top:12px;">
             <div style="font-size:.72rem;font-weight:800;color:var(--suave);text-transform:uppercase;margin-bottom:8px;">Mascotas (${mascotas.length})</div>
-            ${mascotas.map(m => `
-              <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--fondo);border-radius:12px;margin-bottom:6px;cursor:pointer;border:1px solid rgba(26,95,180,.06);" onclick="vetVerHistoria('${m.mascotaId||''}')">
+            ${mascotas.map(m => {
+              const mMatch = normBusqueda(m.nombre||'').includes(q);
+              const brd = mMatch ? 'border:2px solid #5BA3E8;background:#EBF3FC;' : 'border:1px solid rgba(26,95,180,.06);background:var(--fondo);';
+              return `
+              <div style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:12px;margin-bottom:6px;cursor:pointer;${brd}" onclick="vetVerHistoria('${m.mascotaId||''}')">
                 ${m.foto
                   ? `<img src="${m.foto}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid #5BA3E8;">`
-                  : `<div style="width:36px;height:36px;border-radius:50%;background:#EBF3FC;display:flex;align-items:center;justify-content:center;font-size:.9rem;">&#128062;</div>`}
+                  : `<div style="width:36px;height:36px;border-radius:50%;background:${mMatch?'white':'#EBF3FC'};display:flex;align-items:center;justify-content:center;font-size:.9rem;">&#128062;</div>`}
                 <div style="flex:1;">
-                  <div style="font-size:.85rem;font-weight:700;">${m.nombre||'—'}</div>
+                  <div style="font-size:.85rem;font-weight:700;">${m.nombre||'—'}${mMatch?' &#11088;':''}</div>
                   <div style="font-size:.72rem;color:var(--suave);">${m.raza||''} ${m.mascotaId?'· '+m.mascotaId:''}</div>
                 </div>
                 <div style="font-size:.72rem;font-weight:700;color:var(--azul);">${m.plan||'Sin plan'}</div>
                 <span style="font-size:.8rem;color:var(--suave);">&#10145;</span>
-              </div>
-            `).join('')}
+              </div>`;
+            }).join('')}
           </div>
         ` : ''}
       </div>`;
@@ -939,10 +937,6 @@ async function vetVerHistoria(mascotaId) {
                   <div style="font-size:.72rem;color:#9ca3af;margin-top:4px;">Atendido por: ${a.prestadorNombre||'—'}</div>
                   ${a.adjuntos && a.adjuntos.length > 0 ? `<div style="font-size:.72rem;color:var(--azul);margin-top:4px;">&#128206; ${a.adjuntos.length} adjunto${a.adjuntos.length>1?'s':''}</div>` : ''}
                 </div>
-                <div style="text-align:right;">
-                  <div style="font-size:.9rem;font-weight:800;color:var(--azul);">$${(a.monto||0).toLocaleString('es-AR')}</div>
-                  ${a.estado?`<div style="font-size:.65rem;font-weight:700;padding:2px 8px;border-radius:100px;margin-top:4px;background:${a.estado==='pagado'?'#dcfce7':a.estado==='rechazado'?'#fee2e2':'#fef3c7'};color:${a.estado==='pagado'?'#166534':a.estado==='rechazado'?'#991b1b':'#92400e'};">${a.estado.toUpperCase()}</div>`:''}
-                </div>
               </div>
             </div>`;
           }).join('')}
@@ -982,7 +976,6 @@ function vetMostrarFormAtencion(mascotaId, mascotaNombre) {
         </select>
         <textarea id="vetAtenDiag" placeholder="Diagnostico *" class="input-field" style="height:70px;resize:vertical;"></textarea>
         <textarea id="vetAtenTrat" placeholder="Tratamiento" class="input-field" style="height:60px;resize:vertical;"></textarea>
-        <input type="number" id="vetAtenMonto" placeholder="Monto ($) *" class="input-field">
         <div>
           <label class="foto-label" for="vetAtenAdj">Adjuntar archivos (opcional)</label>
           <input type="file" id="vetAtenAdj" multiple accept="image/*,.pdf" style="display:none">
@@ -1001,11 +994,10 @@ async function vetGuardarAtencion(mascotaId, mascotaNombre) {
   const tipo = v('vetAtenTipo');
   const diagnostico = v('vetAtenDiag');
   const tratamiento = v('vetAtenTrat');
-  const monto = parseFloat(document.getElementById('vetAtenMonto')?.value || '0');
   setMsg('vetAtenMsg','',true);
 
-  if (!diagnostico || !monto) {
-    setMsg('vetAtenMsg','Completa diagnostico y monto.',false);
+  if (!diagnostico) {
+    setMsg('vetAtenMsg','Completa el diagnostico.',false);
     return;
   }
 
@@ -1048,7 +1040,7 @@ async function vetGuardarAtencion(mascotaId, mascotaNombre) {
       tipo: tipo,
       diagnostico: diagnostico,
       tratamiento: tratamiento,
-      monto: monto,
+      monto: 0,
       adjuntos: adjuntos,
       estado: 'pendiente',
       fecha: TS()
@@ -1550,9 +1542,6 @@ async function cargarDashboard(){
       return tb - ta;
     }).slice(0,5);
 
-    const COSTO_FIJO = 6500000;
-    const pct = facturacion > 0 ? Math.min(Math.round((facturacion/COSTO_FIJO)*100),100) : 0;
-
     const planColors = {
       'MEDIPaw Urgencias':'#ef4444','MEDIPaw Joven':'#22c55e',
       'MEDIPaw Adulto':'#1A5FB4','MEDIPaw Senior':'#f59e0b','Sin definir':'#9ca3af'
@@ -1608,20 +1597,6 @@ async function cargarDashboard(){
           <div style="font-size:.72rem;color:#92400e;opacity:.7;">Requieren revision en la tab Afiliados</div>
         </div>
       </div>` : ''}
-
-      <div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;border:1px solid rgba(26,95,180,.08);box-shadow:0 2px 8px rgba(26,95,180,.06);">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-          <div style="font-size:.75rem;font-weight:800;color:#0D1B3E;text-transform:uppercase;letter-spacing:.5px;">Progreso al breakeven</div>
-          <div style="font-size:.8rem;font-weight:700;color:#1A5FB4;">${pct}% — $${facturacion.toLocaleString('es-AR')} / $6.500.000</div>
-        </div>
-        <div style="background:#EBF3FC;border-radius:100px;height:12px;overflow:hidden;">
-          <div style="background:linear-gradient(90deg,#1A5FB4,#5BA3E8);height:100%;width:${pct}%;border-radius:100px;transition:width .5s;"></div>
-        </div>
-        <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:.72rem;color:#9ca3af;">
-          <span>$0</span>
-          <span style="color:#f59e0b;font-weight:700;">Meta: $6.500.000/mes</span>
-        </div>
-      </div>
 
       <div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;border:1px solid rgba(26,95,180,.08);box-shadow:0 2px 8px rgba(26,95,180,.06);">
         <div style="font-size:.75rem;font-weight:800;color:#0D1B3E;text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;">Mascotas por plan</div>
