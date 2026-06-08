@@ -13,17 +13,17 @@ service cloud.firestore {
       return request.auth != null && 'admin' in getUserRoles();
     }
 
-    function isPrestador() {
-      return request.auth != null && 'prestador' in getUserRoles();
+    // Transitorio: acepta 'veterinario' O 'prestador' (legacy) en roles[].
+    // Limpiar después de que todos los docs estén migrados.
+    function esVeterinario() {
+      let roles = getUserRoles();
+      return request.auth != null
+        && ('veterinario' in roles || 'prestador' in roles);
     }
 
     // ══════════════════════════════════════
     // ══  USUARIOS                        ══
     // ══════════════════════════════════════
-    // Cualquier usuario autenticado puede leer cualquier doc de usuarios
-    // (necesario para: búsqueda de pacientes por vet, listado admin,
-    //  lectura del propio perfil al login, generarNroSocio).
-    // Write: cada usuario escribe su propio doc; admin puede escribir cualquiera.
     match /usuarios/{userId} {
       allow get: if request.auth != null;
       allow list: if request.auth != null;
@@ -36,8 +36,6 @@ service cloud.firestore {
     // ══════════════════════════════════════
     // ══  MASCOTAS PUBLICAS               ══
     // ══════════════════════════════════════
-    // Get público (ficha /m/{token}), list prohibido (no se puede enumerar).
-    // Write solo con auth (admin/portal sincronizan desde el portal).
     match /mascotas_publicas/{token} {
       allow get: if true;
       allow list: if false;
@@ -47,8 +45,6 @@ service cloud.firestore {
     // ══════════════════════════════════════
     // ══  SOLICITUDES                     ══
     // ══════════════════════════════════════
-    // Create público (formulario "Me interesa" en la ficha pública).
-    // Read/update/delete solo con auth (admin gestiona).
     match /solicitudes/{id} {
       allow create: if true;
       allow read, update, delete: if request.auth != null;
@@ -58,35 +54,24 @@ service cloud.firestore {
     // ══  ATENCIONES                      ══
     // ══════════════════════════════════════
     //
-    // Create: solo prestadores, y prestadorId debe ser el uid del vet.
-    //
-    // Read (get + list):
-    //   - Admin: lee todas (query sin filtro, para tab Pagos).
-    //   - Prestador: lee las que creó (query por prestadorId == uid)
-    //     y las de cualquier mascota (query por mascotaId, para HC).
-    //   - Afiliado: lee las de sus mascotas (query por titularUid == uid).
-    //
-    // Update: admin (procesar pagos) o el vet que la creó.
+    // Create: solo veterinarios, y prestadorId debe ser el uid del vet.
+    // Read: veterinario, admin, o dueño de la mascota (titularUid).
+    // Update: admin o el vet que la creó.
     // Delete: solo admin.
-    //
-    // Nota: Firestore evalúa rules contra cada doc del resultado.
-    // Para que list funcione, la query del cliente DEBE incluir un filtro
-    // que satisfaga la regla (ej: .where('prestadorId','==',uid)).
-    // Las queries sin filtro solo funcionan para admin.
     //
     match /atenciones/{id} {
       allow create: if request.auth != null
-        && isPrestador()
+        && esVeterinario()
         && request.resource.data.prestadorId == request.auth.uid;
 
       allow get: if request.auth != null
         && (isAdmin()
-            || isPrestador()
+            || esVeterinario()
             || resource.data.titularUid == request.auth.uid);
 
       allow list: if request.auth != null
         && (isAdmin()
-            || isPrestador()
+            || esVeterinario()
             || resource.data.titularUid == request.auth.uid);
 
       allow update: if request.auth != null
@@ -97,9 +82,17 @@ service cloud.firestore {
     }
 
     // ══════════════════════════════════════
+    // ══  PRESTADORES (proveedores ext.)  ══
+    // ══════════════════════════════════════
+    // Colección separada de usuarios. Proveedores externos con
+    // relación económica. Solo admin gestiona.
+    match /prestadores/{id} {
+      allow read, write: if isAdmin();
+    }
+
+    // ══════════════════════════════════════
     // ══  CATCH-ALL: DENEGAR              ══
     // ══════════════════════════════════════
     // Cualquier colección no listada arriba queda bloqueada.
-    // NO hay catch-all permisivo.
   }
 }
