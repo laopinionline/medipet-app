@@ -9,6 +9,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
+<script src="./lib/medipaw-core.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--azul:#1A5FB4;--azul-medio:#2272D9;--azul-claro:#5BA3E8;--azul-pale:#EBF3FC;--noche:#0D1B3E;--fondo:#F5F7FA;--texto:#1a2340;--suave:#5a6a8a}
@@ -252,6 +253,61 @@ firebase.initializeApp({
 const auth=firebase.auth(), db=firebase.firestore(), storage=firebase.storage();
 const TS=()=>firebase.firestore.FieldValue.serverTimestamp();
 
+// ── F0.5 · COLECCIÓN MASCOTAS (fuente de verdad) — DAL + lógica pura compartida (lib/medipaw-core) ──
+// La MASCOTA es el sujeto: su plan, su cuota y su ESTADO viven en mascotas/{mascotaId}, no en el titular.
+const MC = window.MEDIPAW; // núcleo puro: coberturaMascota / cuotaTitular / resumenNegocio / planCuota / migrarUsuario
+async function mascGetByTitular(uid){
+  const s = await db.collection('mascotas').where('titularUid','==',uid).get();
+  return s.docs.map(d=>({id:d.id,...d.data()}))
+    .sort((a,b)=>String(a.mascotaId||a.id).localeCompare(String(b.mascotaId||b.id)));
+}
+async function mascGet(mascotaId){
+  if(!mascotaId) return null;
+  const d = await db.collection('mascotas').doc(mascotaId).get();
+  return d.exists ? {id:d.id,...d.data()} : null;
+}
+async function mascGetAll(){
+  const s = await db.collection('mascotas').get();
+  return s.docs.map(d=>({id:d.id,...d.data()}));
+}
+// Re-hidrata las mascotas del afiliado logueado desde la colección y re-renderiza (post-mutación).
+async function refrescarAfiliado(){
+  if(!currentUserData) return;
+  currentUserData.mascotas = await mascGetByTitular(currentUserData.uid);
+  renderPanel(currentUserData);
+}
+/* ESPEJO (expand/contract F0.5): el admin sigue operando el array embebido usuarios.mascotas[] y acá
+   se refleja a la colección (fuente de verdad para vet/carnet/dashboard). PRESERVA el estado/cuota ya
+   fijados en la colección (no re-deriva del titular en cada edición); una mascota NUEVA nace 'suspendido'.
+   Solo admin (las reglas exigen isAdmin para tocar plan/estado/cuota). El array embebido se retira en el próximo tramo. */
+async function espejarMascotasEnColeccion(uid){
+  const snap = await db.collection('usuarios').doc(uid).get();
+  if(!snap.exists) return;
+  const u = {uid, ...snap.data()};
+  const embebidas = u.mascotas || [];
+  for(let i=0;i<embebidas.length;i++){
+    const m = embebidas[i];
+    const mascotaId = m.mascotaId || (u.nroSocio ? MC.generarMascotaId(u.nroSocio, i) : '');
+    if(!mascotaId) continue;
+    const ref = db.collection('mascotas').doc(mascotaId);
+    const cur = await ref.get();
+    const descriptivo = { titularUid:uid, nombre:m.nombre||'', raza:m.raza||'', fechaNacimiento:m.fechaNacimiento||'', foto:m.foto||'', plan:m.plan||'Sin definir', token:m.token||'', servicios:m.servicios||[] };
+    if(cur.exists){
+      const est = cur.data().estado || 'suspendido';
+      await ref.set({ ...descriptivo, cuota: est==='activo' ? MC.planCuota(m.plan) : 0 }, {merge:true});
+    } else {
+      await ref.set({ ...descriptivo, mascotaId, estado:'suspendido', cuota:0, creadoEn: u.creadoEn || TS() }, {merge:true});
+    }
+  }
+}
+// Activa/suspende la COBERTURA de todas las mascotas de un titular (lo dispara la activación del titular).
+async function activarMascotasDe(uid, estado){
+  const s = await db.collection('mascotas').where('titularUid','==',uid).get();
+  const batch = db.batch();
+  s.docs.forEach(d=>{ const m=d.data(); batch.update(d.ref, { estado, cuota: estado==='activo' ? MC.planCuota(m.plan) : 0 }); });
+  if(!s.empty) await batch.commit();
+}
+
 // ── CATALOGO DE SERVICIOS POR DEFECTO ──
 const CATALOGO_SERVICIOS = [
   { key:'salud', nombre:'Cobertura de salud', detalle:'Segun tu plan MEDIPaw', estado:'activo' },
@@ -405,6 +461,10 @@ auth.onAuthStateChanged(async user=>{
         currentUserData = data;
         const roles = getUserRoles(data);
         activeRole = getDefaultRole(roles);
+        // F0.5: hidratar mascotas del titular desde la colección (fuente de verdad), no del array embebido.
+        if (roles.includes('afiliado')) {
+          try { data.mascotas = await mascGetByTitular(user.uid); } catch(e) { /* deja el embebido como fallback */ }
+        }
         showScreen('appScreen');
         setupRoleSwitcher(roles);
         renderPanel(data);
@@ -553,16 +613,21 @@ async function agregarMascota(uid){
       servicios: CATALOGO_SERVICIOS.map(s => ({...s}))
     });
     await db.collection('usuarios').doc(uid).update({mascotas});
-    if (ud.estado === 'activo' && mascotaId) {
-      await syncMascotaPublica(ud, mascotas[idx], idx);
+    // F0.5: la mascota nace en la colección SIN cobertura ('suspendido', cuota 0) hasta que admin la active.
+    if (mascotaId) {
+      await db.collection('mascotas').doc(mascotaId).set({
+        mascotaId, titularUid:uid, nombre, raza, fechaNacimiento:fecha, foto,
+        plan:plan||'Sin definir', cuota:0, estado:'suspendido', token,
+        servicios: CATALOGO_SERVICIOS.map(s => ({...s})), creadoEn: TS()
+      }, {merge:true});
     }
-    if(msg){msg.textContent='+ '+nombre+' agregada.';msg.style.color='#22c55e';}
-    const snapNew=await db.collection('usuarios').doc(uid).get();
-    currentUserData = {uid,...snapNew.data()};
-    renderPanel(currentUserData);
+    if(msg){msg.textContent='+ '+nombre+' agregada. Queda pendiente de activación por MEDIPaw.';msg.style.color='#22c55e';}
+    await refrescarAfiliado();
   }catch(e){if(msg){msg.textContent='Error: '+e.message;msg.style.color='#ef4444';}}
 }
 
+// F0.5: cambio de plan = acción de ADMIN (sensible: mueve la cuota). Escribe embebido + espeja a la
+// colección (plan + cuota si la mascota está activa) + sincroniza ficha pública. Recarga la lista admin.
 async function cambiarPlanMascota(uid, index, nuevoPlan) {
   if (!nuevoPlan) return;
   try {
@@ -571,12 +636,34 @@ async function cambiarPlanMascota(uid, index, nuevoPlan) {
     const mascotas = [...(ud.mascotas || [])];
     mascotas[index] = { ...mascotas[index], plan: nuevoPlan };
     await db.collection('usuarios').doc(uid).update({ mascotas });
-    if (mascotas[index].token && ud.estado === 'activo') {
-      await syncMascotaPublica(ud, mascotas[index], index);
+    const mascotaId = mascotas[index].mascotaId || (ud.nroSocio ? generarMascotaId(ud.nroSocio, index) : '');
+    if (mascotaId) {
+      const ref = db.collection('mascotas').doc(mascotaId);
+      const cur = await ref.get();
+      const est = cur.exists ? (cur.data().estado || 'suspendido') : 'suspendido';
+      await ref.set({ plan: nuevoPlan, cuota: est==='activo' ? MC.planCuota(nuevoPlan) : 0 }, { merge: true });
     }
-    const carnetPlanEl = document.querySelector(`#carnet-${index} div:nth-child(2)`);
-    if (carnetPlanEl) carnetPlanEl.textContent = nuevoPlan;
+    if (mascotas[index].token) {
+      await syncMascotaPublica({ ...ud, uid }, mascotas[index], index);
+    }
+    cargarUsuariosAdmin();
+    if (typeof cargarDashboard === 'function' && document.getElementById('dashboard-content')) { try { cargarDashboard(); } catch(e){} }
   } catch(e) { alert('Error al cambiar plan: ' + e.message); }
+}
+
+// F0.5: control de COBERTURA por mascota (admin). Setea estado + cuota en el doc de la colección.
+async function cambiarEstadoMascota(mascotaId, estado) {
+  if (!mascotaId) return;
+  try {
+    const ref = db.collection('mascotas').doc(mascotaId);
+    const cur = await ref.get();
+    if (!cur.exists) { alert('Esa mascota todavía no está en la colección (activá al titular primero).'); return; }
+    const m = cur.data();
+    await ref.set({ estado, cuota: estado==='activo' ? MC.planCuota(m.plan) : 0 }, { merge: true });
+    // Reflejar el estado a la ficha pública si tiene token.
+    if (m.token) { try { await db.collection('mascotas_publicas').doc(m.token).update({ estado }); } catch(e) {} }
+    cargarUsuariosAdmin();
+  } catch(e) { alert('Error al cambiar estado: ' + e.message); }
 }
 
 async function actualizarFotoTitular(input, uid) {
@@ -615,6 +702,42 @@ async function descargarCarnet(index, nombreMascota) {
   }
 }
 
+// F0.5: salida comercial del afiliado (no ejecuta cobertura). Usa la colección 'solicitudes' (calco "Me interesa").
+// El admin resuelve desde su ficha (cambiar plan / dar de baja la mascota).
+async function crearSolicitud(extra){
+  const d = currentUserData || {};
+  await db.collection('solicitudes').add(Object.assign({
+    titularUid: d.uid || '',
+    nroSocio: d.nroSocio || '',
+    solicitanteNombre: ((d.nombre||'') + ' ' + (d.apellido||'')).trim(),
+    solicitanteTel: d.telefono || '',
+    estado: 'pendiente',
+    creadoEn: TS()
+  }, extra));
+}
+async function pedirCambioPlan(mascotaId, mascotaNombre, planActual, i){
+  const sel = document.getElementById('pedirPlan-'+i);
+  const planPedido = sel ? sel.value : '';
+  const msg = document.getElementById('pedirMsg-'+i);
+  if(!planPedido){ if(msg){ msg.textContent='Elegí el plan que querés.'; msg.style.color='#ef4444'; } return; }
+  try {
+    await crearSolicitud({ tipo:'cambio_plan', mascotaId, mascotaNombre, planActual, planPedido, servicioKey:'cambio_plan' });
+    if(msg){ msg.textContent='Pedido enviado. MEDIPaw lo va a revisar y te contacta.'; msg.style.color='#22c55e'; }
+  } catch(e){ if(msg){ msg.textContent='Error: '+e.message; msg.style.color='#ef4444'; } }
+}
+async function pedirBaja(mascotaId, mascotaNombre){
+  if(!confirm('¿Enviar pedido de BAJA de '+mascotaNombre+'? MEDIPaw lo va a revisar.')) return;
+  try {
+    await crearSolicitud({ tipo:'baja', mascotaId, mascotaNombre, servicioKey:'baja' });
+    toast('Pedido de baja enviado. MEDIPaw lo va a revisar.');
+  } catch(e){ alert('Error: '+e.message); }
+}
+// ADMIN: cierra una solicitud (la resuelve en la ficha: cambia el plan / da de baja, y después la marca resuelta).
+async function marcarSolicitudResuelta(id){
+  try { await db.collection('solicitudes').doc(id).update({ estado:'resuelta', resueltaEn: TS() }); cargarDashboard(); }
+  catch(e){ alert('Error: '+e.message); }
+}
+
 async function cambiarPass(){
   try{await auth.currentUser.updatePassword(document.getElementById('nuevaPass').value);setMsg('passMsg','Contrasena actualizada',true);}
   catch(e){setMsg('passMsg','Reingresa para cambiar contrasena.',false);}
@@ -625,13 +748,16 @@ async function syncMascotaPublica(userData, mascota, index) {
   if (!mascota.token) return;
   const nroSocio = userData.nroSocio || '';
   const mascotaId = mascota.mascotaId || generarMascotaId(nroSocio, index);
+  // F0.5: el estado de la ficha pública es el de LA MASCOTA (colección), no el del titular.
+  let estado = 'suspendido';
+  try { const md = await mascGet(mascotaId); if (md && md.estado) estado = md.estado; } catch(e) {}
   await db.collection('mascotas_publicas').doc(mascota.token).set({
     nombre: mascota.nombre || '',
     raza: mascota.raza || '',
     fechaNacimiento: mascota.fechaNacimiento || '',
     foto: mascota.foto || '',
     plan: mascota.plan || '',
-    estado: userData.estado || 'activo',
+    estado: estado,
     nroSocio: nroSocio,
     titularNombre: (userData.nombre || '') + ' ' + (userData.apellido || ''),
     mascotaId: mascotaId,
@@ -666,8 +792,9 @@ async function adminGuardarServicios(uid, index) {
     });
     mascotas[index] = m;
     await db.collection('usuarios').doc(uid).update({ mascotas });
-    if (m.token && ud.estado === 'activo') {
-      await syncMascotaPublica(ud, m, index);
+    await espejarMascotasEnColeccion(uid); // F0.5: reflejar servicios/token a la colección
+    if (m.token) {
+      await syncMascotaPublica({ ...ud, uid }, m, index);
     }
     toast('Servicios guardados y ficha publica sincronizada');
   } catch(e) { alert('Error: ' + e.message); }
@@ -702,9 +829,8 @@ async function adminRegenerarToken(uid, index) {
     if (oldToken) {
       try { await db.collection('mascotas_publicas').doc(oldToken).delete(); } catch(e) {}
     }
-    if (ud.estado === 'activo') {
-      await syncMascotaPublica(ud, mascotas[index], index);
-    }
+    await espejarMascotasEnColeccion(uid); // F0.5: reflejar el nuevo token a la colección
+    await syncMascotaPublica({ ...ud, uid }, mascotas[index], index);
     toast('Token regenerado');
     cargarUsuariosAdmin();
   } catch(e) { alert('Error: ' + e.message); }
@@ -797,16 +923,28 @@ async function vetEjecutarBusqueda() {
   lista.innerHTML = '<p style="color:#5a6a8a;font-size:.82rem;">Buscando...</p>';
 
   try {
-    const snap = await db.collection('usuarios').get();
-    const resultados = snap.docs.map(d => ({id:d.id,...d.data()}))
-      .filter(u => {
-        const roles = getUserRoles(u);
-        if (!roles.includes('afiliado')) return false;
-        const nombre = normBusqueda((u.nombre||'') + ' ' + (u.apellido||''));
-        const nro = (u.nroSocio||'').toLowerCase();
-        const mascotasMatch = (u.mascotas||[]).some(m => normBusqueda(m.nombre||'').includes(q));
-        return nombre.includes(q) || nro.includes(q) || mascotasMatch;
-      });
+    // F0.5: la cobertura se valida POR MASCOTA (colección mascotas), no por el estado del titular.
+    const [usSnap, masSnap] = await Promise.all([
+      db.collection('usuarios').get(),
+      db.collection('mascotas').get(),
+    ]);
+    const titulares = {};
+    usSnap.docs.forEach(d => { titulares[d.id] = {id:d.id, ...d.data()}; });
+    const mascotasPorTitular = {};
+    masSnap.docs.forEach(d => {
+      const m = {id:d.id, ...d.data()};
+      (mascotasPorTitular[m.titularUid] = mascotasPorTitular[m.titularUid] || []).push(m);
+    });
+
+    // Un titular entra al resultado si su nombre / nroSocio / o alguna de sus mascotas matchea.
+    const resultados = Object.values(titulares).filter(u => {
+      if (!getUserRoles(u).includes('afiliado')) return false;
+      const nombre = normBusqueda((u.nombre||'') + ' ' + (u.apellido||''));
+      const nro = (u.nroSocio||'').toLowerCase();
+      const masc = mascotasPorTitular[u.id] || [];
+      const mascotasMatch = masc.some(m => normBusqueda(m.nombre||'').includes(q));
+      return nombre.includes(q) || nro.includes(q) || mascotasMatch;
+    });
 
     if (resultados.length === 0) {
       lista.innerHTML = '<p style="color:#9ca3af;font-size:.82rem;">No se encontraron afiliados.</p>';
@@ -814,8 +952,7 @@ async function vetEjecutarBusqueda() {
     }
 
     lista.innerHTML = resultados.map(u => {
-      const mascotas = u.mascotas || [];
-      const estadoOk = u.estado === 'activo';
+      const mascotas = (mascotasPorTitular[u.id] || []).sort((a,b)=>String(a.mascotaId||'').localeCompare(String(b.mascotaId||'')));
       return `<div class="uitem">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;">
           <div>
@@ -823,36 +960,40 @@ async function vetEjecutarBusqueda() {
               <strong>${u.nombre||''} ${u.apellido||''}</strong>
               ${u.nroSocio?`<span style="background:#EBF3FC;color:#1A5FB4;font-size:.68rem;font-weight:800;padding:2px 8px;border-radius:100px;">${u.nroSocio}</span>`:''}
             </div>
-          </div>
-        </div>
-        <div class="${estadoOk?'cobertura-ok':'cobertura-no'}" style="margin-top:10px;">
-          <span style="font-size:1.2rem;">${estadoOk?'&#9989;':'&#10060;'}</span>
-          <div>
-            <div style="font-size:.82rem;font-weight:800;">${estadoOk?'Plan activo — cobertura vigente':'Plan inactivo — sin cobertura'}</div>
-            <div style="font-size:.72rem;color:${estadoOk?'#166534':'#991b1b'};">Estado: ${u.estado||'desconocido'}</div>
+            <div style="font-size:.7rem;color:var(--suave);margin-top:2px;">Titular / responsable — la cobertura es de cada mascota</div>
           </div>
         </div>
         ${mascotas.length > 0 ? `
           <div style="margin-top:12px;">
             <div style="font-size:.72rem;font-weight:800;color:var(--suave);text-transform:uppercase;margin-bottom:8px;">Mascotas (${mascotas.length})</div>
             ${mascotas.map(m => {
+              const c = MC.coberturaMascota(m);
               const mMatch = normBusqueda(m.nombre||'').includes(q);
               const brd = mMatch ? 'border:2px solid #5BA3E8;background:#EBF3FC;' : 'border:1px solid rgba(26,95,180,.06);background:var(--fondo);';
               return `
-              <div style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:12px;margin-bottom:6px;cursor:pointer;${brd}" onclick="vetVerHistoria('${m.mascotaId||''}')">
-                ${m.foto
-                  ? `<img src="${m.foto}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid #5BA3E8;">`
-                  : `<div style="width:36px;height:36px;border-radius:50%;background:${mMatch?'white':'#EBF3FC'};display:flex;align-items:center;justify-content:center;font-size:.9rem;">&#128062;</div>`}
-                <div style="flex:1;">
-                  <div style="font-size:.85rem;font-weight:700;">${m.nombre||'—'}${mMatch?' &#11088;':''}</div>
-                  <div style="font-size:.72rem;color:var(--suave);">${m.raza||''} ${m.mascotaId?'· '+m.mascotaId:''}</div>
+              <div style="padding:10px;border-radius:12px;margin-bottom:6px;cursor:pointer;${brd}" onclick="vetVerHistoria('${m.mascotaId||''}')">
+                <div style="display:flex;align-items:center;gap:10px;">
+                  ${m.foto
+                    ? `<img src="${m.foto}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid #5BA3E8;">`
+                    : `<div style="width:36px;height:36px;border-radius:50%;background:${mMatch?'white':'#EBF3FC'};display:flex;align-items:center;justify-content:center;font-size:.9rem;">&#128062;</div>`}
+                  <div style="flex:1;">
+                    <div style="font-size:.85rem;font-weight:700;">${m.nombre||'—'}${mMatch?' &#11088;':''}</div>
+                    <div style="font-size:.72rem;color:var(--suave);">${m.raza||''} ${m.mascotaId?'· '+m.mascotaId:''}</div>
+                  </div>
+                  <div style="font-size:.72rem;font-weight:700;color:var(--azul);">${m.plan||'Sin plan'}</div>
+                  <span style="font-size:.8rem;color:var(--suave);">&#10145;</span>
                 </div>
-                <div style="font-size:.72rem;font-weight:700;color:var(--azul);">${m.plan||'Sin plan'}</div>
-                <span style="font-size:.8rem;color:var(--suave);">&#10145;</span>
+                <div class="${c.ok?'cobertura-ok':'cobertura-no'}" style="margin-top:8px;">
+                  <span style="font-size:1.1rem;">${c.ok?'&#9989;':'&#10060;'}</span>
+                  <div>
+                    <div style="font-size:.8rem;font-weight:800;">${c.label}</div>
+                    <div style="font-size:.7rem;color:${c.color};">Estado de ${m.nombre||'la mascota'}: ${c.estado}</div>
+                  </div>
+                </div>
               </div>`;
             }).join('')}
           </div>
-        ` : ''}
+        ` : '<div style="margin-top:10px;font-size:.78rem;color:var(--suave);">Este titular no tiene mascotas cargadas.</div>'}
       </div>`;
     }).join('');
   } catch(e) {
@@ -879,24 +1020,20 @@ async function vetVerHistoria(mascotaId) {
   el.innerHTML = '<p style="color:#5a6a8a;font-size:.85rem;">Cargando historia clinica...</p>';
 
   try {
-    // Buscar datos de la mascota
+    // Buscar datos de la mascota en la colección (fuente de verdad).
     let mascotaNombre = mascotaId;
     let titularNombre = '';
     let mascotaFoto = '';
     let mascotaRaza = '';
     let mascotaPlan = '';
-    const usSnap = await db.collection('usuarios').get();
-    for (const d of usSnap.docs) {
-      const u = d.data();
-      const mascotas = u.mascotas || [];
-      const m = mascotas.find(m => m.mascotaId === mascotaId);
-      if (m) {
-        mascotaNombre = m.nombre || mascotaId;
-        mascotaFoto = m.foto || '';
-        mascotaRaza = m.raza || '';
-        mascotaPlan = m.plan || '';
-        titularNombre = (u.nombre||'') + ' ' + (u.apellido||'');
-        break;
+    const m = await mascGet(mascotaId);
+    if (m) {
+      mascotaNombre = m.nombre || mascotaId;
+      mascotaFoto = m.foto || '';
+      mascotaRaza = m.raza || '';
+      mascotaPlan = m.plan || '';
+      if (m.titularUid) {
+        try { const td = await db.collection('usuarios').doc(m.titularUid).get(); if (td.exists) { const u = td.data(); titularNombre = (u.nombre||'') + ' ' + (u.apellido||''); } } catch(e) {}
       }
     }
 
@@ -1023,16 +1160,9 @@ async function vetGuardarAtencion(mascotaId, mascotaNombre) {
       }
     }
 
-    // Buscar titularUid (dueño de la mascota)
-    let titularUid = '';
-    const usSnap = await db.collection('usuarios').get();
-    for (const d of usSnap.docs) {
-      const u = d.data();
-      if ((u.mascotas || []).some(m => m.mascotaId === mascotaId)) {
-        titularUid = d.id;
-        break;
-      }
-    }
+    // Buscar titularUid (dueño de la mascota) en la colección.
+    const mDoc = await mascGet(mascotaId);
+    const titularUid = mDoc ? (mDoc.titularUid || '') : '';
 
     await db.collection('atenciones').add({
       prestadorId: uid,
@@ -1076,31 +1206,32 @@ async function cargarMisPacientes() {
       return;
     }
 
-    // Buscar info de cada mascota
-    const usSnap = await db.collection('usuarios').get();
+    // Buscar info de cada mascota en la colección + su titular.
+    const [masSnap, usSnap] = await Promise.all([
+      db.collection('mascotas').get(),
+      db.collection('usuarios').get(),
+    ]);
+    const titulares = {};
+    usSnap.docs.forEach(d => { titulares[d.id] = d.data(); });
     const pacientes = [];
-    for (const d of usSnap.docs) {
-      const u = d.data();
-      const mascotas = u.mascotas || [];
-      for (const m of mascotas) {
-        if (m.mascotaId && mascotaIds.includes(m.mascotaId)) {
-          const atencionesCount = snap.docs.filter(ad => ad.data().mascotaId === m.mascotaId).length;
-          const ultimaAtencion = snap.docs
-            .filter(ad => ad.data().mascotaId === m.mascotaId)
-            .map(ad => ad.data().fecha?.toDate?.())
-            .filter(Boolean)
-            .sort((a,b) => b-a)[0];
-          pacientes.push({
-            ...m,
-            titularNombre: (u.nombre||'') + ' ' + (u.apellido||''),
-            nroSocio: u.nroSocio || '',
-            estadoTitular: u.estado || '',
-            atencionesCount,
-            ultimaAtencion
-          });
-        }
-      }
-    }
+    masSnap.docs.forEach(d => {
+      const m = {id:d.id, ...d.data()};
+      if (!m.mascotaId || !mascotaIds.includes(m.mascotaId)) return;
+      const u = titulares[m.titularUid] || {};
+      const atencionesCount = snap.docs.filter(ad => ad.data().mascotaId === m.mascotaId).length;
+      const ultimaAtencion = snap.docs
+        .filter(ad => ad.data().mascotaId === m.mascotaId)
+        .map(ad => ad.data().fecha?.toDate?.())
+        .filter(Boolean)
+        .sort((a,b) => b-a)[0];
+      pacientes.push({
+        ...m,
+        titularNombre: (u.nombre||'') + ' ' + (u.apellido||''),
+        nroSocio: u.nroSocio || '',
+        atencionesCount,
+        ultimaAtencion
+      });
+    });
 
     el.innerHTML = pacientes.map(p => `
       <div style="display:flex;align-items:center;gap:10px;padding:14px;background:var(--fondo);border-radius:12px;margin-bottom:8px;cursor:pointer;border:1px solid rgba(26,95,180,.06);" onclick="vetVerHistoria('${p.mascotaId}')">
@@ -1149,18 +1280,23 @@ async function cargarUsuariosAdmin(){
   const lista=document.getElementById('listaUsuarios');if(!lista)return;
   lista.innerHTML='<p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p>';
   try{
-    const snap=await db.collection('usuarios').get();
+    const [snap, masSnap]=await Promise.all([
+      db.collection('usuarios').get(),
+      db.collection('mascotas').get(),
+    ]);
     const todos=snap.docs.map(d=>({id:d.id,...d.data()})).filter(u=> esAfiliado(u));
+    // Mapa mascotaId → doc de la colección (fuente de verdad de estado/cobertura por mascota).
+    const masMap={}; masSnap.docs.forEach(d=>{ masMap[d.id]={id:d.id,...d.data()}; });
     if(todos.length===0){lista.innerHTML='<p style="color:#5a6a8a;font-size:.85rem;">No hay afiliados registrados aun.</p>';return;}
     const pend=todos.filter(u=>u.estado==='pendiente');
     const resto=todos.filter(u=>u.estado!=='pendiente');
     let html='';
     if(pend.length>0){
-      html+=`<div class="pend-box"><div class="pend-tit">Pendientes de activacion (${pend.length})</div>${pend.map(u=>cardUsuario(u)).join('')}</div>`;
+      html+=`<div class="pend-box"><div class="pend-tit">Pendientes de activacion (${pend.length})</div>${pend.map(u=>cardUsuario(u,masMap)).join('')}</div>`;
     }
     if(resto.length>0){
       html+=`<div style="font-size:.75rem;font-weight:800;color:var(--suave);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">Afiliados (${resto.length})</div>`;
-      html+=resto.map(u=>cardUsuario(u)).join('');
+      html+=resto.map(u=>cardUsuario(u,masMap)).join('');
     }
     lista.innerHTML=html;
   }catch(e){lista.innerHTML='<p style="color:#ef4444;">Error: '+e.message+'</p>';}
@@ -1209,7 +1345,8 @@ const SRV_ICONS_ADMIN = {
   vacuna: { icon: '\u{1F489}', bg: '#fce7f3' }
 };
 
-function cardUsuario(u){
+function cardUsuario(u, masMap){
+  masMap = masMap || {};
   const col=u.estado==='activo'?'#22c55e':u.estado==='pendiente'?'#f59e0b':'#ef4444';
   const fecha=u.creadoEn?.toDate?.()?.toLocaleDateString('es-AR')||'';
   const mascotas=(u.mascotas||[]).filter(Boolean);
@@ -1247,6 +1384,31 @@ function cardUsuario(u){
               ${m.mascotaId?`<div style="font-size:.68rem;color:#9ca3af;font-family:monospace;">ID: ${m.mascotaId}</div>`:''}
             </div>
           </div>
+          ${(()=>{
+            const mc = m.mascotaId ? masMap[m.mascotaId] : null;
+            const c = MC.coberturaMascota(mc || {estado:'suspendido'});
+            const estActual = mc ? MC.normalizarEstado(mc.estado) : null;
+            const noEnColeccion = !mc;
+            return `<div style="background:${c.ok?'#f0fdf4':'#fef2f2'};border-radius:10px;padding:8px 10px;margin-bottom:10px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+                <div style="font-size:.76rem;font-weight:800;color:${c.color};">${c.emoji} ${noEnColeccion?'Aún no activada (activá al titular)':c.label}${c.ok?` · $${MC.planCuota(mc.plan).toLocaleString('es-AR')}/mes`:''}</div>
+              </div>
+              <div style="display:flex;gap:6px;align-items:center;margin-top:8px;flex-wrap:wrap;">
+                <select onchange="cambiarPlanMascota('${u.id}',${i},this.value)" style="flex:1;min-width:150px;padding:6px 10px;border:2px solid rgba(26,95,180,.15);border-radius:100px;font-family:'Nunito',sans-serif;font-size:.76rem;font-weight:700;color:#1A5FB4;background:#EBF3FC;cursor:pointer;">
+                  <option value="">Cambiar plan…</option>
+                  <option value="MEDIPaw Urgencias" ${m.plan==='MEDIPaw Urgencias'?'selected':''}>MEDIPaw Urgencias</option>
+                  <option value="MEDIPaw Joven" ${m.plan==='MEDIPaw Joven'?'selected':''}>MEDIPaw Joven</option>
+                  <option value="MEDIPaw Adulto" ${m.plan==='MEDIPaw Adulto'?'selected':''}>MEDIPaw Adulto</option>
+                  <option value="MEDIPaw Senior" ${m.plan==='MEDIPaw Senior'?'selected':''}>MEDIPaw Senior</option>
+                </select>
+                ${m.mascotaId && !noEnColeccion ? `
+                  ${estActual!=='activo'?`<button onclick="cambiarEstadoMascota('${m.mascotaId}','activo')" class="bmini bverde" style="font-size:.72rem;">Activar</button>`:''}
+                  ${estActual==='activo'?`<button onclick="cambiarEstadoMascota('${m.mascotaId}','suspendido')" class="bmini brojo" style="font-size:.72rem;">Suspender</button>`:''}
+                  ${estActual!=='baja'?`<button onclick="cambiarEstadoMascota('${m.mascotaId}','baja')" class="bmini" style="font-size:.72rem;background:#f3f4f6;color:#6b7280;">Baja</button>`:''}
+                `:''}
+              </div>
+            </div>`;
+          })()}
           <div style="font-size:.7rem;font-weight:800;color:var(--suave);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Servicios</div>
           ${servicios.map(s => {
             const ic = srvIcons[s.key] || { icon:'*', bg:'#EBF3FC' };
@@ -1347,8 +1509,13 @@ async function cambiarEstado(uid,estado){
         await syncMascotaPublica(updatedData, updatedMascotas[i], i);
       }
     }
+    // F0.5: materializar mascotas en la colección y DAR cobertura (activar cada mascota del titular).
+    await espejarMascotasEnColeccion(uid);
+    await activarMascotasDe(uid, 'activo');
   } else {
     await db.collection('usuarios').doc(uid).update(update);
+    // F0.5: suspender al titular corta la cobertura de TODAS sus mascotas.
+    await activarMascotasDe(uid, 'suspendido');
   }
   cargarUsuariosAdmin();
 }
@@ -1371,14 +1538,14 @@ async function confirmarEliminarMascota(uid, index, nombre) {
     const ud = snap.data();
     const mascotas = ud.mascotas ? [...ud.mascotas] : [];
     const oldToken = mascotas[index]?.token;
+    const oldMascotaId = mascotas[index]?.mascotaId;
     mascotas.splice(index, 1);
     await db.collection('usuarios').doc(uid).update({ mascotas });
     if (oldToken) {
       try { await db.collection('mascotas_publicas').doc(oldToken).delete(); } catch(e) {}
     }
-    const snapNew = await db.collection('usuarios').doc(uid).get();
-    currentUserData = { uid, ...snapNew.data() };
-    renderPanel(currentUserData);
+    if (oldMascotaId) { try { await db.collection('mascotas').doc(oldMascotaId).delete(); } catch(e) {} }
+    cargarUsuariosAdmin();
   } catch(e) { alert('Error al eliminar: ' + e.message); }
 }
 
@@ -1398,6 +1565,8 @@ async function eliminarUsuario(uid) {
         try { await db.collection('mascotas_publicas').doc(m.token).delete(); } catch(e) {}
       }
     }
+    // F0.5: borrar también los docs de la colección mascotas de este titular.
+    try { const ms = await db.collection('mascotas').where('titularUid','==',uid).get(); for (const d of ms.docs) { try { await d.ref.delete(); } catch(e) {} } } catch(e) {}
     await db.collection('usuarios').doc(uid).delete();
     if (email) {
       try { await auth.sendPasswordResetEmail(email); } catch(e) {}
@@ -1519,27 +1688,23 @@ async function cargarDashboard(){
   el.innerHTML = '<p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p>';
 
   try {
-    const snap = await db.collection('usuarios').get();
+    // F0.5: unidad de negocio = MASCOTA ACTIVA (colección), no el titular. Facturación = Σ cuota de activas.
+    const [snap, masSnap] = await Promise.all([
+      db.collection('usuarios').get(),
+      db.collection('mascotas').get(),
+    ]);
     const todos = snap.docs.map(d=>({id:d.id,...d.data()}));
     const afiliados = todos.filter(u => esAfiliado(u));
     const prestadores = todos.filter(u => getUserRoles(u).includes('veterinario'));
-    const activos = afiliados.filter(u=>u.estado==='activo');
     const pendientes = afiliados.filter(u=>u.estado==='pendiente');
 
-    const todasMascotas = afiliados.flatMap(u=>u.mascotas||[]);
-
-    const planCount = {};
-    todasMascotas.forEach(m=>{
-      const p = m.plan||'Sin definir';
-      planCount[p] = (planCount[p]||0)+1;
-    });
-
-    const PRECIOS = {'MEDIPaw Urgencias':23988,'MEDIPaw Joven':58788,'MEDIPaw Adulto':54388,'MEDIPaw Senior':70788};
-    let facturacion = 0;
-    activos.forEach(u=>{
-      const mascs = u.mascotas||[];
-      mascs.forEach(m=>{ facturacion += PRECIOS[m.plan]||0; });
-    });
+    const todasMascotasCol = masSnap.docs.map(d=>({id:d.id,...d.data()}));
+    const rn = MC.resumenNegocio(todasMascotasCol);
+    const todasMascotas = todasMascotasCol;            // total real de mascotas (colección)
+    const planCount = rn.planCount;                    // distribución SOLO de activas
+    const facturacion = rn.facturacion;                // Σ cuota de mascotas activas
+    // titulares con al menos una mascota activa (para el subtítulo "en N titulares activos")
+    const titularesConActiva = new Set(todasMascotasCol.filter(m=>MC.coberturaMascota(m).ok).map(m=>m.titularUid)).size;
 
     const ultimos = [...afiliados].sort((a,b)=>{
       const ta = a.creadoEn?.seconds||0, tb = b.creadoEn?.seconds||0;
@@ -1553,16 +1718,27 @@ async function cargarDashboard(){
 
     let solHtml = '';
     try {
-      const solSnap = await db.collection('solicitudes').orderBy('creadoEn','desc').limit(10).get();
-      if (!solSnap.empty) {
+      const solSnap = await db.collection('solicitudes').orderBy('creadoEn','desc').limit(30).get();
+      // F0.5: mostrar solo pendientes (las resueltas se ocultan). Etiquetar el tipo (cambio de plan / baja / interés).
+      const pendSol = solSnap.docs.filter(d => (d.data().estado||'pendiente') !== 'resuelta');
+      const TIPO_SOL = { cambio_plan:{txt:'Cambio de plan',bg:'#fef3c7',col:'#92400e'}, baja:{txt:'Baja',bg:'#fee2e2',col:'#991b1b'} };
+      if (pendSol.length > 0) {
         solHtml = `<div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;border:1px solid rgba(26,95,180,.08);box-shadow:0 2px 8px rgba(26,95,180,.06);">
-          <div style="font-size:.75rem;font-weight:800;color:#0D1B3E;text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;">Solicitudes recientes</div>
-          ${solSnap.docs.map(d => {
+          <div style="font-size:.75rem;font-weight:800;color:#0D1B3E;text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;">Solicitudes pendientes (${pendSol.length})</div>
+          ${pendSol.map(d => {
             const s = d.data();
             const f = s.creadoEn?.toDate?.()?.toLocaleDateString('es-AR')||'';
-            return `<div style="padding:8px 0;border-bottom:1px solid #f5f7fa;font-size:.82rem;">
-              <strong>${s.solicitanteNombre||'—'}</strong> · ${s.solicitanteTel||''}<br>
-              <span style="color:var(--suave);">${s.mascotaNombre||''} · ${s.servicioKey||''} · ${f}</span>
+            const t = TIPO_SOL[s.tipo] || {txt:(s.servicioKey||'Interés'),bg:'#EBF3FC',col:'#1A5FB4'};
+            const detalle = s.tipo==='cambio_plan' ? `${s.mascotaNombre||''}: ${s.planActual||'—'} → <strong>${s.planPedido||'—'}</strong>`
+                          : s.tipo==='baja' ? `${s.mascotaNombre||''}`
+                          : `${s.mascotaNombre||''} · ${s.servicioKey||''}`;
+            return `<div style="padding:10px 0;border-bottom:1px solid #f5f7fa;font-size:.82rem;">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+                <span style="background:${t.bg};color:${t.col};font-size:.62rem;font-weight:800;padding:2px 8px;border-radius:100px;text-transform:uppercase;">${t.txt}</span>
+                <button onclick="marcarSolicitudResuelta('${d.id}')" class="bmini" style="background:#dcfce7;color:#166534;font-size:.7rem;padding:4px 10px;">Marcar resuelta</button>
+              </div>
+              <div style="margin-top:4px;"><strong>${s.solicitanteNombre||'—'}</strong>${s.nroSocio?` · ${s.nroSocio}`:''}${s.solicitanteTel?` · ${s.solicitanteTel}`:''}</div>
+              <span style="color:var(--suave);">${detalle} · ${f}</span>
               ${s.nota?`<br><span style="color:#9ca3af;font-style:italic;">${s.nota}</span>`:''}
             </div>`;
           }).join('')}
@@ -1573,14 +1749,14 @@ async function cargarDashboard(){
     el.innerHTML = `
       <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:16px;">
         <div style="background:white;border-radius:16px;padding:20px;border:1px solid rgba(26,95,180,.08);box-shadow:0 2px 8px rgba(26,95,180,.06);">
-          <div style="font-size:.7rem;font-weight:700;color:#5a6a8a;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Afiliados activos</div>
-          <div style="font-size:2.5rem;font-weight:900;color:#1A5FB4;line-height:1;">${activos.length}</div>
-          <div style="font-size:.72rem;color:#9ca3af;margin-top:4px;">de ${afiliados.length} totales</div>
+          <div style="font-size:.7rem;font-weight:700;color:#5a6a8a;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Mascotas activas</div>
+          <div style="font-size:2.5rem;font-weight:900;color:#1A5FB4;line-height:1;">${rn.mascotasActivas}</div>
+          <div style="font-size:.72rem;color:#9ca3af;margin-top:4px;">de ${todasMascotas.length} mascotas · unidad de negocio</div>
         </div>
         <div style="background:white;border-radius:16px;padding:20px;border:1px solid rgba(26,95,180,.08);box-shadow:0 2px 8px rgba(26,95,180,.06);">
-          <div style="font-size:.7rem;font-weight:700;color:#5a6a8a;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Mascotas afiliadas</div>
-          <div style="font-size:2.5rem;font-weight:900;color:#2272D9;line-height:1;">${todasMascotas.length}</div>
-          <div style="font-size:.72rem;color:#9ca3af;margin-top:4px;">en ${activos.length} titulares activos</div>
+          <div style="font-size:.7rem;font-weight:700;color:#5a6a8a;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Titulares</div>
+          <div style="font-size:2.5rem;font-weight:900;color:#2272D9;line-height:1;">${afiliados.length}</div>
+          <div style="font-size:.72rem;color:#9ca3af;margin-top:4px;">${titularesConActiva} con cobertura activa</div>
         </div>
         <div style="background:white;border-radius:16px;padding:20px;border:1px solid rgba(26,95,180,.08);box-shadow:0 2px 8px rgba(26,95,180,.06);">
           <div style="font-size:.7rem;font-weight:700;color:#5a6a8a;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Veterinarios</div>
@@ -1590,7 +1766,7 @@ async function cargarDashboard(){
         <div style="background:white;border-radius:16px;padding:20px;border:1px solid rgba(26,95,180,.08);box-shadow:0 2px 8px rgba(26,95,180,.06);">
           <div style="font-size:.7rem;font-weight:700;color:#5a6a8a;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Facturacion estimada</div>
           <div style="font-size:1.6rem;font-weight:900;color:#22c55e;line-height:1;">$${facturacion.toLocaleString('es-AR')}</div>
-          <div style="font-size:.72rem;color:#9ca3af;margin-top:4px;">/mes · solo activos</div>
+          <div style="font-size:.72rem;color:#9ca3af;margin-top:4px;">/mes · Σ cuota de mascotas activas</div>
         </div>
       </div>
 
@@ -1603,11 +1779,11 @@ async function cargarDashboard(){
       </div>` : ''}
 
       <div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;border:1px solid rgba(26,95,180,.08);box-shadow:0 2px 8px rgba(26,95,180,.06);">
-        <div style="font-size:.75rem;font-weight:800;color:#0D1B3E;text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;">Mascotas por plan</div>
+        <div style="font-size:.75rem;font-weight:800;color:#0D1B3E;text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;">Mascotas por plan <span style="font-weight:400;color:#9ca3af;text-transform:none;">(activas)</span></div>
         ${Object.entries(planCount).length === 0
-          ? '<p style="color:#9ca3af;font-size:.82rem;">Sin datos aun.</p>'
+          ? '<p style="color:#9ca3af;font-size:.82rem;">Sin mascotas activas aun.</p>'
           : Object.entries(planCount).map(([plan,count])=>{
-              const total = todasMascotas.length || 1;
+              const total = rn.mascotasActivas || 1;
               const pctPlan = Math.round((count/total)*100);
               const col = planColors[plan]||'#9ca3af';
               return `<div style="margin-bottom:12px;">
@@ -1802,20 +1978,31 @@ function renderPanel(data){
                 <div style="font-size:.78rem;font-weight:700;">${nombre} ${apellido||''}</div>
                 ${data.nroSocio?`<div style="font-size:.58rem;opacity:.5;letter-spacing:1px;">${data.nroSocio}</div>`:''}
               </div>
-              <div style="display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,.12);border-radius:100px;padding:3px 9px;font-size:.65rem;font-weight:700;"><span style="width:5px;height:5px;background:#4ade80;border-radius:50%;display:inline-block;"></span> Activo</div>
+              ${(()=>{const c=MC.coberturaMascota(m);return `<div style="display:inline-flex;align-items:center;gap:4px;background:${c.ok?'rgba(74,222,128,.18)':'rgba(248,113,113,.20)'};border-radius:100px;padding:3px 9px;font-size:.65rem;font-weight:700;"><span style="width:5px;height:5px;background:${c.ok?'#4ade80':'#f87171'};border-radius:50%;display:inline-block;"></span> ${c.chip}</div>`;})()}
             </div>
           </div>
-          <div style="display:flex;gap:8px;margin-top:8px;align-items:center;">
-            <select onchange="cambiarPlanMascota('${data.uid}',${i},this.value)" style="flex:1;padding:8px 12px;border:2px solid rgba(26,95,180,.15);border-radius:100px;font-family:'Nunito',sans-serif;font-size:.82rem;font-weight:700;color:#1A5FB4;background:#EBF3FC;outline:none;cursor:pointer;">
-              <option value="">Cambiar plan...</option>
-              <option value="MEDIPaw Urgencias" ${m.plan==='MEDIPaw Urgencias'?'selected':''}>MEDIPaw Urgencias</option>
-              <option value="MEDIPaw Joven" ${m.plan==='MEDIPaw Joven'?'selected':''}>MEDIPaw Joven</option>
-              <option value="MEDIPaw Adulto" ${m.plan==='MEDIPaw Adulto'?'selected':''}>MEDIPaw Adulto</option>
-              <option value="MEDIPaw Senior" ${m.plan==='MEDIPaw Senior'?'selected':''}>MEDIPaw Senior</option>
-            </select>
-            <button onclick="descargarCarnet(${i},'${m.nombre}')" class="bmini" style="background:#EBF3FC;color:#1A5FB4;font-size:.8rem;padding:8px 12px;">DL</button>
-            <button onclick="confirmarEliminarMascota('${data.uid}',${i},'${m.nombre}')" style="background:none;border:1px solid #fee2e2;color:#991b1b;border-radius:100px;padding:7px 12px;font-size:.8rem;cursor:pointer;">X</button>
-          </div>
+          ${(()=>{const c=MC.coberturaMascota(m);const cuota=MC.planCuota(m.plan);return `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:8px;padding:8px 12px;border-radius:12px;background:${c.ok?'#f0fdf4':'#fef2f2'};">
+            <div style="font-size:.78rem;font-weight:700;color:${c.color};">${c.emoji} ${c.label}${c.ok&&cuota?` · $${cuota.toLocaleString('es-AR')}/mes`:''}</div>
+            <button onclick="descargarCarnet(${i},'${(m.nombre||'').replace(/'/g,"\\'")}')" class="bmini" style="background:#EBF3FC;color:#1A5FB4;font-size:.78rem;padding:7px 12px;flex-shrink:0;">Descargar carnet</button>
+          </div>`;})()}
+          ${m.mascotaId?`<details style="margin-top:6px;">
+            <summary style="cursor:pointer;font-size:.74rem;color:#1A5FB4;font-weight:700;list-style:none;">Solicitar cambio de plan o baja</summary>
+            <div style="background:var(--fondo);border-radius:12px;padding:10px;margin-top:6px;">
+              <div style="font-size:.72rem;color:var(--suave);margin-bottom:8px;">El cambio de plan y la baja los resuelve MEDIPaw. Dejanos tu pedido y te contactamos.</div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+                <select id="pedirPlan-${i}" style="flex:1;min-width:150px;padding:7px 10px;border:2px solid rgba(26,95,180,.15);border-radius:100px;font-family:'Nunito',sans-serif;font-size:.78rem;font-weight:700;color:#1A5FB4;background:white;cursor:pointer;">
+                  <option value="">Plan que querés…</option>
+                  <option value="MEDIPaw Urgencias">MEDIPaw Urgencias</option>
+                  <option value="MEDIPaw Joven">MEDIPaw Joven</option>
+                  <option value="MEDIPaw Adulto">MEDIPaw Adulto</option>
+                  <option value="MEDIPaw Senior">MEDIPaw Senior</option>
+                </select>
+                <button onclick="pedirCambioPlan('${m.mascotaId}','${(m.nombre||'').replace(/'/g,"\\'")}','${(m.plan||'').replace(/'/g,"\\'")}',${i})" class="bmini" style="background:#EBF3FC;color:#1A5FB4;font-size:.76rem;">Pedir cambio</button>
+              </div>
+              <button onclick="pedirBaja('${m.mascotaId}','${(m.nombre||'').replace(/'/g,"\\'")}')" class="bmini brojo" style="margin-top:8px;font-size:.76rem;">Pedir baja de ${m.nombre||'esta mascota'}</button>
+              <p id="pedirMsg-${i}" style="font-size:.72rem;margin-top:6px;"></p>
+            </div>
+          </details>`:''}
         </div>`).join('')}
     </div>
 

@@ -1,0 +1,14 @@
+{
+  "name": "medipet-seed",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Scripts de migración y smokes de MEDIPaw (F0.5+). Admin SDK.",
+  "scripts": {
+    "smoke:core": "node smoke-medipaw-core.js",
+    "migrar:dry": "node migrar-mascotas.js",
+    "migrar:write": "node migrar-mascotas.js --write"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.0.0"
+  }
+}

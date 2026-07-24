@@ -1,0 +1,12 @@
+# Credenciales Admin SDK — NUNCA commitear (proyecto medipet-c3a4d)
+seed/serviceAccountKey.json
+serviceAccountKey.json
+*serviceAccount*.json
+
+# Dependencias
+node_modules/
+seed/node_modules/
+
+# Logs / temporales
+*.log
+.DS_Store

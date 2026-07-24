@@ -34,6 +34,36 @@ service cloud.firestore {
     }
 
     // ══════════════════════════════════════
+    // ══  MASCOTAS (colección propia, F0.5) ══
+    // ══════════════════════════════════════
+    // La MASCOTA es el sujeto: tiene su plan, su cuota y su ESTADO (cobertura por mascota).
+    // Read: admin, cualquier veterinario (reemplaza la credencial de papel), o el TITULAR dueño.
+    // Write sensible (plan/estado/cuota/titularUid/mascotaId/token) = SOLO admin.
+    // El titular puede: crear una mascota SUYA que nace 'suspendido' + cuota 0 (sin cobertura hasta
+    // que admin la active) y editar SOLO campos descriptivos no sensibles. Nunca se auto-otorga cobertura.
+    match /mascotas/{mascotaId} {
+      allow get: if request.auth != null
+        && (isAdmin() || esVeterinario() || resource.data.titularUid == request.auth.uid);
+      allow list: if request.auth != null
+        && (isAdmin() || esVeterinario() || resource.data.titularUid == request.auth.uid);
+
+      allow create: if isAdmin()
+        || (request.auth != null
+            && request.resource.data.titularUid == request.auth.uid
+            && request.resource.data.estado == 'suspendido'
+            && request.resource.data.cuota == 0);
+
+      allow update: if isAdmin()
+        || (request.auth != null
+            && resource.data.titularUid == request.auth.uid
+            && request.resource.data.titularUid == resource.data.titularUid
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['nombre', 'raza', 'fechaNacimiento', 'foto']));
+
+      allow delete: if isAdmin();
+    }
+
+    // ══════════════════════════════════════
     // ══  MASCOTAS PUBLICAS               ══
     // ══════════════════════════════════════
     match /mascotas_publicas/{token} {
