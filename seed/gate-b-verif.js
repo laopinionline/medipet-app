@@ -48,7 +48,32 @@ async function restPatch(idToken, pathDoc, fields, mask) {
   return r.status;
 }
 
+async function restCreate(idToken, pathDoc, fields) {
+  const r = await fetch('https://firestore.googleapis.com/v1/projects/' + PROJECT + '/databases/(default)/documents/' + pathDoc,
+    { method: 'PATCH', headers: { Authorization: 'Bearer ' + idToken, 'Content-Type': 'application/json' }, body: JSON.stringify({ fields }) });
+  return r.status;
+}
 (async () => {
+  // ── Seguridad del EMBUDO: el titular no puede mandar plan/cuota arbitrarios (reglas publicadas) ──
+  if (MODE === 'embudo') {
+    console.log('\n=== EMBUDO — seguridad del create de mascotas (titular real por REST) ===\n');
+    const titUid = await ensureUser(TIT, ['afiliado']);
+    const tok = await idTokenDe(titUid);
+    const base = (extra) => Object.assign({ titularUid: { stringValue: titUid }, estado: { stringValue: 'activo' }, especie: { stringValue: 'perro' }, edadAprox: { stringValue: 'cachorro' } }, extra);
+    // VÁLIDO: perro cachorro → Joven 58788
+    const ok = await restCreate(tok, 'mascotas/MP-EMBUDOTEST1', base({ plan: { stringValue: 'MEDIPaw Joven' }, cuota: { integerValue: '58788' } }));
+    console.log('  VÁLIDO   perro/cachorro→Joven/$58788 → HTTP ' + ok + '  ' + (ok === 200 ? '✓ ALLOW' : '✗ ESPERABA 200'));
+    // ADULTERADO 1: cuota falsa (Joven pero $0)
+    const t1 = await restCreate(tok, 'mascotas/MP-EMBUDOTEST2', base({ plan: { stringValue: 'MEDIPaw Joven' }, cuota: { integerValue: '0' } }));
+    console.log('  ADULTERADO cuota Joven=$0       → HTTP ' + t1 + '  ' + (t1 === 403 ? '✓ DENIED' : '✗ ESPERABA 403'));
+    // ADULTERADO 2: plan que no corresponde a la edad (cachorro pero Senior)
+    const t2 = await restCreate(tok, 'mascotas/MP-EMBUDOTEST3', base({ plan: { stringValue: 'MEDIPaw Senior' }, cuota: { integerValue: '70788' } }));
+    console.log('  ADULTERADO cachorro→Senior      → HTTP ' + t2 + '  ' + (t2 === 403 ? '✓ DENIED' : '✗ ESPERABA 403'));
+    // limpiar el válido (Admin SDK)
+    await db.collection('mascotas').doc('MP-EMBUDOTEST1').delete().catch(()=>{});
+    console.log('\n(limpiado MP-EMBUDOTEST1; corré cleanup para borrar la cuenta desechable)');
+    process.exit(0);
+  }
   // ── Regresión de la escalada de privilegios (parche a): correr DESPUÉS de publicar el parche ──
   if (MODE === 'escalada') {
     console.log('\n=== GATE — escalada de privilegios (parche a) ===\n');
