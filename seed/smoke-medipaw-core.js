@@ -10,17 +10,25 @@ var ok = 0, fail = 0;
 function check(cond, label) { console.log((cond ? '✓' : '✗ FALLO') + '  ' + label); cond ? ok++ : fail++; }
 function eq(a, b, label) { check(JSON.stringify(a) === JSON.stringify(b), label + '  (esperado ' + JSON.stringify(b) + ', got ' + JSON.stringify(a) + ')'); }
 
-console.log('\n— COBERTURA POR MASCOTA (bug del vet + bug del carnet) —');
-// Bug (a): la cobertura es de LA MASCOTA, no del titular. Titular activo con mascota suspendida ⇒ NO cubierta.
-check(C.coberturaMascota({ estado: 'activo' }).ok === true, 'mascota activa → cubierta');
-check(C.coberturaMascota({ estado: 'suspendido' }).ok === false, 'mascota suspendida → NO cubierta (aunque el titular esté activo)');
-check(C.coberturaMascota({ estado: 'baja' }).ok === false, 'mascota de baja → NO cubierta');
+console.log('\n— COBERTURA POR MASCOTA (estado activo Y plan del catálogo) —');
+var PLAN_OK = 'MEDIPaw Joven'; // plan real del catálogo
+// Bug (a): la cobertura es de LA MASCOTA, no del titular. Activo + plan del catálogo ⇒ cubierta.
+check(C.coberturaMascota({ estado: 'activo', plan: PLAN_OK }).ok === true, 'activa + plan del catálogo → cubierta');
+check(C.coberturaMascota({ estado: 'suspendido', plan: PLAN_OK }).ok === false, 'suspendida → NO cubierta (aunque el titular esté activo)');
+check(C.coberturaMascota({ estado: 'baja', plan: PLAN_OK }).ok === false, 'de baja → NO cubierta');
 // Bug (b): sin estado (o basura) NUNCA se asume activo — el carnet no puede mentir "Activo".
-check(C.coberturaMascota({}).ok === false, 'mascota sin estado → NO cubierta (no se asume activo)');
-check(C.coberturaMascota({ estado: 'cualquiercosa' }).ok === false, 'estado inválido → NO cubierta');
-eq(C.coberturaMascota({ estado: 'activo' }).chip, 'Activo', 'chip activo');
-eq(C.coberturaMascota({ estado: 'suspendido' }).chip, 'Suspendido', 'chip suspendido');
-eq(C.coberturaMascota({ estado: 'baja' }).chip, 'Baja', 'chip baja');
+check(C.coberturaMascota({ plan: PLAN_OK }).ok === false, 'sin estado → NO cubierta (no se asume activo)');
+check(C.coberturaMascota({ estado: 'cualquiercosa', plan: PLAN_OK }).ok === false, 'estado inválido → NO cubierta');
+// Bug (c) NUEVO: activo pero SIN plan del catálogo ("Sin definir" o legacy) ⇒ NO es cobertura vigente.
+check(C.coberturaMascota({ estado: 'activo', plan: 'Sin definir' }).ok === false, 'activo + "Sin definir" → NO cubierta (falta plan)');
+check(C.coberturaMascota({ estado: 'activo', plan: '' }).ok === false, 'activo + plan vacío → NO cubierta');
+check(C.coberturaMascota({ estado: 'activo' }).ok === false, 'activo sin campo plan → NO cubierta');
+check(C.coberturaMascota({ estado: 'activo', plan: 'Premium' }).ok === false, 'activo + plan LEGACY fuera de catálogo (Premium) → NO cubierta');
+eq(C.coberturaMascota({ estado: 'activo', plan: 'Sin definir' }).chip, 'Sin plan', 'chip "Sin plan" para activo sin plan');
+eq(C.coberturaMascota({ estado: 'activo', plan: PLAN_OK }).chip, 'Activo', 'chip activo');
+eq(C.coberturaMascota({ estado: 'suspendido', plan: PLAN_OK }).chip, 'Suspendido', 'chip suspendido');
+eq(C.coberturaMascota({ estado: 'baja', plan: PLAN_OK }).chip, 'Baja', 'chip baja');
+check(C.planEnCatalogo('MEDIPaw Senior') === true && C.planEnCatalogo('Premium') === false && C.planEnCatalogo('Sin definir') === false, 'planEnCatalogo: catálogo sí, legacy/sin-definir no');
 
 console.log('\n— CUOTA DEL TITULAR = Σ cuotas de mascotas ACTIVAS —');
 var mascotasTit = [
@@ -32,19 +40,21 @@ eq(C.cuotaTitular(mascotasTit), 58788 + 70788, 'suma solo las activas (la suspen
 eq(C.cuotaTitular([]), 0, 'titular sin mascotas → 0');
 eq(C.cuotaTitular([{ plan: 'Sin definir', estado: 'activo' }]), 0, 'plan sin definir activo → 0 (no factura)');
 
-console.log('\n— RESUMEN DE NEGOCIO (unidad = mascota activa, no titular) —');
+console.log('\n— RESUMEN DE NEGOCIO (activa operativa por estado; cobertura exige plan) —');
 var universo = [
   { plan: 'MEDIPaw Joven', estado: 'activo' },
   { plan: 'MEDIPaw Joven', estado: 'activo' },
   { plan: 'MEDIPaw Senior', estado: 'activo' },
+  { plan: 'Sin definir', estado: 'activo' },      // operativa pero SIN cobertura vigente (falta plan)
   { plan: 'MEDIPaw Adulto', estado: 'suspendido' },
   { plan: 'MEDIPaw Urgencias', estado: 'baja' },
 ];
 var r = C.resumenNegocio(universo);
-eq(r.mascotasTotales, 5, 'totales = 5');
-eq(r.mascotasActivas, 3, 'activas = 3 (excluye suspendida y baja)');
-eq(r.facturacion, 58788 + 58788 + 70788, 'facturación = Σ cuota de activas');
-eq(r.planCount, { 'MEDIPaw Joven': 2, 'MEDIPaw Senior': 1 }, 'planCount solo cuenta activas');
+eq(r.mascotasTotales, 6, 'totales = 6');
+eq(r.mascotasActivas, 4, 'activas (estado) = 4 (incluye la "Sin definir" activa; excluye suspendida y baja)');
+eq(r.mascotasConCobertura, 3, 'con cobertura = 3 (la "Sin definir" NO cuenta: falta plan)');
+eq(r.facturacion, 58788 + 58788 + 70788, 'facturación = Σ cuota de activas (Sin definir suma $0)');
+eq(r.planCount, { 'MEDIPaw Joven': 2, 'MEDIPaw Senior': 1, 'Sin definir': 1 }, 'planCount por estado activo (muestra la que falta remapear)');
 
 console.log('\n— PRECIOS / CUOTA —');
 eq(C.planCuota('MEDIPaw Adulto'), 54388, 'cuota Adulto');
