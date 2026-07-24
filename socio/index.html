@@ -15,7 +15,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
-<script src="/lib/medipaw-core.js?v=20260724e"></script>
+<script src="/lib/medipaw-core.js?v=20260724f"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--azul:#1A5FB4;--azul-medio:#2272D9;--azul-claro:#5BA3E8;--azul-pale:#EBF3FC;--noche:#0D1B3E;--fondo:#F5F7FA;--texto:#1a2340;--suave:#5a6a8a;--rojo:#e11d48;--verde:#166534}
@@ -145,8 +145,8 @@ body{font-family:'Nunito',sans-serif;background:var(--fondo);color:var(--texto);
 <div id="registerScreen" class="screen">
   <div class="auth-card tall" style="max-width:480px;">
     <div class="auth-logo"><svg width="40" height="40"><use href="#mp-iso"/></svg><div class="marca">MEDI<span>Paw</span></div></div>
-    <div class="auth-title">Afiliá a tu mascota</div>
-    <div class="auth-sub">Tus datos y los de tu mascota</div>
+    <div class="auth-title">Creá tu cuenta MEDIPaw</div>
+    <div class="auth-sub">Después damos de alta a tu mascota</div>
     <div class="fstack">
       <div class="frow">
         <input type="text" id="regNombre" placeholder="Tu nombre *" class="input-field">
@@ -155,21 +155,9 @@ body{font-family:'Nunito',sans-serif;background:var(--fondo);color:var(--texto);
       <input type="email" id="regEmail" placeholder="Email *" class="input-field" autocomplete="email">
       <input type="tel" id="regTel" placeholder="Teléfono / WhatsApp" class="input-field">
       <input type="password" id="regPass" placeholder="Contraseña (mín. 6) *" class="input-field" autocomplete="new-password">
-      <div style="border-top:1px solid var(--azul-pale);padding-top:12px;">
-        <p style="font-size:.75rem;font-weight:800;color:var(--noche);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">Tu mascota</p>
-        <div class="frow">
-          <input type="text" id="regMascota" placeholder="Nombre *" class="input-field">
-          <input type="text" id="regRaza" placeholder="Raza" class="input-field">
-        </div>
-        <div style="margin-top:8px;">
-          <label class="foto-label" for="regFoto">Foto de tu mascota (opcional)</label>
-          <input type="file" id="regFoto" accept="image/*" style="display:none" onchange="previewFoto(this)">
-          <img id="fotoPreview" src="" alt="" style="width:80px;height:80px;border-radius:50%;object-fit:cover;margin-top:10px;display:none;border:3px solid var(--azul-claro);">
-        </div>
-      </div>
       <button onclick="doRegistro()" class="btn-primary" id="btnRegistro">Crear mi cuenta</button>
       <p id="regError" class="errmsg"></p>
-      <p style="font-size:.72rem;color:var(--suave);text-align:center;">Tu mascota queda pendiente de activación por MEDIPaw. Te contactamos para completar el alta.</p>
+      <p style="font-size:.72rem;color:var(--suave);text-align:center;">Después vas a poder dar de alta a tu mascota: te preguntamos su especie y edad y le asignamos el plan que le corresponde.</p>
     </div>
     <div class="divider"><button onclick="showScreen('loginScreen')" class="link-btn">Ya tengo cuenta</button></div>
   </div>
@@ -210,9 +198,9 @@ function getRoles(u){
 
 // ── Estado único ──
 const S = { view:'boot', sub:'home', cred:null, mascotaSel:0, deferredPrompt:null, caso:null };
-// Dispatcher del sub-view dentro del appScreen: home | caso ("[Nombre] no está bien") | cuenta (cuota y comprobantes)
-function render(){ if(S.sub==='caso') casoView(); else if(S.sub==='cuenta') cuentaView(); else homeView(); }
-function volverHome(){ S.sub='home'; S.caso=null; render(); }
+// Dispatcher del sub-view: home | caso | cuenta | alta (embudo de alta de mascota)
+function render(){ if(S.sub==='caso') casoView(); else if(S.sub==='cuenta') cuentaView(); else if(S.sub==='alta') altaView(); else homeView(); }
+function volverHome(){ S.sub='home'; S.caso=null; S.alta=null; render(); }
 
 // ── Colección mascotas (fuente de verdad; reusa el núcleo) ──
 async function mascGetByTitular(uid){
@@ -241,21 +229,18 @@ async function doLogin(){
 async function doRegistro(){
   const nombre=v('regNombre'),apellido=v('regApellido'),email=v('regEmail'),tel=v('regTel');
   const pass=document.getElementById('regPass').value;
-  const mascotaNombre=v('regMascota'),raza=v('regRaza');
   setErr('regError','');
-  if(!nombre||!email||!pass||!mascotaNombre){ setErr('regError','Completá los campos con *.'); return; }
+  if(!nombre||!email||!pass){ setErr('regError','Completá los campos con *.'); return; }
   if(pass.length<6){ setErr('regError','La contraseña necesita al menos 6 caracteres.'); return; }
   const btn=document.getElementById('btnRegistro'); btn.disabled=true; btn.textContent='Creando cuenta…';
   try{
     const cred=await auth.createUserWithEmailAndPassword(email,pass);
     const uid=cred.user.uid;
-    let foto=''; const fEl=document.getElementById('regFoto');
-    if(fEl&&fEl.files&&fEl.files[0]){ try{ foto=await comprimirFoto(fEl.files[0]); }catch(_){ } }
-    // Mascota EMBEBIDA (compat con el panel); el doc de la colección lo crea el admin al activar (mascotaId al alta).
+    // Cuenta SOLA (sin mascota). La mascota se da de alta por el EMBUDO (especie→edad→plan del sistema), activa.
     await db.collection('usuarios').doc(uid).set({
       uid,nombre,apellido,email,telefono:tel,
-      rol:'afiliado', roles:['afiliado'], estado:'pendiente',
-      mascotas:[{ nombre:mascotaNombre, raza, fechaNacimiento:'', plan:'Sin definir', foto, mascotaId:'', token:'' }],
+      rol:'afiliado', roles:['afiliado'], estado:'activo',
+      mascotas:[],
       creadoEn:TS()
     });
   }catch(e){
@@ -321,29 +306,106 @@ function homeView(){
 function mascotaActiva(){ const ms=S.cred.mascotas||[]; return ms[S.mascotaSel]||ms[0]||null; }
 function nombreMasc(m){ return (m&&m.nombre) ? m.nombre : 'tu mascota'; }
 function seleccionarMascota(i){ S.mascotaSel=i; homeView(); }
-function toggleAddMasc(){ const f=document.getElementById('addMascForm'); if(f) f.style.display=f.style.display==='none'?'block':'none'; }
-// Alta de mascota desde el estado vacío. Embebido (compat panel) + doc de colección si el titular ya tiene nroSocio
-// (nace SUSPENDIDA, sin cobertura, hasta que admin la active — reglas: titular crea suspendido+cuota0).
-async function agregarMascotaSocio(){
-  const nombre=v('amNombre'), raza=v('amRaza'); const msg=document.getElementById('amMsg');
-  if(msg) msg.textContent='';
-  if(!nombre){ if(msg) msg.textContent='Poné el nombre de tu mascota.'; return; }
+// ══ EMBUDO DE ALTA (especie → edad → peso/raza/sexo → plan del SISTEMA → mascota ACTIVA) ══
+// El plan y la cuota los fija el sistema (MC.planPorEspecieEdad); el titular NO los elige. Las reglas los revalidan.
+function genCodigo(n){ const ch='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let t=''; const a=new Uint8Array(n); crypto.getRandomValues(a); for(let i=0;i<n;i++) t+=ch[a[i]%ch.length]; return t; }
+const ESPECIE_LABEL={perro:'🐶 Perro',gato:'🐱 Gato',ave:'🐦 Ave',otros:'🐾 Otros'};
+function abrirAlta(){ S.sub='alta'; S.alta={ paso:1, nombre:'', especie:'', edadAprox:'', fnac:'', peso:'', raza:'', sexo:'', busy:false, err:'' }; render(); }
+function altaEspecie(e){ S.alta.especie=e; S.alta.err=''; S.alta.paso=2; altaView(); }
+function altaEdad(x){ S.alta.edadAprox=x; S.alta.err=''; altaView(); }
+function altaPaso(n){
+  const a=S.alta;
+  // guardar inputs visibles antes de navegar
+  if(a.paso===1){ a.nombre=v('altaNombre'); }
+  if(a.paso===2){ const el=document.getElementById('altaFnac'); a.fnac=el?el.value:''; }
+  if(a.paso===3){ a.peso=v('altaPeso'); a.raza=v('altaRaza'); const sx=document.getElementById('altaSexo'); a.sexo=sx?sx.value:''; }
+  a.err='';
+  if(n>a.paso){ // validaciones al avanzar
+    if(a.paso===1 && !a.nombre){ a.err='Poné el nombre de tu mascota.'; altaView(); return; }
+    if(a.paso===1 && !a.especie){ a.err='Elegí la especie.'; altaView(); return; }
+    if(a.paso===2 && !a.edadAprox){ a.err='Elegí la edad aproximada.'; altaView(); return; } // fecha exacta OPCIONAL, nunca traba
+    if(a.paso===3){
+      if(!a.peso || Number(a.peso)<=0){ a.err='Poné el peso (kg).'; altaView(); return; }
+      if(!a.raza){ a.err='Poné la raza.'; altaView(); return; }
+      if(!a.sexo){ a.err='Elegí el sexo.'; altaView(); return; }
+    }
+  }
+  a.paso=n; altaView();
+}
+// El plan lo maneja la EDAD APROXIMADA (nunca la fecha). Fuente única MC.planPorEdadAprox.
+function altaPlanCalc(){ const a=S.alta; if(!a.especie||!a.edadAprox) return null; const plan=MC.planPorEdadAprox(a.especie, a.edadAprox); return { plan, cuota:MC.planCuota(plan), franja:(a.especie==='perro'||a.especie==='gato')?MC.EDAD_APROX_LABEL[a.edadAprox]:'Básico' }; }
+function altaView(){
+  const a=S.alta; if(!a){ volverHome(); return; }
+  const pasoN=a.paso, total=4;
+  const barra=`<div style="display:flex;gap:6px;margin-bottom:16px;">${[1,2,3,4].map(i=>`<div style="flex:1;height:5px;border-radius:100px;background:${i<=pasoN?'var(--azul-medio)':'var(--azul-pale)'};"></div>`).join('')}</div>`;
+  let cuerpo='';
+  if(pasoN===1){
+    cuerpo=`<div class="stit" style="text-transform:none;font-size:1rem;">¿Cómo se llama y qué es?</div>
+      <input type="text" id="altaNombre" class="input-field" placeholder="Nombre de tu mascota *" value="${esc(a.nombre)}" style="margin:10px 0;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        ${MC.ESPECIES.map(e=>`<button class="btn-primary" style="background:${a.especie===e?'var(--noche)':'var(--azul)'};" onclick="S.alta.nombre=v('altaNombre');altaEspecie('${e}')">${ESPECIE_LABEL[e]}</button>`).join('')}
+      </div>`;
+  } else if(pasoN===2){
+    cuerpo=`<div class="stit" style="text-transform:none;font-size:1rem;">¿Qué edad tiene ${esc(a.nombre||'tu mascota')}?</div>
+      <p style="font-size:.78rem;color:var(--suave);margin:4px 0 10px;">Con la edad le asignamos el plan (en perros y gatos). Aproximada está bien.</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        ${MC.EDADES_APROX.map(x=>`<button class="btn-primary" style="background:${a.edadAprox===x?'var(--noche)':'var(--azul)'};" onclick="altaEdad('${x}')">${MC.EDAD_APROX_LABEL[x]}</button>`).join('')}
+      </div>
+      <div style="margin-top:14px;border-top:1px solid var(--azul-pale);padding-top:12px;">
+        <label style="font-size:.78rem;font-weight:700;display:block;margin-bottom:4px;">Fecha de nacimiento exacta <span style="color:var(--suave);font-weight:400;">(opcional, si la sabés)</span></label>
+        <input type="date" id="altaFnac" class="input-field" value="${esc(a.fnac)}" max="${new Date().toISOString().slice(0,10)}">
+      </div>`;
+  } else if(pasoN===3){
+    cuerpo=`<div class="stit" style="text-transform:none;font-size:1rem;">Datos de ${esc(a.nombre||'tu mascota')}</div>
+      <p style="font-size:.78rem;color:var(--suave);margin:4px 0 10px;">El peso arranca su seguimiento (después lo vas midiendo en "Chequeo y peso").</p>
+      <div class="fstack">
+        <input type="number" id="altaPeso" class="input-field" placeholder="Peso ahora (kg) *" value="${esc(a.peso)}" step="0.1" min="0">
+        <input type="text" id="altaRaza" class="input-field" placeholder="Raza *" value="${esc(a.raza)}">
+        <select id="altaSexo" class="input-field"><option value="">Sexo *</option><option value="macho" ${a.sexo==='macho'?'selected':''}>Macho</option><option value="hembra" ${a.sexo==='hembra'?'selected':''}>Hembra</option></select>
+      </div>`;
+  } else {
+    const p=altaPlanCalc();
+    cuerpo=`<div class="stit" style="text-transform:none;font-size:1rem;">Listo — este es el plan que le corresponde</div>
+      <div class="seccion" style="background:var(--azul-pale);margin:10px 0;">
+        <div style="font-size:.72rem;color:var(--suave);text-transform:uppercase;letter-spacing:1px;">Plan asignado por ${a.especie==='perro'||a.especie==='gato'?('edad ('+ (p?p.franja:'') +')'):'especie'}</div>
+        <div style="font-size:1.2rem;font-weight:900;color:var(--azul);">${p?esc(p.plan):'—'}</div>
+        <div style="font-weight:800;">$${p?p.cuota.toLocaleString('es-AR'):'—'}/mes · cobertura activa</div>
+      </div>
+      <div style="font-size:.82rem;color:var(--texto);">${esc(a.nombre)} · ${ESPECIE_LABEL[a.especie]||''} · ${esc(a.raza)} · ${a.sexo==='macho'?'macho':'hembra'} · ${esc(a.peso)} kg</div>
+      <p style="font-size:.72rem;color:var(--suave);margin-top:6px;">El plan lo asigna MEDIPaw según especie y edad. No se elige a mano.</p>`;
+  }
+  const btnPrimario = pasoN<4
+    ? `<button class="btn-primary" onclick="altaPaso(${pasoN+1})" style="margin-top:14px;">Continuar</button>`
+    : `<button class="btn-primary" onclick="finalizarAlta()" style="margin-top:14px;" ${a.busy?'disabled':''}>${a.busy?'Dando de alta…':'Confirmar alta'}</button>`;
+  const volver = pasoN>1 ? `<button class="link-btn" onclick="altaPaso(${pasoN-1})" style="margin-top:10px;">‹ Atrás</button>` : `<button class="link-btn" onclick="volverHome()" style="margin-top:10px;">‹ Cancelar</button>`;
+  document.getElementById('home').innerHTML = `<div class="seccion">${barra}${cuerpo}<p class="errmsg">${esc(a.err||'')}</p>${pasoN===1?'':btnPrimario}${pasoN===1?`<button class="link-btn" onclick="volverHome()" style="margin-top:12px;">Cancelar</button>`:volver}</div>`;
+}
+async function finalizarAlta(){
+  const a=S.alta; const p=altaPlanCalc(); if(!p){ a.err='Faltan datos.'; altaView(); return; }
+  a.busy=true; altaView();
   const uid=S.cred.u.uid;
   try{
-    const snap=await db.collection('usuarios').doc(uid).get(); const ud=snap.data();
-    const mascotas=Array.isArray(ud.mascotas)?ud.mascotas.slice():[];
-    const idx=mascotas.length;
-    const mascotaId = ud.nroSocio ? MC.generarMascotaId(ud.nroSocio, idx) : '';
-    mascotas.push({ nombre, raza, fechaNacimiento:'', plan:'Sin definir', foto:'', mascotaId, token:'' });
-    await db.collection('usuarios').doc(uid).update({ mascotas });
-    if(mascotaId){
-      await db.collection('mascotas').doc(mascotaId).set({ mascotaId, titularUid:uid, nombre, raza, fechaNacimiento:'', foto:'', plan:'Sin definir', cuota:0, estado:'suspendido', token:'', servicios:[], creadoEn:TS() }, {merge:true});
-    }
-    toast(nombre+' agregada. Queda pendiente de activación.');
-    S.cred.u.mascotas=mascotas;
-    try{ S.cred.mascotas=await mascGetByTitular(uid); }catch(_){}
-    S.mascotaSel=0; homeView();
-  }catch(e){ if(msg) msg.textContent='Error: '+e.message; }
+    const mascotaId='MP-'+genCodigo(8);
+    // Mascota ACTIVA; plan/cuota los pone el sistema por EDAD APROXIMADA (la regla los revalida por el bucket).
+    const doc={
+      mascotaId, titularUid:uid, nombre:a.nombre, especie:a.especie, edadAprox:a.edadAprox, raza:a.raza, sexo:a.sexo,
+      plan:p.plan, cuota:p.cuota, estado:'activo', foto:'', token:'', servicios:[], creadoEn:TS()
+    };
+    // Fecha exacta OPCIONAL: solo si el titular la cargó (refina el recálculo futuro).
+    if(a.fnac){ doc.fechaNacimiento=firebase.firestore.Timestamp.fromDate(new Date(a.fnac+'T00:00:00-03:00')); }
+    await db.collection('mascotas').doc(mascotaId).set(doc);
+    // Espejo al array embebido usuarios.mascotas[] (invariante expand/contract: el admin identifica afiliados por ahí).
+    try{ const s=await db.collection('usuarios').doc(uid).get(); const ud=s.data()||{}; const arr=Array.isArray(ud.mascotas)?ud.mascotas.slice():[];
+      arr.push({ nombre:a.nombre, raza:a.raza, especie:a.especie, sexo:a.sexo, plan:p.plan, mascotaId, token:'' });
+      await db.collection('usuarios').doc(uid).update({ mascotas:arr }); S.cred.u.mascotas=arr;
+    }catch(_){}
+    // Primer punto de la SERIE DE PESO (no es un campo que se pisa).
+    try{ await db.collection('pesos').add({ mascotaId, titularUid:uid, peso:Number(a.peso), fecha:TS(), origen:'alta' }); }catch(_){}
+    S.cred.mascotas=await mascGetByTitular(uid);
+    S.mascotaSel=Math.max(0,S.cred.mascotas.findIndex(m=>m.mascotaId===mascotaId));
+    S.sub='home'; S.alta=null; render();
+    toast(a.nombre+' quedó con cobertura activa.');
+  }catch(e){ a.busy=false; a.err='No se pudo dar de alta: '+e.message; altaView(); }
 }
 
 // 1) Selector de mascota + carnet DE LA MASCOTA (con 1 mascota: solo carnet, sin selector). Titular = responsable.
@@ -351,31 +413,22 @@ function bloqueMascotaCarnet(c, m){
   const ms=c.mascotas||[];
   const titular = `${esc(c.u.nombre||'')} ${esc(c.u.apellido||'')}`.trim() || 'Responsable';
   let selector='';
-  if(ms.length>1){
+  if(ms.length>=1){
     selector = `<div class="masc-tabs">` + ms.map((x,i)=>`
       <div class="masc-tab ${i===S.mascotaSel?'active':''}" onclick="seleccionarMascota(${i})">
         ${x.foto?`<img src="${esc(x.foto)}" alt="">`:`<span class="ph">🐾</span>`}
         <span>${esc(x.nombre||'—')}</span>
-      </div>`).join('') + `</div>`;
+      </div>`).join('') +
+      `<div class="masc-tab" style="border-style:dashed;" onclick="abrirAlta()"><span class="ph" style="background:transparent;">＋</span><span>Otra</span></div>` +
+      `</div>`;
   }
   if(!m){
-    // Estado vacío (0 mascotas en la colección): recién registrado o sin mascotas. NUNCA pantalla vacía ni loop.
-    const pend=(c.u.mascotas||[]).filter(x=>x&&x.nombre);
-    const pendTxt = pend.length ? `Tenés a ${esc(pend.map(x=>x.nombre).join(', '))} pendiente de activación por MEDIPaw. Te contactamos para completarla.` : 'Sumá tu primera mascota para empezar.';
+    // Estado vacío (0 mascotas): NUNCA pantalla vacía ni loop. El alta va por el EMBUDO (especie→edad→plan del sistema).
     return `<div class="seccion" style="text-align:center;">
       <div style="font-size:2rem;">🐾</div>
-      <div class="stit" style="text-transform:none;font-size:1rem;margin-top:6px;">Todavía no tenés una mascota activa</div>
-      <p style="font-size:.83rem;color:var(--suave);margin-top:4px;line-height:1.5;">${pendTxt}</p>
-      <button class="btn-primary" style="margin-top:14px;" onclick="toggleAddMasc()">Agregar una mascota</button>
-      <div id="addMascForm" style="display:none;margin-top:12px;text-align:left;">
-        <div class="fstack">
-          <input type="text" id="amNombre" placeholder="Nombre de tu mascota *" class="input-field">
-          <input type="text" id="amRaza" placeholder="Raza (opcional)" class="input-field">
-          <button class="btn-primary" onclick="agregarMascotaSocio()">Guardar</button>
-          <p id="amMsg" class="errmsg"></p>
-          <p style="font-size:.72rem;color:var(--suave);">Queda pendiente de activación por MEDIPaw.</p>
-        </div>
-      </div>
+      <div class="stit" style="text-transform:none;font-size:1rem;margin-top:6px;">Sumá tu primera mascota</div>
+      <p style="font-size:.83rem;color:var(--suave);margin-top:4px;line-height:1.5;">Te hacemos unas preguntas y le asignamos el plan que le corresponde por su especie y edad.</p>
+      <button class="btn-primary" style="margin-top:14px;" onclick="abrirAlta()">Dar de alta una mascota</button>
     </div>`;
   }
   const cob=MC.coberturaMascota(m); const cuota=MC.planCuota(m.plan);

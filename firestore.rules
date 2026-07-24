@@ -3,10 +3,13 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ── Helper: obtener roles del usuario ──
+    // ── Helper: obtener roles del usuario (ROBUSTO) ──
+    // Guarda con exists() para no hacer get() sobre un doc inexistente, y default [] si falta el campo roles.
+    // Evita el error de evaluación null.roles (que denegaba a titulares legítimos y complicaba el orden de ramas).
     function getUserRoles() {
-      let userData = get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data;
-      return userData.roles;
+      return (request.auth != null && exists(/databases/$(database)/documents/usuarios/$(request.auth.uid)))
+        ? get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.get('roles', [])
+        : [];
     }
 
     function isAdmin() {
@@ -21,6 +24,24 @@ service cloud.firestore {
         && ('veterinario' in roles || 'prestador' in roles);
     }
 
+    // ── Alta como embudo: el SISTEMA fija plan y cuota por especie + EDAD APROXIMADA (bucket; réplica de
+    //    lib/medipaw-core.planPorEdadAprox). El titular NO puede mandar plan/cuota arbitrarios. La fecha exacta
+    //    es opcional y NO decide el plan (solo refina el recálculo). Sin math de request.time → sin bordes. ──
+    function planEsperadoR(data) {
+      return (data.especie == 'perro' || data.especie == 'gato')
+        ? (data.edadAprox == 'cachorro' ? 'MEDIPaw Joven'
+           : (data.edadAprox == 'mayor' ? 'MEDIPaw Senior' : 'MEDIPaw Adulto'))
+        : 'MEDIPaw Básico';
+    }
+    function precioDeR(plan) {
+      return plan == 'MEDIPaw Urgencias' ? 23988
+        : plan == 'MEDIPaw Básico' ? 40000
+        : plan == 'MEDIPaw Joven' ? 58788
+        : plan == 'MEDIPaw Adulto' ? 54388
+        : plan == 'MEDIPaw Senior' ? 70788
+        : -1;
+    }
+
     // ══════════════════════════════════════
     // ══  USUARIOS                        ══
     // ══════════════════════════════════════
@@ -28,8 +49,13 @@ service cloud.firestore {
       allow get: if request.auth != null;
       allow list: if request.auth != null;
       allow create: if request.auth != null && request.auth.uid == userId;
-      allow update: if request.auth != null
-        && (request.auth.uid == userId || isAdmin());
+      // (a) FIX escalada de privilegios: el DUEÑO solo puede tocar campos NO privilegiados (whitelist). `roles`/`rol`/
+      //     `estado` quedan FUERA de su alcance → un titular no puede agregarse 'admin'/'veterinario'. Grants = solo
+      //     admin o seed/agregar-rol.js. `mascotas` está en el whitelist porque el embudo espeja ahí (no da cobertura).
+      allow update: if isAdmin()
+        || (request.auth != null && request.auth.uid == userId
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['mascotas', 'fotoTitular', 'nombre', 'apellido', 'telefono']));
       allow delete: if isAdmin();
     }
 
@@ -38,29 +64,52 @@ service cloud.firestore {
     // ══════════════════════════════════════
     // La MASCOTA es el sujeto: tiene su plan, su cuota y su ESTADO (cobertura por mascota).
     // Read: admin, cualquier veterinario (reemplaza la credencial de papel), o el TITULAR dueño.
-    // Write sensible (plan/estado/cuota/titularUid/mascotaId/token) = SOLO admin.
-    // El titular puede: crear una mascota SUYA que nace 'suspendido' + cuota 0 (sin cobertura hasta
-    // que admin la active) y editar SOLO campos descriptivos no sensibles. Nunca se auto-otorga cobertura.
+    // ALTA COMO EMBUDO (este tramo): el titular crea su mascota ACTIVA, pero el plan y la cuota los VALIDA la
+    // regla por especie/edad (planEsperadoR/precioDeR). No puede elegir plan ni cuota ni mandar valores arbitrarios.
     match /mascotas/{mascotaId} {
       allow get: if request.auth != null
         && (isAdmin() || esVeterinario() || resource.data.titularUid == request.auth.uid);
       allow list: if request.auth != null
         && (isAdmin() || esVeterinario() || resource.data.titularUid == request.auth.uid);
 
-      allow create: if isAdmin()
-        || (request.auth != null
+      // (b) FIX orden de evaluación: rama TITULAR primero (no llama isAdmin() para un titular). Con getUserRoles
+      //     robusto, isAdmin() ya no puede errorear igual; el orden es defensa extra + claridad.
+      allow create: if (request.auth != null
             && request.resource.data.titularUid == request.auth.uid
-            && request.resource.data.estado == 'suspendido'
-            && request.resource.data.cuota == 0);
+            && request.resource.data.estado == 'activo'
+            && (request.resource.data.especie in ['perro', 'gato', 'ave', 'otros'])
+            && (request.resource.data.edadAprox in ['cachorro', 'joven', 'adulto', 'mayor'])
+            && request.resource.data.plan == planEsperadoR(request.resource.data)
+            && request.resource.data.cuota == precioDeR(request.resource.data.plan))
+        || isAdmin();
 
+      // El titular edita SOLO cosméticos (nombre/foto). NO toca fechaNacimiento (afecta el plan), ni plan/estado/cuota.
       allow update: if isAdmin()
         || (request.auth != null
             && resource.data.titularUid == request.auth.uid
             && request.resource.data.titularUid == resource.data.titularUid
             && request.resource.data.diff(resource.data).affectedKeys()
-                 .hasOnly(['nombre', 'raza', 'fechaNacimiento', 'foto']));
+                 .hasOnly(['nombre', 'foto']));
 
       allow delete: if isAdmin();
+    }
+
+    // ══════════════════════════════════════
+    // ══  PESOS (serie de peso por mascota) ══
+    // ══════════════════════════════════════
+    // Serie append-only: el peso NO es un campo que se pisa; cada medición es un punto {mascotaId, peso, fecha}.
+    // El primer punto se crea en el alta; el bloque "Chequeo y peso" agrega más. El titular agrega a SU mascota y
+    // lee lo suyo; vet/admin leen. Inmutable para el titular (no edita ni borra puntos).
+    match /pesos/{id} {
+      // (f) FIX: el vet/admin también cargan peso (guardia). La mascota debe existir; el titular solo la suya.
+      allow create: if request.auth != null
+        && exists(/databases/$(database)/documents/mascotas/$(request.resource.data.mascotaId))
+        && (isAdmin() || esVeterinario()
+            || (request.resource.data.titularUid == request.auth.uid
+                && get(/databases/$(database)/documents/mascotas/$(request.resource.data.mascotaId)).data.titularUid == request.auth.uid));
+      allow get, list: if request.auth != null
+        && (isAdmin() || esVeterinario() || resource.data.titularUid == request.auth.uid);
+      allow update, delete: if isAdmin();
     }
 
     // ══════════════════════════════════════
@@ -109,7 +158,8 @@ service cloud.firestore {
     match /mascotas_publicas/{token} {
       allow get: if true;
       allow list: if false;
-      allow write: if request.auth != null;
+      // (c) FIX: solo admin escribe (antes cualquier autenticado podía pisar la ficha pública de cualquier mascota).
+      allow write: if isAdmin();
     }
 
     // ══════════════════════════════════════
@@ -117,7 +167,8 @@ service cloud.firestore {
     // ══════════════════════════════════════
     match /solicitudes/{id} {
       allow create: if true;
-      allow read, update, delete: if request.auth != null;
+      // (d) FIX: solo admin lee/gestiona (contiene bajas, cambios de plan y leads con datos de contacto).
+      allow read, update, delete: if isAdmin();
     }
 
     // ══════════════════════════════════════
@@ -130,9 +181,12 @@ service cloud.firestore {
     // Delete: solo admin.
     //
     match /atenciones/{id} {
+      // (e) FIX: exigir titularUid en el create (si no, el titular nunca puede leer su propia atención — el read lo pide).
       allow create: if request.auth != null
         && esVeterinario()
-        && request.resource.data.prestadorId == request.auth.uid;
+        && request.resource.data.prestadorId == request.auth.uid
+        && request.resource.data.titularUid is string
+        && request.resource.data.titularUid.size() > 0;
 
       allow get: if request.auth != null
         && (isAdmin()

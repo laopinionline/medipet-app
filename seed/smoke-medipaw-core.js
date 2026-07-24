@@ -30,6 +30,26 @@ eq(C.coberturaMascota({ estado: 'suspendido', plan: PLAN_OK }).chip, 'Suspendido
 eq(C.coberturaMascota({ estado: 'baja', plan: PLAN_OK }).chip, 'Baja', 'chip baja');
 check(C.planEnCatalogo('MEDIPaw Senior') === true && C.planEnCatalogo('Premium') === false && C.planEnCatalogo('Sin definir') === false, 'planEnCatalogo: catálogo sí, legacy/sin-definir no');
 
+console.log('\n— ALTA EMBUDO: plan Básico + asignación por especie/edad (fuente única) —');
+eq(C.planCuota('MEDIPaw Básico'), 40000, 'Básico $40.000 en catálogo');
+check(C.planEnCatalogo('MEDIPaw Básico') === true, 'planEnCatalogo reconoce Básico');
+check(C.especieValida('perro') && C.especieValida('gato') && C.especieValida('ave') && C.especieValida('otros'), 'las 4 especies válidas');
+check(C.especieValida('pez') === false, 'especie fuera de lista → inválida');
+// ASIGNACIÓN POR EDAD APROXIMADA (bucket) — lo que maneja el plan y lo que valida la regla.
+eq(C.EDADES_APROX, ['cachorro','joven','adulto','mayor'], '4 buckets de edad');
+eq(C.planPorEdadAprox('perro', 'cachorro'), 'MEDIPaw Joven', 'perro cachorro → Joven');
+eq(C.planPorEdadAprox('gato', 'joven'), 'MEDIPaw Adulto', 'gato joven → Adulto');
+eq(C.planPorEdadAprox('perro', 'adulto'), 'MEDIPaw Adulto', 'perro adulto → Adulto');
+eq(C.planPorEdadAprox('gato', 'mayor'), 'MEDIPaw Senior', 'gato mayor → Senior');
+eq(C.planPorEdadAprox('ave', 'adulto'), 'MEDIPaw Básico', 'ave → Básico (sin importar edad)');
+eq(C.planPorEdadAprox('otros', 'cachorro'), 'MEDIPaw Básico', 'otros → Básico');
+eq(C.planCuota(C.planPorEdadAprox('perro', 'mayor')), 70788, 'cuota del plan asignado (Senior)');
+// EDAD EXACTA (opcional) — solo para el recálculo cuando hay fecha real.
+var now = 1000 * 365.25 * 24 * 3600 * 1000;
+var haceAnios = function (a) { return now - a * C.ANIO_MS; };
+eq(C.planPorEspecieEdad('perro', haceAnios(9), now), 'MEDIPaw Senior', 'recálculo por fecha: perro 9 años → Senior');
+eq(C.franjaEtaria('perro', haceAnios(0.5), now), 'Joven', 'franja exacta legible');
+
 console.log('\n— COMPROBANTES: snapshot congelado + no-prorrateo + numeración + vencimiento —');
 var msComp = [
   { mascotaId: 'MP-0001-01', nombre: 'Pepa', plan: 'MEDIPaw Joven', estado: 'activo' },   // 58788

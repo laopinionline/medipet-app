@@ -40,8 +40,29 @@ async function restGet(idToken, pathDoc) {
     { headers: { Authorization: 'Bearer ' + idToken } });
   return r.status;
 }
+// PATCH (update) por REST con updateMask — para probar reglas de escritura como el usuario real.
+async function restPatch(idToken, pathDoc, fields, mask) {
+  const qs = (mask || []).map(f => 'updateMask.fieldPaths=' + f).join('&');
+  const r = await fetch('https://firestore.googleapis.com/v1/projects/' + PROJECT + '/databases/(default)/documents/' + pathDoc + (qs ? '?' + qs : ''),
+    { method: 'PATCH', headers: { Authorization: 'Bearer ' + idToken, 'Content-Type': 'application/json' }, body: JSON.stringify({ fields }) });
+  return r.status;
+}
 
 (async () => {
+  // ── Regresión de la escalada de privilegios (parche a): correr DESPUÉS de publicar el parche ──
+  if (MODE === 'escalada') {
+    console.log('\n=== GATE — escalada de privilegios (parche a) ===\n');
+    const titUid = await ensureUser(TIT, ['afiliado']); // titular PURO
+    const tok = await idTokenDe(titUid);
+    // El titular intenta agregarse 'admin' a SUS roles → DEBE dar 403 (con el parche publicado).
+    const st = await restPatch(tok, 'usuarios/' + titUid,
+      { roles: { arrayValue: { values: [{ stringValue: 'afiliado' }, { stringValue: 'admin' }] } } }, ['roles']);
+    console.log('  PATCH usuarios/' + titUid + ' roles+=admin → HTTP ' + st + '  ' + (st === 403 ? '✓ DENIED (escalada bloqueada)' : '✗ ESPERABA 403 — ¿publicaste el parche?'));
+    // Control: puede tocar un campo del whitelist (telefono) → 200.
+    const st2 = await restPatch(tok, 'usuarios/' + titUid, { telefono: { stringValue: '11-0000-0000' } }, ['telefono']);
+    console.log('  PATCH usuarios/' + titUid + ' telefono → HTTP ' + st2 + '  ' + (st2 === 200 ? '✓ OK (campo permitido)' : '✗ ESPERABA 200'));
+    process.exit(0);
+  }
   if (MODE === 'cleanup') {
     console.log('\n=== CLEANUP cuentas desechables + caso PRUEBA ===');
     await delUser(TIT.email); await delUser(VET.email);

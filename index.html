@@ -9,7 +9,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
-<script src="/lib/medipaw-core.js?v=20260724e"></script>
+<script src="/lib/medipaw-core.js?v=20260724f"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--azul:#1A5FB4;--azul-medio:#2272D9;--azul-claro:#5BA3E8;--azul-pale:#EBF3FC;--noche:#0D1B3E;--fondo:#F5F7FA;--texto:#1a2340;--suave:#5a6a8a}
@@ -197,6 +197,7 @@ body{font-family:'Nunito',sans-serif;background:var(--fondo);color:var(--texto);
       <select id="regPlan" class="input-field" style="margin-top:8px;">
         <option value="">Plan de la mascota...</option>
         <option value="MEDIPaw Urgencias">MEDIPaw Urgencias — $23.988/mes</option>
+        <option value="MEDIPaw Básico">MEDIPaw Básico — $40.000/mes</option>
         <option value="MEDIPaw Joven">MEDIPaw Joven — $58.788/mes</option>
         <option value="MEDIPaw Adulto">MEDIPaw Adulto — $54.388/mes</option>
         <option value="MEDIPaw Senior">MEDIPaw Senior — $70.788/mes</option>
@@ -452,13 +453,15 @@ auth.onAuthStateChanged(async user=>{
       const snap=await db.collection('usuarios').doc(user.uid).get();
       if(snap.exists){
         const data = {uid:user.uid,...snap.data()};
-        // Migración: rol→roles + 'prestador'→'veterinario'
+        // Migración: rol→roles + 'prestador'→'veterinario'. NO-FATAL: por el fix (a) el dueño ya no puede
+        // escribir `roles` en su propio doc; la persistencia es best-effort (el mapeo local igual rige la sesión,
+        // y las reglas aceptan 'prestador' legacy). Un write denegado NO debe romper el login.
         const rolesActuales = data.roles && Array.isArray(data.roles) ? data.roles : null;
         const necesitaMigrar = !rolesActuales || rolesActuales.includes('prestador');
         if (necesitaMigrar) {
           const roles = getUserRoles(data); // ya mapea prestador→veterinario
-          await db.collection('usuarios').doc(user.uid).update({ roles });
           data.roles = roles;
+          try { await db.collection('usuarios').doc(user.uid).update({ roles }); } catch(_) { /* denegado por reglas: solo admin migra roles ahora */ }
         }
         currentUserData = data;
         const roles = getUserRoles(data);
@@ -1499,14 +1502,22 @@ function cardUsuario(u, masMap){
             const c = MC.coberturaMascota(mc || {estado:'suspendido'});
             const estActual = mc ? MC.normalizarEstado(mc.estado) : null;
             const noEnColeccion = !mc;
+            // RECÁLCULO POR EDAD: si la mascota tiene especie+fechaNacimiento, el plan sugerido por edad puede diferir del actual.
+            let sugerencia='';
+            if(mc && mc.especie && mc.fechaNacimiento && mc.fechaNacimiento.toMillis){
+              const planSug = MC.planPorEspecieEdad(mc.especie, mc.fechaNacimiento.toMillis(), Date.now());
+              if(planSug !== mc.plan){ sugerencia = `<div style="font-size:.7rem;color:#92400e;margin-top:4px;">↻ Por edad hoy le correspondería <b>${planSug}</b> ($${MC.planCuota(planSug).toLocaleString('es-AR')}). Actualizá el plan si querés.</div>`; }
+            }
             return `<div style="background:${c.ok?'#f0fdf4':'#fef2f2'};border-radius:10px;padding:8px 10px;margin-bottom:10px;">
               <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
                 <div style="font-size:.76rem;font-weight:800;color:${c.color};">${c.emoji} ${noEnColeccion?'Aún no activada (activá al titular)':c.label}${c.ok?` · $${MC.planCuota(mc.plan).toLocaleString('es-AR')}/mes`:''}</div>
               </div>
+              ${sugerencia}
               <div style="display:flex;gap:6px;align-items:center;margin-top:8px;flex-wrap:wrap;">
                 <select onchange="cambiarPlanMascota('${u.id}',${i},this.value)" style="flex:1;min-width:150px;padding:6px 10px;border:2px solid rgba(26,95,180,.15);border-radius:100px;font-family:'Nunito',sans-serif;font-size:.76rem;font-weight:700;color:#1A5FB4;background:#EBF3FC;cursor:pointer;">
                   <option value="">Cambiar plan…</option>
                   <option value="MEDIPaw Urgencias" ${m.plan==='MEDIPaw Urgencias'?'selected':''}>MEDIPaw Urgencias</option>
+                  <option value="MEDIPaw Básico" ${m.plan==='MEDIPaw Básico'?'selected':''}>MEDIPaw Básico</option>
                   <option value="MEDIPaw Joven" ${m.plan==='MEDIPaw Joven'?'selected':''}>MEDIPaw Joven</option>
                   <option value="MEDIPaw Adulto" ${m.plan==='MEDIPaw Adulto'?'selected':''}>MEDIPaw Adulto</option>
                   <option value="MEDIPaw Senior" ${m.plan==='MEDIPaw Senior'?'selected':''}>MEDIPaw Senior</option>
@@ -2140,6 +2151,7 @@ function renderPanel(data){
           <select id="newMascotaPlan" class="input-field" style="margin-top:4px;">
             <option value="">Plan de esta mascota...</option>
             <option value="MEDIPaw Urgencias">MEDIPaw Urgencias — $23.988/mes</option>
+            <option value="MEDIPaw Básico">MEDIPaw Básico — $40.000/mes</option>
             <option value="MEDIPaw Joven">MEDIPaw Joven — $58.788/mes</option>
             <option value="MEDIPaw Adulto">MEDIPaw Adulto — $54.388/mes</option>
             <option value="MEDIPaw Senior">MEDIPaw Senior — $70.788/mes</option>
@@ -2190,6 +2202,7 @@ function renderPanel(data){
                 <select id="pedirPlan-${i}" style="flex:1;min-width:150px;padding:7px 10px;border:2px solid rgba(26,95,180,.15);border-radius:100px;font-family:'Nunito',sans-serif;font-size:.78rem;font-weight:700;color:#1A5FB4;background:white;cursor:pointer;">
                   <option value="">Plan que querés…</option>
                   <option value="MEDIPaw Urgencias">MEDIPaw Urgencias</option>
+                  <option value="MEDIPaw Básico">MEDIPaw Básico</option>
                   <option value="MEDIPaw Joven">MEDIPaw Joven</option>
                   <option value="MEDIPaw Adulto">MEDIPaw Adulto</option>
                   <option value="MEDIPaw Senior">MEDIPaw Senior</option>
@@ -2336,6 +2349,7 @@ function renderPanel(data){
             <select id="afilPlan" class="input-field">
               <option value="">Plan...</option>
               <option value="MEDIPaw Urgencias">MEDIPaw Urgencias</option>
+              <option value="MEDIPaw Básico">MEDIPaw Básico</option>
               <option value="MEDIPaw Joven">MEDIPaw Joven</option>
               <option value="MEDIPaw Adulto">MEDIPaw Adulto</option>
               <option value="MEDIPaw Senior">MEDIPaw Senior</option>
