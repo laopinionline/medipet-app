@@ -30,6 +30,33 @@ eq(C.coberturaMascota({ estado: 'suspendido', plan: PLAN_OK }).chip, 'Suspendido
 eq(C.coberturaMascota({ estado: 'baja', plan: PLAN_OK }).chip, 'Baja', 'chip baja');
 check(C.planEnCatalogo('MEDIPaw Senior') === true && C.planEnCatalogo('Premium') === false && C.planEnCatalogo('Sin definir') === false, 'planEnCatalogo: catálogo sí, legacy/sin-definir no');
 
+console.log('\n— COMPROBANTES: snapshot congelado + no-prorrateo + numeración + vencimiento —');
+var msComp = [
+  { mascotaId: 'MP-0001-01', nombre: 'Pepa', plan: 'MEDIPaw Joven', estado: 'activo' },   // 58788
+  { mascotaId: 'MP-0001-02', nombre: 'Moka', plan: 'MEDIPaw Senior', estado: 'activo' },  // 70788
+  { mascotaId: 'MP-0001-03', nombre: 'Fido', plan: 'MEDIPaw Adulto', estado: 'suspendido' }, // NO entra (sin cobertura)
+  { mascotaId: 'MP-0001-04', nombre: 'Zoe', plan: 'Sin definir', estado: 'activo' },       // NO entra (sin plan del catálogo)
+];
+var comp = C.armarComprobante(msComp, '2026-03');
+eq(comp.items.length, 2, 'solo las mascotas con cobertura vigente entran (2 de 4)');
+eq(comp.total, 58788 + 70788, 'total = Σ cuota de las mascotas del snapshot');
+eq(comp.items[0], { mascotaId: 'MP-0001-01', mascotaNombre: 'Pepa', plan: 'MEDIPaw Joven', monto: 58788 }, 'ítem congela mascota+plan+monto');
+// SNAPSHOT: cambiar la mascota DESPUÉS no toca el comprobante ya armado (es una foto por valor).
+msComp[0].plan = 'MEDIPaw Senior';
+eq(comp.items[0].monto, 58788, 'el comprobante NO se recalcula si la mascota cambia de plan después (snapshot)');
+eq(comp.total, 58788 + 70788, 'total sigue congelado tras el cambio posterior');
+// NO-PRORRATEO: una mascota suspendida no aporta fracción; simplemente no está en el snapshot (mes completo o nada).
+eq(C.armarComprobante([{ mascotaId: 'x', nombre: 'S', plan: 'MEDIPaw Joven', estado: 'suspendido' }], '2026-03').total, 0, 'suspendida → no factura (sin prorrateo)');
+// Numeración + vencimiento
+eq(C.fmtComprobante(1), 'MP-C-000001', 'numeración MP-C-000001');
+eq(C.fmtComprobante(42), 'MP-C-000042', 'numeración padded');
+eq(C.venceComprobanteISO('2026-03'), '2026-03-10T23:59:59-03:00', 'vence día 10 del período, hora AR');
+eq(C.venceComprobanteISO('malformado'), null, 'período inválido → sin vencimiento');
+// Estado derivado (no toca el guardado)
+eq(C.estadoComprobante({ estado: 'pagada' }, 999, 1), 'pagada', 'pagada manda');
+eq(C.estadoComprobante({ estado: 'emitida' }, 100, 50), 'vencida', 'emitida y hoy>vence → vencida');
+eq(C.estadoComprobante({ estado: 'emitida' }, 40, 50), 'pendiente', 'emitida y hoy<=vence → pendiente');
+
 console.log('\n— RUTEO POR ROL (login único: /app/ staff · /socio/ titular) —');
 check(C.esStaff(['admin']) === true, 'admin → staff (va a /app/)');
 check(C.esStaff(['veterinario']) === true, 'veterinario → staff');

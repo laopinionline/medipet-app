@@ -9,7 +9,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
-<script src="/lib/medipaw-core.js?v=20260724d"></script>
+<script src="/lib/medipaw-core.js?v=20260724e"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--azul:#1A5FB4;--azul-medio:#2272D9;--azul-claro:#5BA3E8;--azul-pale:#EBF3FC;--noche:#0D1B3E;--fondo:#F5F7FA;--texto:#1a2340;--suave:#5a6a8a}
@@ -1780,6 +1780,92 @@ async function procesarAtencion(id,estado){
   cargarAtencionesAdmin();
 }
 
+// ══ F1-C · CONTABLE (comprobantes de cuota, internos no-fiscales) ══
+// El comprobante es una FOTO (snapshot): al emitir se congelan items+total (MC.armarComprobante). NO recalcula.
+// Numeración correlativa ATÓMICA (transacción sobre contadores/comprobantes). Idempotente por (titular, período).
+async function siguienteNroComprobante(){
+  const ref=db.collection('contadores').doc('comprobantes');
+  return db.runTransaction(async tx=>{ const s=await tx.get(ref); const n=((s.exists&&s.data().ultimo)||0)+1; tx.set(ref,{ultimo:n},{merge:true}); return n; });
+}
+async function cargarCuotasAdmin(){
+  const el=document.getElementById('cuotas-content'); if(!el) return;
+  el.innerHTML='<p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p>';
+  try{
+    const [compSnap, usSnap] = await Promise.all([ db.collection('comprobantes').get(), db.collection('usuarios').get() ]);
+    const titulares={}; usSnap.docs.forEach(d=>titulares[d.id]=d.data());
+    const comps=compSnap.docs.map(d=>({id:d.id,...d.data()}))
+      .sort((a,b)=> String(b.periodo||'').localeCompare(String(a.periodo||'')) || String(a.nroComprobante||'').localeCompare(String(b.nroComprobante||'')));
+    const now=new Date(); const per=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+    el.innerHTML = `
+      <div style="background:var(--fondo);border-radius:12px;padding:12px;margin-bottom:14px;">
+        <div style="font-size:.8rem;font-weight:700;margin-bottom:8px;">Emitir comprobantes de un período</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <input type="month" id="emitPeriodo" value="${per}" class="input-field" style="max-width:180px;">
+          <button onclick="emitirPeriodo()" class="btn-primary" style="width:auto;padding:11px 18px;">Emitir</button>
+        </div>
+        <p id="emitMsg" style="font-size:.78rem;margin-top:6px;"></p>
+        <p style="font-size:.72rem;color:#9ca3af;margin-top:4px;">Un comprobante por titular con mascotas activas. Es una FOTO: congela plan y monto por mascota al emitir. No re-emite si ya existe para ese período. Comprobantes internos (no fiscales).</p>
+      </div>
+      <div style="font-size:.75rem;font-weight:800;color:var(--suave);text-transform:uppercase;margin-bottom:8px;">Comprobantes (${comps.length})</div>
+      ${comps.length===0 ? '<p style="color:#9ca3af;font-size:.82rem;">Sin comprobantes emitidos.</p>' : comps.map(c=>compAdminCard(c, titulares[c.titularUid]||{})).join('')}`;
+  }catch(e){ el.innerHTML='<p style="color:#ef4444;">Error: '+e.message+'</p>'; }
+}
+function compAdminCard(c, u){
+  const venceMs=c.venceEl&&c.venceEl.toMillis?c.venceEl.toMillis():0;
+  const est=MC.estadoComprobante(c, Date.now(), venceMs);
+  const b={pagada:['#dcfce7','#166534','Pagado'],vencida:['#fee2e2','#991b1b','Vencido'],pendiente:['#fef3c7','#92400e','Pendiente']}[est];
+  return `<div class="uitem">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <strong>${((u.nombre||'')+' '+(u.apellido||'')).replace(/</g,'&lt;')} <span style="font-family:monospace;font-size:.72rem;color:#9ca3af;">${c.nroComprobante||''}</span></strong>
+      <span style="background:${b[0]};color:${b[1]};font-size:.64rem;font-weight:800;padding:3px 9px;border-radius:100px;text-transform:uppercase;">${b[2]}</span>
+    </div>
+    <div style="font-size:.76rem;color:#5a6a8a;">${c.periodo||''}${u.nroSocio?(' · '+u.nroSocio):''}</div>
+    <div style="font-size:.78rem;margin-top:4px;color:#1a2340;">${(c.items||[]).map(it=>`${(it.mascotaNombre||'').replace(/</g,'&lt;')} ($${(Number(it.monto)||0).toLocaleString('es-AR')})`).join(' · ')||'—'}</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
+      <span style="font-weight:900;">Total $${(Number(c.total)||0).toLocaleString('es-AR')}</span>
+      ${c.estado!=='pagada' ? `<button onclick="marcarPagado('${c.id}')" class="bmini bverde">Marcar pagado</button>` : `<span style="font-size:.72rem;color:#166534;">Pagado${c.pagadaEn&&c.pagadaEn.toDate?' '+c.pagadaEn.toDate().toLocaleDateString('es-AR'):''}</span>`}
+    </div>
+  </div>`;
+}
+async function emitirPeriodo(){
+  const periodo=document.getElementById('emitPeriodo')?.value||''; const msg=document.getElementById('emitMsg');
+  if(!/^\d{4}-\d{2}$/.test(periodo)){ if(msg){msg.textContent='Elegí un período válido.';msg.style.color='#ef4444';} return; }
+  if(msg){ msg.textContent='Emitiendo…'; msg.style.color='#5a6a8a'; }
+  try{
+    const [usSnap, masSnap, compSnap] = await Promise.all([
+      db.collection('usuarios').get(),
+      db.collection('mascotas').get(),
+      db.collection('comprobantes').where('periodo','==',periodo).get(),
+    ]);
+    const yaEmitido=new Set(compSnap.docs.map(d=>d.data().titularUid));
+    const mascotasPorTitular={};
+    masSnap.docs.forEach(d=>{ const m={id:d.id,...d.data()}; (mascotasPorTitular[m.titularUid]=mascotasPorTitular[m.titularUid]||[]).push(m); });
+    const venceISO=MC.venceComprobanteISO(periodo);
+    const venceTs=venceISO?firebase.firestore.Timestamp.fromDate(new Date(venceISO)):null;
+    let emitidos=0, saltados=0, sinActivas=0;
+    for(const d of usSnap.docs){
+      const u={id:d.id,...d.data()};
+      if(!getUserRoles(u).includes('afiliado')) continue;
+      if(yaEmitido.has(u.id)){ saltados++; continue; }
+      const snap=MC.armarComprobante(mascotasPorTitular[u.id]||[], periodo);
+      if(snap.items.length===0){ sinActivas++; continue; }
+      const nro=await siguienteNroComprobante();
+      await db.collection('comprobantes').add({
+        titularUid:u.id, titularNombre:((u.nombre||'')+' '+(u.apellido||'')).trim(), nroSocio:u.nroSocio||'',
+        periodo, items:snap.items, total:snap.total, estado:'emitida', fiscal:false,
+        venceEl:venceTs, nroComprobante:MC.fmtComprobante(nro), emitidaEn:TS(), emitidaPor:auth.currentUser.uid
+      });
+      emitidos++;
+    }
+    if(msg){ msg.textContent=`Emitidos ${emitidos} · ya existían ${saltados} · sin mascotas activas ${sinActivas}.`; msg.style.color='#166534'; }
+    cargarCuotasAdmin();
+  }catch(e){ if(msg){ msg.textContent='Error: '+e.message; msg.style.color='#ef4444'; } }
+}
+async function marcarPagado(id){
+  try{ await db.collection('comprobantes').doc(id).set({ estado:'pagada', pagadaEn:TS(), pagadaPor:auth.currentUser.uid }, {merge:true}); cargarCuotasAdmin(); }
+  catch(e){ alert('Error: '+e.message); }
+}
+
 function switchTab(tab,btn){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.tab-content').forEach(t=>t.style.display='none');
@@ -1789,6 +1875,7 @@ function switchTab(tab,btn){
   if(tab==='afiliados')cargarUsuariosAdmin();
   if(tab==='veterinarios')cargarVeterinariosAdmin();
   if(tab==='proveedores')cargarProveedoresAdmin();
+  if(tab==='cuotas')cargarCuotasAdmin();
   if(tab==='pagos')cargarAtencionesAdmin();
 }
 
@@ -2213,7 +2300,14 @@ function renderPanel(data){
       <button class="tab" onclick="switchTab('afiliados',this)">Afiliados</button>
       <button class="tab" onclick="switchTab('veterinarios',this)">Veterinarios</button>
       <button class="tab" onclick="switchTab('proveedores',this)">Prestadores</button>
+      <button class="tab" onclick="switchTab('cuotas',this)">Cuotas</button>
       <button class="tab" onclick="switchTab('pagos',this)">Pagos</button>
+    </div>
+    <div id="tab-cuotas" class="tab-content" style="display:none;">
+      <div class="seccion">
+        <div class="stit">Comprobantes de cuota</div>
+        <div id="cuotas-content"><p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p></div>
+      </div>
     </div>
     <div id="tab-dashboard" class="tab-content">
       <div id="dashboard-content"><p style="color:#5a6a8a;font-size:.85rem;padding:20px 0;">Cargando metricas...</p></div>

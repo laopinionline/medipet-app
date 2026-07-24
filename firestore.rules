@@ -90,6 +90,20 @@ service cloud.firestore {
     }
 
     // ══════════════════════════════════════
+    // ══  COMPROBANTES (F1-C · contable)  ══
+    // ══════════════════════════════════════
+    // Comprobantes INTERNOS no-fiscales. SNAPSHOT (items/total congelados al emitir). Los emite/gestiona el admin;
+    // el titular SOLO lee los suyos (no puede pagar en la app — sin pasarela todavía).
+    match /comprobantes/{id} {
+      allow get, list: if request.auth != null && (isAdmin() || resource.data.titularUid == request.auth.uid);
+      allow create, update, delete: if isAdmin();
+    }
+    // Contador correlativo de comprobantes (numeración atómica por transacción). Solo admin.
+    match /contadores/{id} {
+      allow read, write: if isAdmin();
+    }
+
+    // ══════════════════════════════════════
     // ══  MASCOTAS PUBLICAS               ══
     // ══════════════════════════════════════
     match /mascotas_publicas/{token} {

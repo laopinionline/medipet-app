@@ -15,7 +15,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
-<script src="/lib/medipaw-core.js?v=20260724d"></script>
+<script src="/lib/medipaw-core.js?v=20260724e"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--azul:#1A5FB4;--azul-medio:#2272D9;--azul-claro:#5BA3E8;--azul-pale:#EBF3FC;--noche:#0D1B3E;--fondo:#F5F7FA;--texto:#1a2340;--suave:#5a6a8a;--rojo:#e11d48;--verde:#166534}
@@ -210,8 +210,8 @@ function getRoles(u){
 
 // ── Estado único ──
 const S = { view:'boot', sub:'home', cred:null, mascotaSel:0, deferredPrompt:null, caso:null };
-// Dispatcher del sub-view dentro del appScreen: home | caso ("[Nombre] no está bien")
-function render(){ if(S.sub==='caso') casoView(); else homeView(); }
+// Dispatcher del sub-view dentro del appScreen: home | caso ("[Nombre] no está bien") | cuenta (cuota y comprobantes)
+function render(){ if(S.sub==='caso') casoView(); else if(S.sub==='cuenta') cuentaView(); else homeView(); }
 function volverHome(){ S.sub='home'; S.caso=null; render(); }
 
 // ── Colección mascotas (fuente de verdad; reusa el núcleo) ──
@@ -281,10 +281,11 @@ auth.onAuthStateChanged(async user=>{
     }
     // Es titular (afiliado). Carga sus mascotas de la colección y muestra el home. (Si además es staff, se queda acá:
     // entró explícitamente a /socio/; el panel /app/ solo rebota al afiliado PURO.)
-    let mascotas=[], casos=[];
+    let mascotas=[], casos=[], comprobantes=[];
     try{ mascotas=await mascGetByTitular(user.uid); }catch(_){ }
     try{ casos=(await db.collection('casos').where('titularUid','==',user.uid).get()).docs.map(d=>({id:d.id,...d.data()})); }catch(_){ }
-    S.cred={ u, mascotas, casos }; S.mascotaSel=0; S.sub='home';
+    try{ comprobantes=(await db.collection('comprobantes').where('titularUid','==',user.uid).get()).docs.map(d=>({id:d.id,...d.data()})); }catch(_){ }
+    S.cred={ u, mascotas, casos, comprobantes }; S.mascotaSel=0; S.sub='home';
     render();
     showScreen('appScreen');
   }catch(e){ showScreen('loginScreen'); setErr('loginError','Error al cargar tu cuenta: '+e.message); }
@@ -492,7 +493,61 @@ async function enviarCaso(){
 function bloqueTurnos(m){ return tilePlaceholder('📅','Turnos','Pedí un turno para tu mascota'); }
 function bloqueChequeo(m){ return tilePlaceholder('⚖️',`Chequeo y peso de ${esc(nombreMasc(m))}`,'Seguimiento de salud y peso'); }
 function bloqueHistoria(m){ return tilePlaceholder('📋',`Historia de ${esc(nombreMasc(m))}`,'Atenciones, vacunas y estudios'); }
-function bloqueCuota(c){ return tilePlaceholder('🧾','Cuota y comprobantes','Qué pagás, por qué mascota, tu historial'); }
+// Cómo se paga HOY (sin pasarela) — constante única, fácil de cambiar cuando entre Mercado Pago.
+const PAGO_INFO = 'Por ahora el pago se coordina con MEDIPaw (transferencia o en la clínica). Todavía no se puede pagar desde la app.';
+const LEYENDA_NO_FISCAL = 'Comprobantes internos de MEDIPaw. No son facturas fiscales (AFIP).';
+
+function bloqueCuota(c){
+  const cuota=MC.cuotaTitular(c.mascotas||[]);
+  const pend=(c.comprobantes||[]).filter(x=>x.estado!=='pagada').length;
+  return `<button class="tile" onclick="abrirCuenta()">
+    <div class="t-ico">🧾</div>
+    <div class="t-body"><div class="t-title">Cuota y comprobantes</div><div class="t-sub">${cuota?('$'+cuota.toLocaleString('es-AR')+'/mes'):'Sin cuota activa'}${pend?` · ${pend} pendiente${pend>1?'s':''}`:''}</div></div>
+    <span class="t-arrow">›</span>
+  </button>`;
+}
+function abrirCuenta(){ S.sub='cuenta'; render(); }
+function cuentaView(){
+  const c=S.cred; const ahora=Date.now();
+  const activas=(c.mascotas||[]).filter(m=>MC.coberturaMascota(m).ok);
+  const cuota=MC.cuotaTitular(c.mascotas||[]);
+  const desglose = activas.length
+    ? activas.map(m=>`<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:4px 0;"><span>${esc(m.nombre)} <span style="color:var(--suave);">· ${esc(m.plan)}</span></span><span style="font-weight:800;">$${MC.planCuota(m.plan).toLocaleString('es-AR')}</span></div>`).join('')
+    : `<div style="font-size:.82rem;color:var(--suave);">No tenés mascotas con cobertura activa.</div>`;
+  const comps=(c.comprobantes||[]).slice().sort((a,b)=>String(b.periodo||'').localeCompare(String(a.periodo||'')));
+  const badge=(est)=>({pagada:['#dcfce7','#166534','Pagado'],vencida:['#fee2e2','#991b1b','Vencido'],pendiente:['#fef3c7','#92400e','Pendiente']}[est]);
+  const compsHtml = comps.length ? comps.map(cp=>{
+    const venceMs = cp.venceEl&&cp.venceEl.toMillis?cp.venceEl.toMillis():0;
+    const est = MC.estadoComprobante(cp, ahora, venceMs);
+    const b=badge(est);
+    const venceTxt = cp.venceEl&&cp.venceEl.toDate?cp.venceEl.toDate().toLocaleDateString('es-AR'):'';
+    const items=(cp.items||[]).map(it=>`<div style="display:flex;justify-content:space-between;font-size:.78rem;color:var(--suave);padding:2px 0;"><span>${esc(it.mascotaNombre)} · ${esc(it.plan)}</span><span>$${(Number(it.monto)||0).toLocaleString('es-AR')}</span></div>`).join('');
+    return `<div class="seccion" style="padding:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div><div style="font-weight:800;">${esc(cp.periodo||'')}</div><div style="font-size:.7rem;color:var(--suave);">${esc(cp.nroComprobante||'')}</div></div>
+        <span style="background:${b[0]};color:${b[1]};font-size:.66rem;font-weight:800;padding:3px 10px;border-radius:100px;text-transform:uppercase;">${b[2]}</span>
+      </div>
+      <div style="margin:8px 0;border-top:1px solid var(--azul-pale);border-bottom:1px solid var(--azul-pale);padding:6px 0;">${items}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:.75rem;color:var(--suave);">${est==='pagada'?'Pagado':(venceTxt?('Vence '+venceTxt):'')}</span>
+        <span style="font-weight:900;font-size:1.05rem;">$${(Number(cp.total)||0).toLocaleString('es-AR')}</span>
+      </div>
+    </div>`;
+  }).join('') : `<div class="seccion"><p style="font-size:.85rem;color:var(--suave);">Todavía no tenés comprobantes emitidos.</p></div>`;
+  document.getElementById('home').innerHTML =
+    `<button class="link-btn" style="margin-bottom:10px;display:inline-block;" onclick="volverHome()">‹ Volver</button>
+    <div class="seccion">
+      <div class="stit">Tu cuota mensual</div>
+      ${desglose}
+      <div style="display:flex;justify-content:space-between;align-items:center;border-top:2px solid var(--azul-pale);margin-top:6px;padding-top:8px;">
+        <span style="font-weight:800;">Total por mes</span><span style="font-weight:900;font-size:1.15rem;color:var(--azul);">$${cuota.toLocaleString('es-AR')}</span>
+      </div>
+      <div style="background:var(--azul-pale);border-radius:10px;padding:10px;margin-top:10px;font-size:.8rem;color:var(--noche);">💳 ${PAGO_INFO}</div>
+    </div>
+    <div class="stit" style="margin:4px 2px 8px;">Comprobantes</div>
+    ${compsHtml}
+    <div class="foot-note" style="margin-top:6px;">${LEYENDA_NO_FISCAL}</div>`;
+}
 function bloqueMisMascotas(c){ return tilePlaceholder('🐾','Mis mascotas y servicios','Tus mascotas, planes y servicios'); }
 
 // 9) Instalar app (solo si no está instalada y hay prompt disponible).
