@@ -9,7 +9,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
-<script src="/lib/medipaw-core.js?v=20260724c"></script>
+<script src="/lib/medipaw-core.js?v=20260724d"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--azul:#1A5FB4;--azul-medio:#2272D9;--azul-claro:#5BA3E8;--azul-pale:#EBF3FC;--noche:#0D1B3E;--fondo:#F5F7FA;--texto:#1a2340;--suave:#5a6a8a}
@@ -1254,6 +1254,114 @@ async function cargarMisPacientes() {
   }
 }
 
+// ══ F1-B · BANDEJA DE CASOS (despacho veterinario) ══
+// SPLIT N3: `casos` = cara al titular (relato/estado/respuestaTitular). `casos_clinico` = SOLO staff
+// (prioridadInterna/notasVet). El titular NUNCA lee casos_clinico (reglas). Al titular se le responde
+// en `casos.respuestaTitular` con cuidado y acción, jamás con la clasificación interna.
+function tmsV(t){ return t&&t.toMillis?t.toMillis():0; }
+function desdeTexto(v){ return {hoy:'hoy', ayer:'ayer', varios_dias:'hace varios días'}[v]||v||''; }
+
+async function cargarBandejaCasos(){
+  const el=document.getElementById('vet-casos-content'); if(!el) return;
+  el.innerHTML='<p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p>';
+  try{
+    const [casosSnap, clinicoSnap, usSnap] = await Promise.all([
+      db.collection('casos').get(),
+      db.collection('casos_clinico').get(),
+      db.collection('usuarios').get(),
+    ]);
+    const clinico={}; clinicoSnap.docs.forEach(d=>clinico[d.id]=d.data());
+    const titulares={}; usSnap.docs.forEach(d=>titulares[d.id]=d.data());
+    const ord={nuevo:0, en_curso:1};
+    const casos=casosSnap.docs.map(d=>({id:d.id,...d.data()})).filter(c=>c.estado!=='cerrado')
+      .sort((a,b)=>((ord[a.estado]??9)-(ord[b.estado]??9)) || (tmsV(b.creadoEn)-tmsV(a.creadoEn)));
+    if(casos.length===0){ el.innerHTML='<p style="color:#9ca3af;font-size:.85rem;">No hay casos entrantes. &#10003;</p>'; return; }
+    const nombreVet=(cl)=>{ if(!cl||!cl.tomadoPor) return ''; const t=titulares[cl.tomadoPor]; return t?((t.nombre||'')+' '+(t.apellido||'')).trim():'otro veterinario'; };
+    el.innerHTML=casos.map(c=>casoCard(c, clinico[c.id]||{}, titulares[c.titularUid]||{}, nombreVet(clinico[c.id]))).join('');
+  }catch(e){ el.innerHTML='<p style="color:#ef4444;">Error: '+e.message+'</p>'; }
+}
+
+function casoCard(c, cl, u, tomadoPorNombre){
+  const nuevo = c.estado==='nuevo';
+  const cuandoTom = cl.tomadoEn&&cl.tomadoEn.toDate?cl.tomadoEn.toDate().toLocaleString('es-AR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
+  const badge = nuevo
+    ? '<span style="background:#dbeafe;color:#1d4ed8;font-size:.62rem;font-weight:800;padding:2px 8px;border-radius:100px;text-transform:uppercase;">Nuevo</span>'
+    : `<span style="background:#fef3c7;color:#92400e;font-size:.62rem;font-weight:800;padding:2px 8px;border-radius:100px;text-transform:uppercase;">En curso${tomadoPorNombre?' · '+String(tomadoPorNombre).replace(/</g,'&lt;'):''}</span>`;
+  const prio = cl.prioridadInterna||'';
+  const opt=(v,t)=>`<option value="${v}" ${prio===v?'selected':''}>${t}</option>`;
+  return `<div class="uitem">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+      <strong style="font-size:.95rem;">${(c.mascotaNombre||'—')} <span style="font-family:monospace;font-size:.72rem;color:#9ca3af;">${c.mascotaId||''}</span></strong>
+      ${badge}
+    </div>
+    <div style="font-size:.76rem;color:#5a6a8a;margin-top:2px;">Titular: ${(u.nombre||'')} ${(u.apellido||'')}${u.nroSocio?(' · '+u.nroSocio):''}${u.telefono?(' · '+u.telefono):''}</div>
+    <div style="font-size:.85rem;color:#1a2340;margin-top:6px;background:#fff7f7;border-left:3px solid #fecaca;padding:8px 10px;border-radius:6px;">&ldquo;${(c.relato||'').replace(/</g,'&lt;')}&rdquo;${c.desdeCuando?`<div style="font-size:.72rem;color:#9ca3af;margin-top:3px;">Desde: ${desdeTexto(c.desdeCuando)}</div>`:''}</div>
+
+    ${(!nuevo && tomadoPorNombre)?`<div style="font-size:.74rem;font-weight:700;color:#92400e;margin-top:6px;">&#129466; Tomado por ${String(tomadoPorNombre).replace(/</g,'&lt;')}${cuandoTom?' · '+cuandoTom:''}</div>`:''}
+
+    <div style="background:#f8faff;border:1px solid rgba(26,95,180,.1);border-radius:10px;padding:10px;margin-top:8px;">
+      <div style="font-size:.66rem;font-weight:800;color:var(--suave);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Interno &middot; NO lo ve el titular</div>
+      <select id="caso-prio-${c.id}" class="input-field" style="padding:8px 10px;margin-bottom:6px;">
+        <option value="">Prioridad interna…</option>${opt('baja','Baja')}${opt('media','Media')}${opt('alta','Alta')}
+      </select>
+      <textarea id="caso-notas-${c.id}" class="input-field" style="height:56px;resize:vertical;" placeholder="Notas clínicas (interno)">${(cl.notasVet||'').replace(/</g,'&lt;')}</textarea>
+    </div>
+
+    <div style="margin-top:8px;">
+      <div style="font-size:.66rem;font-weight:800;color:#166534;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Respuesta al titular (la ve — cuidado y acción)</div>
+      <textarea id="caso-resp-${c.id}" class="input-field" style="height:52px;resize:vertical;" placeholder="Lo que le decimos al titular: qué hacer, qué mirar, sin diagnóstico cerrado">${(c.respuestaTitular||'').replace(/</g,'&lt;')}</textarea>
+    </div>
+
+    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+      ${nuevo?`<button onclick="casoTomar('${c.id}')" class="bmini bverde">Tomar</button>`:''}
+      <button onclick="casoGuardar('${c.id}')" class="bmini" style="background:#EBF3FC;color:#1A5FB4;">Guardar</button>
+      <button onclick="casoCerrar('${c.id}',false)" class="bmini" style="background:#f3f4f6;color:#6b7280;">Cerrar</button>
+      <button onclick="casoCerrar('${c.id}','${(c.mascotaId||'')}')" class="bmini brojo">Cerrar + atención</button>
+    </div>
+  </div>`;
+}
+
+async function casoTomar(id){
+  // Guardia ATÓMICA (guardia 24hs, vets rotando): solo se toma si sigue 'nuevo'. Si otro lo tomó, avisa y refresca.
+  try{
+    const ref=db.collection('casos').doc(id);
+    await db.runTransaction(async tx=>{
+      const s=await tx.get(ref);
+      if(!s.exists) throw new Error('El caso ya no existe.');
+      if(s.data().estado!=='nuevo') throw new Error('Ese caso ya lo tomó otro veterinario.');
+      tx.update(ref, { estado:'en_curso' });
+    });
+    await db.collection('casos_clinico').doc(id).set({ tomadoPor:auth.currentUser.uid, tomadoEn:TS() }, {merge:true});
+    cargarBandejaCasos();
+  }catch(e){ alert(e.message); cargarBandejaCasos(); }
+}
+async function casoGuardar(id){
+  try{
+    const prio=document.getElementById('caso-prio-'+id)?.value||'';
+    const notas=document.getElementById('caso-notas-'+id)?.value||'';
+    const resp=document.getElementById('caso-resp-'+id)?.value||'';
+    // Clínico interno (solo staff) + respuesta al titular (en `casos`, que el titular sí lee).
+    await db.collection('casos_clinico').doc(id).set({ prioridadInterna:prio, notasVet:notas, actualizadoPor:auth.currentUser.uid, actualizadoEn:TS() }, {merge:true});
+    await db.collection('casos').doc(id).set({ respuestaTitular:resp }, {merge:true});
+    toast('Guardado.');
+  }catch(e){ alert('Error: '+e.message); }
+}
+async function casoCerrar(id, mascotaIdOrFalse){
+  try{
+    // guardar la respuesta al titular pendiente antes de cerrar (si la escribió)
+    const resp=document.getElementById('caso-resp-'+id)?.value;
+    const upd={ estado:'cerrado' }; if(resp!=null) upd.respuestaTitular=resp;
+    await db.collection('casos').doc(id).set(upd, {merge:true});
+    if(mascotaIdOrFalse && mascotaIdOrFalse!=='false'){
+      // Derivar a atención: cerramos el caso y abrimos la historia/alta de atención de esa mascota.
+      toast('Caso cerrado. Registrá la atención.');
+      vetVerHistoria(mascotaIdOrFalse);
+    } else {
+      cargarBandejaCasos();
+    }
+  }catch(e){ alert('Error: '+e.message); }
+}
+
 // VET: Tab switching
 function vetSwitchTab(tab, btn) {
   document.querySelectorAll('.vet-tab-btn').forEach(t => t.classList.remove('active'));
@@ -1261,6 +1369,7 @@ function vetSwitchTab(tab, btn) {
   document.getElementById('vet-tab-' + tab).style.display = 'block';
   btn.classList.add('active');
   if (tab === 'inicio') cargarDashboardVet();
+  if (tab === 'casos') cargarBandejaCasos();
   if (tab === 'pacientes') cargarMisPacientes();
 }
 
@@ -2035,6 +2144,7 @@ function renderPanel(data){
 
     <div class="tabs">
       <button class="vet-tab-btn tab active" data-tab="inicio" onclick="vetSwitchTab('inicio',this)">Inicio</button>
+      <button class="vet-tab-btn tab" data-tab="casos" onclick="vetSwitchTab('casos',this)">Casos</button>
       <button class="vet-tab-btn tab" data-tab="buscar" onclick="vetSwitchTab('buscar',this)">Buscar</button>
       <button class="vet-tab-btn tab" data-tab="historia" onclick="vetSwitchTab('historia',this)">Historia</button>
       <button class="vet-tab-btn tab" data-tab="pacientes" onclick="vetSwitchTab('pacientes',this)">Pacientes</button>
@@ -2053,6 +2163,14 @@ function renderPanel(data){
         </div>
       </div>
       <div id="vet-dashboard-content"><p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p></div>
+    </div>
+
+    <!-- TAB CASOS (F1-B · bandeja de despacho veterinario) -->
+    <div id="vet-tab-casos" class="vet-tab-content" style="display:none;">
+      <div class="seccion">
+        <div class="stit">Casos entrantes</div>
+        <div id="vet-casos-content"><p style="color:#9ca3af;font-size:.82rem;">Cargando...</p></div>
+      </div>
     </div>
 
     <!-- TAB BUSCAR -->

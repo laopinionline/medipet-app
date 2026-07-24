@@ -64,6 +64,32 @@ service cloud.firestore {
     }
 
     // ══════════════════════════════════════
+    // ══  CASOS (F1-B · despacho veterinario) ══
+    // ══════════════════════════════════════
+    // SPLIT para la asimetría N3 (inviolable): lo que ve el titular vive en `casos`; lo clínico interno
+    // (prioridad, notas del vet, clasificación) vive en `casos_clinico` y el titular NUNCA lo lee.
+    // `casos` = cara al titular: relato, estado, respuestaTitular (cuidado y acción), atencionId.
+    match /casos/{casoId} {
+      // Crea el TITULAR dueño de la mascota (verifica que la mascota exista y sea suya). Nace 'nuevo'.
+      allow create: if request.auth != null
+        && request.resource.data.titularUid == request.auth.uid
+        && request.resource.data.estado == 'nuevo'
+        && exists(/databases/$(database)/documents/mascotas/$(request.resource.data.mascotaId))
+        && get(/databases/$(database)/documents/mascotas/$(request.resource.data.mascotaId)).data.titularUid == request.auth.uid;
+      // Lee: vet, admin, o el titular dueño (solo campos titular-safe viven acá).
+      allow get, list: if request.auth != null
+        && (isAdmin() || esVeterinario() || resource.data.titularUid == request.auth.uid);
+      // Gestiona (estado, respuestaTitular, atencionId): SOLO vet/admin. El titular no edita su caso.
+      allow update: if request.auth != null && (isAdmin() || esVeterinario());
+      allow delete: if isAdmin();
+    }
+
+    // `casos_clinico` = lo INTERNO del vet (prioridad, notas, clasificación). El titular NUNCA accede (N3).
+    match /casos_clinico/{casoId} {
+      allow read, write: if request.auth != null && (isAdmin() || esVeterinario());
+    }
+
+    // ══════════════════════════════════════
     // ══  MASCOTAS PUBLICAS               ══
     // ══════════════════════════════════════
     match /mascotas_publicas/{token} {

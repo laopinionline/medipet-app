@@ -41,6 +41,16 @@ check(C.esTitular(['admin']) === false, 'admin puro → NO titular');
 check(C.esStaff(['afiliado', 'admin']) === true && C.esTitular(['afiliado', 'admin']) === true, 'mixto afiliado+admin → staff Y titular (ambas apps)');
 check(C.esStaff([]) === false && C.esTitular([]) === false, 'sin roles → ni staff ni titular (cartel honesto)');
 
+console.log('\n— CASOS: estado cara-al-titular (N3: cuidado y acción, NUNCA clasificación) —');
+check(C.estadoCasoTitular('nuevo').tono === 'nuevo', 'nuevo → tono nuevo');
+check(C.estadoCasoTitular('en_curso').tono === 'en_curso', 'en_curso → tono en_curso');
+check(C.estadoCasoTitular('cerrado').tono === 'cerrado', 'cerrado → tono cerrado');
+check(C.estadoCasoTitular(undefined).tono === 'nuevo', 'sin estado → nuevo');
+// N3 duro: ningún texto al titular menciona prioridad/clasificación/urgencia/score.
+var prohibidas = /prioridad|clasific|urgen|score|rojo|amarillo|nivel|triage/i;
+check(['nuevo','en_curso','cerrado'].every(e => !prohibidas.test(C.estadoCasoTitular(e).texto)), 'ningún texto al titular filtra jerga clínica/clasificación');
+check(C.CAMPOS_CASO_TITULAR.indexOf('prioridadInterna') < 0 && C.CAMPOS_CASO_TITULAR.indexOf('notasVet') < 0, 'campos titular-safe NO incluyen prioridadInterna ni notasVet');
+
 console.log('\n— CUOTA DEL TITULAR = Σ cuotas de mascotas ACTIVAS —');
 var mascotasTit = [
   { plan: 'MEDIPaw Joven', estado: 'activo' },      // 58788

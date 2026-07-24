@@ -15,7 +15,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
-<script src="/lib/medipaw-core.js?v=20260724c"></script>
+<script src="/lib/medipaw-core.js?v=20260724d"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--azul:#1A5FB4;--azul-medio:#2272D9;--azul-claro:#5BA3E8;--azul-pale:#EBF3FC;--noche:#0D1B3E;--fondo:#F5F7FA;--texto:#1a2340;--suave:#5a6a8a;--rojo:#e11d48;--verde:#166534}
@@ -209,7 +209,10 @@ function getRoles(u){
 }
 
 // ── Estado único ──
-const S = { view:'boot', cred:null, mascotaSel:0, deferredPrompt:null };
+const S = { view:'boot', sub:'home', cred:null, mascotaSel:0, deferredPrompt:null, caso:null };
+// Dispatcher del sub-view dentro del appScreen: home | caso ("[Nombre] no está bien")
+function render(){ if(S.sub==='caso') casoView(); else homeView(); }
+function volverHome(){ S.sub='home'; S.caso=null; render(); }
 
 // ── Colección mascotas (fuente de verdad; reusa el núcleo) ──
 async function mascGetByTitular(uid){
@@ -278,10 +281,11 @@ auth.onAuthStateChanged(async user=>{
     }
     // Es titular (afiliado). Carga sus mascotas de la colección y muestra el home. (Si además es staff, se queda acá:
     // entró explícitamente a /socio/; el panel /app/ solo rebota al afiliado PURO.)
-    let mascotas=[];
+    let mascotas=[], casos=[];
     try{ mascotas=await mascGetByTitular(user.uid); }catch(_){ }
-    S.cred={ u, mascotas }; S.mascotaSel=0;
-    homeView();
+    try{ casos=(await db.collection('casos').where('titularUid','==',user.uid).get()).docs.map(d=>({id:d.id,...d.data()})); }catch(_){ }
+    S.cred={ u, mascotas, casos }; S.mascotaSel=0; S.sub='home';
+    render();
     showScreen('appScreen');
   }catch(e){ showScreen('loginScreen'); setErr('loginError','Error al cargar tu cuenta: '+e.message); }
 });
@@ -416,7 +420,75 @@ function tilePlaceholder(ico, titulo, sub){
   </button>`;
 }
 function bloqueIA(m){ return tilePlaceholder('💬','MEDIPaw IA','Consultá sobre tu plan, tus mascotas o cómo cuidarlas'); }
-function bloqueNoEstaBien(m){ return tilePlaceholder('🩹',`${esc(nombreMasc(m))} no está bien`,'Contanos qué le pasa — un veterinario lo revisa'); }
+
+// "[Nombre] no está bien" — tile REAL (abre el caso) + estado de los casos abiertos de esa mascota (cuidado/acción, sin clasificación).
+function tms(t){ return t&&t.toMillis?t.toMillis():(t&&t.seconds?t.seconds*1000:0); }
+function casosDe(m){ if(!m) return []; return (S.cred.casos||[]).filter(c=>c.mascotaId===m.mascotaId); }
+function bloqueNoEstaBien(m){
+  const abiertos = casosDe(m).filter(c=>c.estado!=='cerrado').sort((a,b)=>tms(b.creadoEn)-tms(a.creadoEn));
+  let estado='';
+  if(abiertos.length){
+    const c=abiertos[0]; const st=MC.estadoCasoTitular(c.estado);
+    estado = `<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:10px 12px;margin:-4px 0 12px;">
+      <div style="font-size:.8rem;font-weight:800;color:var(--azul);">${esc(st.texto)}</div>
+      ${c.respuestaTitular?`<div style="font-size:.78rem;color:var(--texto);margin-top:4px;">💬 ${esc(c.respuestaTitular)}</div>`:''}
+    </div>`;
+  }
+  return `<button class="tile" onclick="abrirCaso()">
+    <div class="t-ico" style="background:#fee2e2;">🩹</div>
+    <div class="t-body"><div class="t-title">${esc(nombreMasc(m))} no está bien</div><div class="t-sub">Contanos qué le pasa — un veterinario lo revisa</div></div>
+    <span class="t-arrow">›</span>
+  </button>` + estado;
+}
+function abrirCaso(){ S.sub='caso'; S.caso=null; render(); }
+function casoView(){
+  const m=mascotaActiva(); const nombre=nombreMasc(m);
+  let body;
+  if(!m){
+    body = `<div class="seccion"><p style="font-size:.85rem;color:var(--suave);">Primero agregá una mascota para poder contarnos cómo está.</p></div>`;
+  } else if(S.caso&&S.caso.done){
+    body = `<div class="seccion" style="text-align:center;">
+      <div style="font-size:2rem;">✅</div>
+      <div class="stit" style="text-transform:none;font-size:1rem;margin-top:6px;">Recibimos lo de ${esc(nombre)}</div>
+      <p style="font-size:.85rem;color:var(--suave);line-height:1.5;margin-top:6px;">Un veterinario lo va a revisar y te contactamos. Si mientras tanto se pone urgente, no esperes acá:</p>
+      <a class="btn-emerg" href="tel:${TEL_EMERG}" style="margin-top:12px;"><span class="em-ico">🚑</span><span><span class="em-top">EMERGENCIA 24hs</span><span class="em-sub">Guardia veterinaria — ${esc(TEL_EMERG)}</span></span></a>
+      <button class="btn-primary" style="margin-top:10px;" onclick="volverHome()">Volver al inicio</button>
+    </div>`;
+  } else {
+    body = `<div class="seccion">
+      <div class="stit" style="text-transform:none;font-size:1rem;">¿Qué le pasa a ${esc(nombre)}?</div>
+      <div class="fstack" style="margin-top:10px;">
+        <textarea id="casoRelato" class="input-field" style="height:90px;resize:vertical;" placeholder="Contanos qué notás: síntomas, comportamiento, qué te preocupa…"></textarea>
+        <select id="casoDesde" class="input-field">
+          <option value="">¿Desde cuándo?</option>
+          <option value="hoy">Hoy</option>
+          <option value="ayer">Ayer</option>
+          <option value="varios_dias">Hace varios días</option>
+        </select>
+        <p id="casoMsg" class="errmsg"></p>
+      </div>
+      <p style="font-size:.8rem;font-weight:800;color:var(--noche);margin:6px 0 8px;">¿Puede esperar o es urgente?</p>
+      <a class="btn-emerg" href="tel:${TEL_EMERG}"><span class="em-ico">🚑</span><span><span class="em-top">ES URGENTE — llamar ahora</span><span class="em-sub">No esperes respuesta acá. Guardia 24hs: ${esc(TEL_EMERG)}</span></span></a>
+      <button class="btn-primary" style="margin-top:10px;" onclick="enviarCaso()">Puedo esperar — enviar a un veterinario</button>
+    </div>`;
+  }
+  document.getElementById('home').innerHTML = `<button class="link-btn" style="margin-bottom:10px;display:inline-block;" onclick="volverHome()">‹ Volver</button>` + body;
+}
+async function enviarCaso(){
+  const m=mascotaActiva(); if(!m) return;
+  const relato=v('casoRelato'); const dEl=document.getElementById('casoDesde'); const desde=dEl?dEl.value:'';
+  const msg=document.getElementById('casoMsg'); if(msg) msg.textContent='';
+  if(!relato){ if(msg) msg.textContent='Contanos qué le pasa.'; return; }
+  try{
+    const ref=await db.collection('casos').add({
+      mascotaId:m.mascotaId, mascotaNombre:m.nombre||'', titularUid:S.cred.u.uid,
+      relato, desdeCuando:desde||'', urgenciaTitular:false, estado:'nuevo',
+      respuestaTitular:'', atencionId:null, creadoEn:TS()
+    });
+    S.cred.casos=(S.cred.casos||[]).concat([{ id:ref.id, mascotaId:m.mascotaId, mascotaNombre:m.nombre, relato, estado:'nuevo', urgenciaTitular:false, respuestaTitular:'', creadoEn:{toMillis:()=>Date.now()} }]);
+    S.caso={done:true}; casoView();
+  }catch(e){ if(msg) msg.textContent='Error: '+e.message; }
+}
 function bloqueTurnos(m){ return tilePlaceholder('📅','Turnos','Pedí un turno para tu mascota'); }
 function bloqueChequeo(m){ return tilePlaceholder('⚖️',`Chequeo y peso de ${esc(nombreMasc(m))}`,'Seguimiento de salud y peso'); }
 function bloqueHistoria(m){ return tilePlaceholder('📋',`Historia de ${esc(nombreMasc(m))}`,'Atenciones, vacunas y estudios'); }
