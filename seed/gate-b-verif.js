@@ -54,6 +54,26 @@ async function restCreate(idToken, pathDoc, fields) {
   return r.status;
 }
 (async () => {
+  // ── Setup para el E2E del embudo en el navegador: crea titular desechable, imprime custom-token + uid ──
+  if (MODE === 'alta-token') {
+    const titUid = await ensureUser(TIT, ['afiliado']);
+    const ct = await auth.createCustomToken(titUid);
+    console.log('TIT_UID=' + titUid);
+    console.log('TIT_CUSTOM_TOKEN=' + ct);
+    process.exit(0);
+  }
+  // ── Cleanup del E2E: borra mascotas + pesos del titular desechable + la cuenta ──
+  if (MODE === 'alta-cleanup') {
+    let uid = null; try { uid = (await auth.getUserByEmail(TIT.email)).uid; } catch (_) {}
+    if (uid) {
+      const ms = await db.collection('mascotas').where('titularUid', '==', uid).get();
+      for (const d of ms.docs) { await d.ref.delete(); console.log('  borrada mascota', d.id); }
+      const ps = await db.collection('pesos').where('titularUid', '==', uid).get();
+      for (const d of ps.docs) { await d.ref.delete(); console.log('  borrado peso', d.id); }
+    }
+    await delUser(TIT.email);
+    process.exit(0);
+  }
   // ── Seguridad del EMBUDO: el titular no puede mandar plan/cuota arbitrarios (reglas publicadas) ──
   if (MODE === 'embudo') {
     console.log('\n=== EMBUDO — seguridad del create de mascotas (titular real por REST) ===\n');
