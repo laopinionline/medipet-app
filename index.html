@@ -1164,9 +1164,10 @@ async function vetGuardarAtencion(mascotaId, mascotaNombre) {
       }
     }
 
-    // Buscar titularUid (dueño de la mascota) en la colección.
+    // Buscar titularUid (dueño de la mascota) en la colección. La regla EXIGE titularUid no vacío en el create.
     const mDoc = await mascGet(mascotaId);
     const titularUid = mDoc ? (mDoc.titularUid || '') : '';
+    if (!titularUid) { setMsg('vetAtenMsg','No pude identificar al titular de esta mascota. Buscala de nuevo desde la colección.',false); return; }
 
     await db.collection('atenciones').add({
       prestadorId: uid,
