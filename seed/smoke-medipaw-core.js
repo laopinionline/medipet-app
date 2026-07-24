@@ -30,6 +30,17 @@ eq(C.coberturaMascota({ estado: 'suspendido', plan: PLAN_OK }).chip, 'Suspendido
 eq(C.coberturaMascota({ estado: 'baja', plan: PLAN_OK }).chip, 'Baja', 'chip baja');
 check(C.planEnCatalogo('MEDIPaw Senior') === true && C.planEnCatalogo('Premium') === false && C.planEnCatalogo('Sin definir') === false, 'planEnCatalogo: catálogo sí, legacy/sin-definir no');
 
+console.log('\n— RUTEO POR ROL (login único: /app/ staff · /socio/ titular) —');
+check(C.esStaff(['admin']) === true, 'admin → staff (va a /app/)');
+check(C.esStaff(['veterinario']) === true, 'veterinario → staff');
+check(C.esStaff(['prestador']) === true, 'prestador legacy → staff (mapea a veterinario)');
+check(C.esStaff(['afiliado']) === false, 'afiliado puro → NO staff');
+check(C.esTitular(['afiliado']) === true, 'afiliado → titular (va a /socio/)');
+check(C.esTitular(['admin']) === false, 'admin puro → NO titular');
+// Mixto staff+afiliado: es AMBOS → puede usar las dos apps (se queda donde entró; sin loop).
+check(C.esStaff(['afiliado', 'admin']) === true && C.esTitular(['afiliado', 'admin']) === true, 'mixto afiliado+admin → staff Y titular (ambas apps)');
+check(C.esStaff([]) === false && C.esTitular([]) === false, 'sin roles → ni staff ni titular (cartel honesto)');
+
 console.log('\n— CUOTA DEL TITULAR = Σ cuotas de mascotas ACTIVAS —');
 var mascotasTit = [
   { plan: 'MEDIPaw Joven', estado: 'activo' },      // 58788

@@ -9,7 +9,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
-<script src="./lib/medipaw-core.js?v=20260724b"></script>
+<script src="/lib/medipaw-core.js?v=20260724c"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--azul:#1A5FB4;--azul-medio:#2272D9;--azul-claro:#5BA3E8;--azul-pale:#EBF3FC;--noche:#0D1B3E;--fondo:#F5F7FA;--texto:#1a2340;--suave:#5a6a8a}
@@ -319,8 +319,10 @@ const CATALOGO_SERVICIOS = [
 
 // ── ROLES ──
 // Prioridad para vista por defecto: admin > veterinario > afiliado
-const ROLE_PRIORITY = ['admin','veterinario','afiliado'];
-const ROLE_LABELS = {admin:'Administrador',veterinario:'Veterinario',afiliado:'Mis mascotas'};
+// TRAMO A (split): /app/ es SOLO staff. El titular PURO vive en /socio/. STAFF = roles que trabajan acá.
+const STAFF = ['admin','veterinario'];
+const ROLE_PRIORITY = ['admin','veterinario']; // sin 'afiliado': la vista de titular ya no vive en el panel
+const ROLE_LABELS = {admin:'Administrador',veterinario:'Veterinario'};
 let currentUserData = null;
 let activeRole = 'afiliado';
 
@@ -460,13 +462,12 @@ auth.onAuthStateChanged(async user=>{
         }
         currentUserData = data;
         const roles = getUserRoles(data);
-        activeRole = getDefaultRole(roles);
-        // F0.5: hidratar mascotas del titular desde la colección (fuente de verdad), no del array embebido.
-        if (roles.includes('afiliado')) {
-          try { data.mascotas = await mascGetByTitular(user.uid); } catch(e) { /* deja el embebido como fallback */ }
-        }
+        // TRAMO A: el titular PURO (sin rol de staff) no trabaja en el panel → lo mandamos a su PWA /socio/.
+        if (!MC.esStaff(roles)) { window.location.replace('../socio/'); return; }
+        const rolesStaff = roles.filter(r => STAFF.includes(r));
+        activeRole = getDefaultRole(roles); // ROLE_PRIORITY solo-staff → nunca 'afiliado'
         showScreen('appScreen');
-        setupRoleSwitcher(roles);
+        setupRoleSwitcher(rolesStaff); // el switcher del panel muestra SOLO roles de staff
         renderPanel(data);
       } else {
         setMsg('loginError','Tu registro esta siendo procesado.',false);
