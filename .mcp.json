@@ -2,11 +2,7 @@
   "mcpServers": {
     "firebase": {
       "command": "npx",
-      "args": ["-y", "firebase-tools@latest", "experimental:mcp", "--only", "firestore,auth"],
-      "env": {
-        "GOOGLE_APPLICATION_CREDENTIALS": "./seed/serviceAccountKey.json",
-        "FIREBASE_PROJECT": "medipet-c3a4d"
-      }
+      "args": ["-y", "firebase-tools@latest", "experimental:mcp", "--only", "firestore,auth"]
     }
   }
 }

@@ -50,7 +50,13 @@ proyecto Firebase `medipet-c3a4d`. Prod: VPS 186.148.233.122 (Nginx + Cloudflare
 - **Si el tramo TOCA REGLAS nuevas:** **reglas publicadas y CONFIRMADAS por Lucas → recién ahí el código.** NO
   deployar código antes del "reglas publicadas" explícito. Publicar es paso manual de Lucas en la consola. Ya tumbó
   producción por deployar código contra reglas viejas. Orden: aviso previo con el `firestore.rules` COMPLETO →
-  esperar "reglas publicadas" → commit+push+curl. Si el tramo NO toca reglas, el deploy va directo con aviso previo.
+  esperar "reglas publicadas" → **verificar que se publicó de verdad** → commit+push+curl. Si el tramo NO toca reglas,
+  el deploy va directo con aviso previo.
+- **Publicado ≠ verificado (eslabón obligatorio entre publicación y código).** Después del "reglas publicadas" de
+  Lucas y ANTES de deployar código, correr **`node seed/gate-b-verif.js escalada`** y **exigir 403** (la escalada de
+  privilegios rechazada = prueba de que el ruleset nuevo está corriendo, no el viejo). Sin ese verde **no se deploya**.
+  Sumar los modos que pruebe el parche (`embudo`, `alta-token`, N3, etc.) según el tramo. Es el control de que "lo
+  publicado" y "lo que corre" son lo mismo — complementa el PASO 0 del subagente `auditor-reglas`.
 - **Antes de tocar Firestore** (migraciones/backfills): aviso previo + **dry-run** primero (mostrar), después `--write`.
 - **Mecánica del deploy** (push+curl, NO scp): commit+push a `main` → deploy `/lib/` (si cambió) y curl-verificar que
   sirve JS → deploy `/socio/` (index + sw) → **backup** `/app/index.html.bak-<fecha>` → swap `/app/index.html` →
