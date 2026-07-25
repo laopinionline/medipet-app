@@ -57,6 +57,12 @@ proyecto Firebase `medipet-c3a4d`. Prod: VPS 186.148.233.122 (Nginx + Cloudflare
   privilegios rechazada = prueba de que el ruleset nuevo está corriendo, no el viejo). Sin ese verde **no se deploya**.
   Sumar los modos que pruebe el parche (`embudo`, `alta-token`, N3, etc.) según el tramo. Es el control de que "lo
   publicado" y "lo que corre" son lo mismo — complementa el PASO 0 del subagente `auditor-reglas`.
+- **El PASO 0 solo cuenta si lo produjo el subagente `auditor-reglas`. Autor y auditor no pueden ser el mismo.** El
+  diff repo↔publicado tiene que salir DENTRO de la corrida del subagente. Si lo resolvió el hilo principal (o
+  cualquiera que no sea `auditor-reglas`) — p. ej. porque al subagente le denegaron la tool y lo hizo el orquestador —
+  el veredicto es **NO VERIFICADO** y **NO habilita publicación**, aunque el diff haya dado idéntico. Un PASO 0 hecho
+  por el propio autor del cambio no es control independiente: no vale. Si al subagente le falla el acceso, se
+  arregla el acceso (permiso en `.claude/settings.json`) y se re-corre el subagente — no se suple a mano.
 - **Antes de tocar Firestore** (migraciones/backfills): aviso previo + **dry-run** primero (mostrar), después `--write`.
 - **Mecánica del deploy** (push+curl, NO scp): commit+push a `main` → deploy `/lib/` (si cambió) y curl-verificar que
   sirve JS → deploy `/socio/` (index + sw) → **backup** `/app/index.html.bak-<fecha>` → swap `/app/index.html` →
