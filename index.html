@@ -752,6 +752,14 @@ async function syncMascotaPublica(userData, mascota, index) {
   if (!mascota.token) return;
   const nroSocio = userData.nroSocio || '';
   const mascotaId = mascota.mascotaId || generarMascotaId(nroSocio, index);
+  // CHECK DE COLISIÓN (el titular setea token en el create; podría poner el de OTRA mascota para pisarle la ficha).
+  // Si ya existe una ficha pública con ese token para OTRO mascotaId → abortar (no la pisamos).
+  try {
+    const prev = await db.collection('mascotas_publicas').doc(mascota.token).get();
+    if (prev.exists && prev.data().mascotaId && prev.data().mascotaId !== mascotaId) {
+      throw new Error('El código de la ficha ya pertenece a otra mascota (' + prev.data().mascotaId + '). Regenerá el token de esta mascota.');
+    }
+  } catch(e) { if (/ya pertenece/.test(e.message)) throw e; /* error de red al leer: seguimos (set con merge no reasigna mascotaId ajeno igual, pero preferimos abortar arriba) */ }
   // F0.5: el estado de la ficha pública es el de LA MASCOTA (colección), no el del titular.
   let estado = 'suspendido';
   try { const md = await mascGet(mascotaId); if (md && md.estado) estado = md.estado; } catch(e) {}
@@ -773,7 +781,7 @@ async function syncMascotaPublica(userData, mascota, index) {
 // ── ADMIN: FICHA DE MASCOTA ──
 function ensureMascotaFields(mascota, nroSocio, index) {
   let changed = false;
-  if (!mascota.token) { mascota.token = generarToken(); changed = true; }
+  // El TOKEN ya NO se genera acá (la colección `mascotas` es la fuente; el embudo lo crea, y el backfill movió los viejos).
   if (!mascota.mascotaId && nroSocio) { mascota.mascotaId = generarMascotaId(nroSocio, index); changed = true; }
   if (!mascota.servicios || mascota.servicios.length === 0) {
     mascota.servicios = CATALOGO_SERVICIOS.map(s => ({...s}));
@@ -836,6 +844,22 @@ async function adminRegenerarToken(uid, index) {
     await espejarMascotasEnColeccion(uid); // F0.5: reflejar el nuevo token a la colección
     await syncMascotaPublica({ ...ud, uid }, mascotas[index], index);
     toast('Token regenerado');
+    cargarUsuariosAdmin();
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+// Genera/actualiza la ficha pública (/m/{token}) de una mascota de la COLECCIÓN (fuente). Solo admin (reglas).
+// Sin Cloud Functions no nace sola en el alta del titular → el admin la publica desde acá. El token viene de la
+// colección (lo creó el embudo); si faltara, se genera. syncMascotaPublica hace el check de colisión.
+async function generarFichaPublica(mascotaId) {
+  try {
+    const m = await mascGet(mascotaId);
+    if (!m) { alert('No encontré la mascota en la colección.'); return; }
+    if (!m.token) { const t = generarToken(); await db.collection('mascotas').doc(mascotaId).set({ token: t }, { merge: true }); m.token = t; }
+    let userData = { uid: m.titularUid, nombre: '', apellido: '', nroSocio: '' };
+    if (m.titularUid) { try { const s = await db.collection('usuarios').doc(m.titularUid).get(); if (s.exists) userData = { uid: m.titularUid, ...s.data() }; } catch(e) {} }
+    await syncMascotaPublica(userData, m, 0); // usa m.token (colección) + check de colisión
+    toast('Ficha pública lista: ' + PUBLIC_BASE + m.token);
     cargarUsuariosAdmin();
   } catch(e) { alert('Error: ' + e.message); }
 }
@@ -1483,6 +1507,7 @@ function cardUsuario(u, masMap){
       ${mascotas.map((m,i)=>{
         const srvIcons = SRV_ICONS_ADMIN;
         const servicios = m.servicios || [];
+        const mcToken = (masMap[m.mascotaId] || {}).token || ''; // TOKEN de la COLECCIÓN (fuente), no del embebido
         return `
         <div style="background:white;border-radius:14px;padding:12px;border:1px solid rgba(26,95,180,.1);">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
@@ -1549,9 +1574,10 @@ function cardUsuario(u, masMap){
           }).join('')}
           <div class="ficha-actions">
             <button onclick="adminGuardarServicios('${u.id}',${i})" style="background:#dcfce7;color:#166534;">Guardar</button>
-            ${m.token?`<button onclick="adminCopiarEnlace('${m.token}')" style="background:#EBF3FC;color:#1A5FB4;">Copiar enlace</button>`:''}
-            ${m.token?`<button onclick="adminWhatsApp('${m.token}','${(m.nombre||'').replace(/'/g,"\\'")}')" style="background:#dcfce7;color:#166534;">WhatsApp</button>`:''}
-            ${m.token?`<button onclick="adminRegenerarToken('${u.id}',${i})" style="background:#fef3c7;color:#92400e;">Regenerar token</button>`:''}
+            ${m.mascotaId?`<button onclick="generarFichaPublica('${m.mascotaId}')" style="background:#ede9fe;color:#5b21b6;">Generar ficha pública</button>`:''}
+            ${mcToken?`<button onclick="adminCopiarEnlace('${mcToken}')" style="background:#EBF3FC;color:#1A5FB4;">Copiar enlace</button>`:''}
+            ${mcToken?`<button onclick="adminWhatsApp('${mcToken}','${(m.nombre||'').replace(/'/g,"\\'")}')" style="background:#dcfce7;color:#166534;">WhatsApp</button>`:''}
+            ${mcToken?`<button onclick="adminRegenerarToken('${u.id}',${i})" style="background:#fef3c7;color:#92400e;">Regenerar token</button>`:''}
           </div>
         </div>`;
       }).join('')}

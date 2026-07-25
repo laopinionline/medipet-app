@@ -386,17 +386,18 @@ async function finalizarAlta(){
   const uid=S.cred.u.uid;
   try{
     const mascotaId='MP-'+genCodigo(8);
+    const token=genCodigo(24); // crypto.getRandomValues (genCodigo) — para la ficha pública /m/{token}. La colección es la fuente.
     // Mascota ACTIVA; plan/cuota los pone el sistema por EDAD APROXIMADA (la regla los revalida por el bucket).
     const doc={
       mascotaId, titularUid:uid, nombre:a.nombre, especie:a.especie, edadAprox:a.edadAprox, raza:a.raza, sexo:a.sexo,
-      plan:p.plan, cuota:p.cuota, estado:'activo', foto:'', token:'', servicios:[], creadoEn:TS()
+      plan:p.plan, cuota:p.cuota, estado:'activo', foto:'', token, servicios:[], creadoEn:TS()
     };
     // Fecha exacta OPCIONAL: solo si el titular la cargó (refina el recálculo futuro).
     if(a.fnac){ doc.fechaNacimiento=firebase.firestore.Timestamp.fromDate(new Date(a.fnac+'T00:00:00-03:00')); }
     await db.collection('mascotas').doc(mascotaId).set(doc);
     // Espejo al array embebido usuarios.mascotas[] (invariante expand/contract: el admin identifica afiliados por ahí).
     try{ const s=await db.collection('usuarios').doc(uid).get(); const ud=s.data()||{}; const arr=Array.isArray(ud.mascotas)?ud.mascotas.slice():[];
-      arr.push({ nombre:a.nombre, raza:a.raza, especie:a.especie, sexo:a.sexo, plan:p.plan, mascotaId, token:'' });
+      arr.push({ nombre:a.nombre, raza:a.raza, especie:a.especie, sexo:a.sexo, plan:p.plan, mascotaId, token });
       await db.collection('usuarios').doc(uid).update({ mascotas:arr }); S.cred.u.mascotas=arr;
     }catch(_){}
     // Primer punto de la SERIE DE PESO (no es un campo que se pisa).
