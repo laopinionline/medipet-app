@@ -17,11 +17,21 @@ nginx/Cloudflare da la fecha de subida.
 `medipet` = sitio público (landing + ficha). `medipet-app` (este repo) = portal + socio + núcleo. El
 `index.html` de ESTE repo se sirve en **`/app/`**, NO en `/`.
 
+## ⚠️ TRAMPA (para sesión futura): `medipet` tiene GitHub Pages activo, pero prod NO sale de Pages
+
+El repo `laopinionline/medipet` **tiene GitHub Pages habilitado** (build de `main` `/`,
+`laopinionline.github.io/medipet/`, `cname: null`). Es fácil asumir que pushear a `medipet` "deploya" la landing o la
+ficha — **NO.** `medipaw.com.ar/` y `/m/` se sirven desde el **VPS** (`/var/www/medipaw/{index.html,m/index.html}`),
+igual que `medipet-app`. El deploy real de AMBOS repos es el mismo: **SSH `laopinion@186.148.233.122` → `curl` de raw
+GitHub → backup → `sudo cp`** (ver el runbook en memoria del proyecto). Pushear a GitHub es solo el prerequisito (el
+server hace `curl` de raw). Pages queda como artefacto colateral que NADIE consume en prod.
+
 ## Verificación repo↔prod (sin drift al 2026-07-26)
 
 - **`/` == `medipet` HEAD `index.html`** → **idéntico** (69 743 b). `Last-Modified: 2026-06-06 12:08:02`;
   `medipet` `pushedAt: 2026-06-06T12:07:54Z` (8 s de diferencia → mismo release).
-- **`/m/{token}` == `medipet` HEAD `m/index.html`** → **idéntico** (16 056 b). `Last-Modified: 2026-06-05`.
+- **`/m/{token}` == `medipet` HEAD `m/index.html`** → era **idéntico** (16 056 b). **Actualizado 2026-07-26** por el
+  fix XSS (commit `b385f19`, ahora 17 859 b, `mk`/`textContent`) — ver la nota "Incidente-Seguridad" en el vault MEDIPAW.
 
 Conclusión: **nada que recuperar a `medipet-app`.** Ambas páginas públicas ya están versionadas en `medipet` y prod
 coincide con su HEAD. Lo que faltaba era ESTE mapa. Un intento previo de copiar `/m/index.html` a `medipet-app` se
