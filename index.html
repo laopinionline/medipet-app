@@ -254,6 +254,30 @@ firebase.initializeApp({
 const auth=firebase.auth(), db=firebase.firestore(), storage=firebase.storage();
 const TS=()=>firebase.firestore.FieldValue.serverTimestamp();
 
+// esc(): escape HTML COMPLETO (& < > " ') — mismo helper que /socio/. Envolver TODO dato de origen usuario
+// (titular/vet) o público (solicitudes del /m/) antes de interpolarlo en innerHTML. Sin esto = XSS almacenado,
+// y en el panel corre en sesión admin (que puede escribir roles[]). Para atributos on* usar data-* + listener.
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// Delegación de clicks para botones con datos de usuario. Reemplaza el patrón viejo de un handler inline con el
+// dato interpolado como string JS DENTRO de un atributo HTML (doble contexto, se escapa mal siempre). Los valores
+// viajan en data-* (escapados con esc, que cubre comillas) y se leen por dataset → se pasan como ARGUMENTO JS,
+// sin reparsear. Atado una sola vez.
+document.addEventListener('click', (ev) => {
+  const b = ev.target.closest('[data-action]'); if (!b) return;
+  const d = b.dataset;
+  switch (d.action) {
+    case 'reenviar':        reenviarCredenciales(d.email); break;
+    case 'eliminar-usuario':confirmarEliminarUsuario(d.id, d.nombre); break;
+    case 'wsp':             adminWhatsApp(d.token, d.nombre); break;
+    case 'descargar-carnet':descargarCarnet(Number(d.idx), d.nombre); break;
+    case 'pedir-cambio':    pedirCambioPlan(d.mascotaId, d.nombre, d.plan, Number(d.idx)); break;
+    case 'pedir-baja':      pedirBaja(d.mascotaId, d.nombre); break;
+    case 'form-atencion':   vetMostrarFormAtencion(d.mascotaId, d.nombre); break;
+    case 'guardar-atencion':vetGuardarAtencion(d.mascotaId, d.nombre); break;
+  }
+});
+
 // ── F0.5 · COLECCIÓN MASCOTAS (fuente de verdad) — DAL + lógica pura compartida (lib/medipaw-core) ──
 // La MASCOTA es el sujeto: su plan, su cuota y su ESTADO viven en mascotas/{mascotaId}, no en el titular.
 const MC = window.MEDIPAW; // núcleo puro: coberturaMascota / cuotaTitular / resumenNegocio / planCuota / migrarUsuario
@@ -916,9 +940,9 @@ async function cargarDashboardVet() {
             return `<div class="hc-entry" onclick="vetVerHistoria('${a.mascotaId||''}')">
               <div style="display:flex;justify-content:space-between;align-items:flex-start;">
                 <div>
-                  <span class="hc-tipo tipo-${tipo}">${tipo}</span>
-                  <div style="font-size:.85rem;font-weight:700;margin-top:4px;">${a.mascotaNombre||a.mascota||'—'}</div>
-                  <div style="font-size:.78rem;color:var(--suave);">${a.diagnostico||a.descripcion||''}</div>
+                  <span class="hc-tipo tipo-${esc(tipo)}">${esc(tipo)}</span>
+                  <div style="font-size:.85rem;font-weight:700;margin-top:4px;">${esc(a.mascotaNombre||a.mascota||'—')}</div>
+                  <div style="font-size:.78rem;color:var(--suave);">${esc(a.diagnostico||a.descripcion||'')}</div>
                 </div>
                 <div style="text-align:right;">
                   <div style="font-size:.78rem;color:#9ca3af;">${fecha}</div>
@@ -985,8 +1009,8 @@ async function vetEjecutarBusqueda() {
         <div style="display:flex;justify-content:space-between;align-items:flex-start;">
           <div>
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-              <strong>${u.nombre||''} ${u.apellido||''}</strong>
-              ${u.nroSocio?`<span style="background:#EBF3FC;color:#1A5FB4;font-size:.68rem;font-weight:800;padding:2px 8px;border-radius:100px;">${u.nroSocio}</span>`:''}
+              <strong>${esc(u.nombre||'')} ${esc(u.apellido||'')}</strong>
+              ${u.nroSocio?`<span style="background:#EBF3FC;color:#1A5FB4;font-size:.68rem;font-weight:800;padding:2px 8px;border-radius:100px;">${esc(u.nroSocio)}</span>`:''}
             </div>
             <div style="font-size:.7rem;color:var(--suave);margin-top:2px;">Titular / responsable — la cobertura es de cada mascota</div>
           </div>
@@ -1002,20 +1026,20 @@ async function vetEjecutarBusqueda() {
               <div style="padding:10px;border-radius:12px;margin-bottom:6px;cursor:pointer;${brd}" onclick="vetVerHistoria('${m.mascotaId||''}')">
                 <div style="display:flex;align-items:center;gap:10px;">
                   ${m.foto
-                    ? `<img src="${m.foto}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid #5BA3E8;">`
+                    ? `<img src="${esc(m.foto)}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid #5BA3E8;">`
                     : `<div style="width:36px;height:36px;border-radius:50%;background:${mMatch?'white':'#EBF3FC'};display:flex;align-items:center;justify-content:center;font-size:.9rem;">&#128062;</div>`}
                   <div style="flex:1;">
-                    <div style="font-size:.85rem;font-weight:700;">${m.nombre||'—'}${mMatch?' &#11088;':''}</div>
-                    <div style="font-size:.72rem;color:var(--suave);">${m.raza||''} ${m.mascotaId?'· '+m.mascotaId:''}</div>
+                    <div style="font-size:.85rem;font-weight:700;">${esc(m.nombre||'—')}${mMatch?' &#11088;':''}</div>
+                    <div style="font-size:.72rem;color:var(--suave);">${esc(m.raza||'')} ${m.mascotaId?'· '+esc(m.mascotaId):''}</div>
                   </div>
-                  <div style="font-size:.72rem;font-weight:700;color:var(--azul);">${m.plan||'Sin plan'}</div>
+                  <div style="font-size:.72rem;font-weight:700;color:var(--azul);">${esc(m.plan||'Sin plan')}</div>
                   <span style="font-size:.8rem;color:var(--suave);">&#10145;</span>
                 </div>
                 <div class="${c.ok?'cobertura-ok':'cobertura-no'}" style="margin-top:8px;">
                   <span style="font-size:1.1rem;">${c.ok?'&#9989;':'&#10060;'}</span>
                   <div>
                     <div style="font-size:.8rem;font-weight:800;">${c.label}</div>
-                    <div style="font-size:.7rem;color:${c.color};">Estado de ${m.nombre||'la mascota'}: ${c.estado}</div>
+                    <div style="font-size:.7rem;color:${c.color};">Estado de ${esc(m.nombre||'la mascota')}: ${esc(c.estado)}</div>
                   </div>
                 </div>
               </div>`;
@@ -1076,14 +1100,14 @@ async function vetVerHistoria(mascotaId) {
     el.innerHTML = `
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
         ${mascotaFoto
-          ? `<img src="${mascotaFoto}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid #5BA3E8;">`
+          ? `<img src="${esc(mascotaFoto)}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid #5BA3E8;">`
           : `<div style="width:48px;height:48px;border-radius:50%;background:#EBF3FC;display:flex;align-items:center;justify-content:center;font-size:1.4rem;">&#128062;</div>`}
         <div style="flex:1;">
-          <div style="font-size:1.1rem;font-weight:900;color:var(--noche);">${mascotaNombre}</div>
-          <div style="font-size:.78rem;color:var(--suave);">${mascotaRaza} · ${mascotaPlan} · ${mascotaId}</div>
-          <div style="font-size:.72rem;color:#9ca3af;">Titular: ${titularNombre}</div>
+          <div style="font-size:1.1rem;font-weight:900;color:var(--noche);">${esc(mascotaNombre)}</div>
+          <div style="font-size:.78rem;color:var(--suave);">${esc(mascotaRaza)} · ${esc(mascotaPlan)} · ${esc(mascotaId)}</div>
+          <div style="font-size:.72rem;color:#9ca3af;">Titular: ${esc(titularNombre)}</div>
         </div>
-        <button onclick="vetMostrarFormAtencion('${mascotaId}','${mascotaNombre.replace(/'/g,"\\'")}')" class="bmini bverde" style="font-size:.8rem;padding:8px 14px;">+ Nueva atencion</button>
+        <button data-action="form-atencion" data-mascota-id="${esc(mascotaId)}" data-nombre="${esc(mascotaNombre)}" class="bmini bverde" style="font-size:.8rem;padding:8px 14px;">+ Nueva atencion</button>
       </div>
       <div id="formNuevaAtencionWrap" style="display:none;"></div>
       ${atenciones.length === 0
@@ -1096,13 +1120,13 @@ async function vetVerHistoria(mascotaId) {
               <div style="display:flex;justify-content:space-between;align-items:flex-start;">
                 <div style="flex:1;">
                   <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-                    <span class="hc-tipo tipo-${tipo}">${tipo}</span>
+                    <span class="hc-tipo tipo-${esc(tipo)}">${esc(tipo)}</span>
                     <span style="font-size:.72rem;color:#9ca3af;">${fechaStr}</span>
                   </div>
-                  ${a.diagnostico?`<div style="font-size:.85rem;font-weight:700;margin-top:6px;color:var(--noche);">Diagnostico: ${a.diagnostico}</div>`:''}
-                  ${a.tratamiento?`<div style="font-size:.82rem;color:var(--suave);margin-top:2px;">Tratamiento: ${a.tratamiento}</div>`:''}
-                  ${a.descripcion && !a.diagnostico?`<div style="font-size:.82rem;color:var(--suave);margin-top:4px;">${a.descripcion}</div>`:''}
-                  <div style="font-size:.72rem;color:#9ca3af;margin-top:4px;">Atendido por: ${a.prestadorNombre||'—'}</div>
+                  ${a.diagnostico?`<div style="font-size:.85rem;font-weight:700;margin-top:6px;color:var(--noche);">Diagnostico: ${esc(a.diagnostico)}</div>`:''}
+                  ${a.tratamiento?`<div style="font-size:.82rem;color:var(--suave);margin-top:2px;">Tratamiento: ${esc(a.tratamiento)}</div>`:''}
+                  ${a.descripcion && !a.diagnostico?`<div style="font-size:.82rem;color:var(--suave);margin-top:4px;">${esc(a.descripcion)}</div>`:''}
+                  <div style="font-size:.72rem;color:#9ca3af;margin-top:4px;">Atendido por: ${esc(a.prestadorNombre||'—')}</div>
                   ${a.adjuntos && a.adjuntos.length > 0 ? `<div style="font-size:.72rem;color:var(--azul);margin-top:4px;">&#128206; ${a.adjuntos.length} adjunto${a.adjuntos.length>1?'s':''}</div>` : ''}
                 </div>
               </div>
@@ -1133,7 +1157,7 @@ function vetMostrarFormAtencion(mascotaId, mascotaNombre) {
   wrap.style.display = 'block';
   wrap.innerHTML = `
     <div class="form-box" style="margin-bottom:16px;">
-      <div style="font-size:.75rem;font-weight:800;color:var(--noche);margin-bottom:10px;text-transform:uppercase;">Nueva atencion — ${mascotaNombre}</div>
+      <div style="font-size:.75rem;font-weight:800;color:var(--noche);margin-bottom:10px;text-transform:uppercase;">Nueva atencion — ${esc(mascotaNombre)}</div>
       <div class="fstack">
         <select id="vetAtenTipo" class="input-field">
           <option value="consulta">Consulta</option>
@@ -1149,7 +1173,7 @@ function vetMostrarFormAtencion(mascotaId, mascotaNombre) {
           <input type="file" id="vetAtenAdj" multiple accept="image/*,.pdf" style="display:none">
         </div>
         <div style="display:flex;gap:8px;">
-          <button onclick="vetGuardarAtencion('${mascotaId}','${mascotaNombre.replace(/'/g,"\\'")}')" class="btn-primary" style="flex:1;">Guardar atencion</button>
+          <button data-action="guardar-atencion" data-mascota-id="${esc(mascotaId)}" data-nombre="${esc(mascotaNombre)}" class="btn-primary" style="flex:1;">Guardar atencion</button>
           <button onclick="document.getElementById('formNuevaAtencionWrap').style.display='none'" class="bmini brojo" style="padding:10px 16px;">X</button>
         </div>
         <p id="vetAtenMsg" style="font-size:.8rem;"></p>
@@ -1265,11 +1289,11 @@ async function cargarMisPacientes() {
     el.innerHTML = pacientes.map(p => `
       <div style="display:flex;align-items:center;gap:10px;padding:14px;background:var(--fondo);border-radius:12px;margin-bottom:8px;cursor:pointer;border:1px solid rgba(26,95,180,.06);" onclick="vetVerHistoria('${p.mascotaId}')">
         ${p.foto
-          ? `<img src="${p.foto}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:2px solid #5BA3E8;">`
+          ? `<img src="${esc(p.foto)}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:2px solid #5BA3E8;">`
           : `<div style="width:40px;height:40px;border-radius:50%;background:#EBF3FC;display:flex;align-items:center;justify-content:center;font-size:1rem;">&#128062;</div>`}
         <div style="flex:1;">
-          <div style="font-size:.85rem;font-weight:700;">${p.nombre||'—'} <span style="font-size:.72rem;color:#9ca3af;font-weight:400;">${p.mascotaId}</span></div>
-          <div style="font-size:.72rem;color:var(--suave);">${p.raza||''} · Titular: ${p.titularNombre} ${p.nroSocio?'('+p.nroSocio+')':''}</div>
+          <div style="font-size:.85rem;font-weight:700;">${esc(p.nombre||'—')} <span style="font-size:.72rem;color:#9ca3af;font-weight:400;">${esc(p.mascotaId)}</span></div>
+          <div style="font-size:.72rem;color:var(--suave);">${esc(p.raza||'')} · Titular: ${esc(p.titularNombre)} ${p.nroSocio?'('+esc(p.nroSocio)+')':''}</div>
         </div>
         <div style="text-align:right;">
           <div style="font-size:.82rem;font-weight:800;color:var(--azul);">${p.atencionesCount} at.</div>
@@ -1314,30 +1338,30 @@ function casoCard(c, cl, u, tomadoPorNombre){
   const cuandoTom = cl.tomadoEn&&cl.tomadoEn.toDate?cl.tomadoEn.toDate().toLocaleString('es-AR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
   const badge = nuevo
     ? '<span style="background:#dbeafe;color:#1d4ed8;font-size:.62rem;font-weight:800;padding:2px 8px;border-radius:100px;text-transform:uppercase;">Nuevo</span>'
-    : `<span style="background:#fef3c7;color:#92400e;font-size:.62rem;font-weight:800;padding:2px 8px;border-radius:100px;text-transform:uppercase;">En curso${tomadoPorNombre?' · '+String(tomadoPorNombre).replace(/</g,'&lt;'):''}</span>`;
+    : `<span style="background:#fef3c7;color:#92400e;font-size:.62rem;font-weight:800;padding:2px 8px;border-radius:100px;text-transform:uppercase;">En curso${tomadoPorNombre?' · '+esc(tomadoPorNombre):''}</span>`;
   const prio = cl.prioridadInterna||'';
   const opt=(v,t)=>`<option value="${v}" ${prio===v?'selected':''}>${t}</option>`;
   return `<div class="uitem">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
-      <strong style="font-size:.95rem;">${(c.mascotaNombre||'—')} <span style="font-family:monospace;font-size:.72rem;color:#9ca3af;">${c.mascotaId||''}</span></strong>
+      <strong style="font-size:.95rem;">${esc(c.mascotaNombre||'—')} <span style="font-family:monospace;font-size:.72rem;color:#9ca3af;">${esc(c.mascotaId||'')}</span></strong>
       ${badge}
     </div>
-    <div style="font-size:.76rem;color:#5a6a8a;margin-top:2px;">Titular: ${(u.nombre||'')} ${(u.apellido||'')}${u.nroSocio?(' · '+u.nroSocio):''}${u.telefono?(' · '+u.telefono):''}</div>
-    <div style="font-size:.85rem;color:#1a2340;margin-top:6px;background:#fff7f7;border-left:3px solid #fecaca;padding:8px 10px;border-radius:6px;">&ldquo;${(c.relato||'').replace(/</g,'&lt;')}&rdquo;${c.desdeCuando?`<div style="font-size:.72rem;color:#9ca3af;margin-top:3px;">Desde: ${desdeTexto(c.desdeCuando)}</div>`:''}</div>
+    <div style="font-size:.76rem;color:#5a6a8a;margin-top:2px;">Titular: ${esc(u.nombre||'')} ${esc(u.apellido||'')}${u.nroSocio?(' · '+esc(u.nroSocio)):''}${u.telefono?(' · '+esc(u.telefono)):''}</div>
+    <div style="font-size:.85rem;color:#1a2340;margin-top:6px;background:#fff7f7;border-left:3px solid #fecaca;padding:8px 10px;border-radius:6px;">&ldquo;${esc(c.relato||'')}&rdquo;${c.desdeCuando?`<div style="font-size:.72rem;color:#9ca3af;margin-top:3px;">Desde: ${esc(desdeTexto(c.desdeCuando))}</div>`:''}</div>
 
-    ${(!nuevo && tomadoPorNombre)?`<div style="font-size:.74rem;font-weight:700;color:#92400e;margin-top:6px;">&#129466; Tomado por ${String(tomadoPorNombre).replace(/</g,'&lt;')}${cuandoTom?' · '+cuandoTom:''}</div>`:''}
+    ${(!nuevo && tomadoPorNombre)?`<div style="font-size:.74rem;font-weight:700;color:#92400e;margin-top:6px;">&#129466; Tomado por ${esc(tomadoPorNombre)}${cuandoTom?' · '+cuandoTom:''}</div>`:''}
 
     <div style="background:#f8faff;border:1px solid rgba(26,95,180,.1);border-radius:10px;padding:10px;margin-top:8px;">
       <div style="font-size:.66rem;font-weight:800;color:var(--suave);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Interno &middot; NO lo ve el titular</div>
       <select id="caso-prio-${c.id}" class="input-field" style="padding:8px 10px;margin-bottom:6px;">
         <option value="">Prioridad interna…</option>${opt('baja','Baja')}${opt('media','Media')}${opt('alta','Alta')}
       </select>
-      <textarea id="caso-notas-${c.id}" class="input-field" style="height:56px;resize:vertical;" placeholder="Notas clínicas (interno)">${(cl.notasVet||'').replace(/</g,'&lt;')}</textarea>
+      <textarea id="caso-notas-${c.id}" class="input-field" style="height:56px;resize:vertical;" placeholder="Notas clínicas (interno)">${esc(cl.notasVet||'')}</textarea>
     </div>
 
     <div style="margin-top:8px;">
       <div style="font-size:.66rem;font-weight:800;color:#166534;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Respuesta al titular (la ve — cuidado y acción)</div>
-      <textarea id="caso-resp-${c.id}" class="input-field" style="height:52px;resize:vertical;" placeholder="Lo que le decimos al titular: qué hacer, qué mirar, sin diagnóstico cerrado">${(c.respuestaTitular||'').replace(/</g,'&lt;')}</textarea>
+      <textarea id="caso-resp-${c.id}" class="input-field" style="height:52px;resize:vertical;" placeholder="Lo que le decimos al titular: qué hacer, qué mirar, sin diagnóstico cerrado">${esc(c.respuestaTitular||'')}</textarea>
     </div>
 
     <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
@@ -1457,10 +1481,10 @@ async function cargarVeterinariosAdmin(){
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
           <div style="flex:1;">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;">
-              <strong style="font-size:1rem;">&#127973; ${u.nombre||''} ${u.apellido||''}</strong>
+              <strong style="font-size:1rem;">&#127973; ${esc(u.nombre||'')} ${esc(u.apellido||'')}</strong>
             </div>
-            ${u.clinica?`<div style="font-size:.82rem;color:var(--azul);font-weight:700;">${u.clinica}</div>`:''}
-            <div style="font-size:.8rem;color:#5a6a8a;">${u.email||''}${u.telefono?' · '+u.telefono:''}</div>
+            ${u.clinica?`<div style="font-size:.82rem;color:var(--azul);font-weight:700;">${esc(u.clinica)}</div>`:''}
+            <div style="font-size:.8rem;color:#5a6a8a;">${esc(u.email||'')}${u.telefono?' · '+esc(u.telefono):''}</div>
             <div style="font-size:.72rem;color:#9ca3af;margin-top:4px;">Roles: ${getUserRoles(u).join(', ')} · Alta: ${fecha||'—'}</div>
           </div>
           <span style="background:${col};color:white;font-size:.65rem;font-weight:700;padding:3px 9px;border-radius:100px;white-space:nowrap;flex-shrink:0;">${(u.estado||'—').toUpperCase()}</span>
@@ -1468,7 +1492,7 @@ async function cargarVeterinariosAdmin(){
         <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
           ${u.estado!=='activo'?`<button onclick="cambiarEstado('${u.id}','activo')" class="bmini bverde">Activar</button>`:''}
           ${u.estado==='activo'?`<button onclick="cambiarEstado('${u.id}','suspendido')" class="bmini brojo">Suspender</button>`:''}
-          <button onclick="reenviarCredenciales('${u.email||''}')" class="bmini" style="background:#f0fdf4;color:#166534;">Reenviar acceso</button>
+          <button data-action="reenviar" data-email="${esc(u.email||'')}" class="bmini" style="background:#f0fdf4;color:#166534;">Reenviar acceso</button>
         </div>
       </div>`;
     }).join('');
@@ -1489,7 +1513,7 @@ function cardUsuario(u, masMap){
   const fecha=u.creadoEn?.toDate?.()?.toLocaleDateString('es-AR')||'';
   const mascotas=(u.mascotas||[]).filter(Boolean);
   const planesTexto = mascotas.length > 0
-    ? mascotas.map(m => m.plan && m.plan !== 'Sin definir' ? `${m.nombre}: ${m.plan}` : null).filter(Boolean).join(' · ')
+    ? mascotas.map(m => m.plan && m.plan !== 'Sin definir' ? `${esc(m.nombre)}: ${esc(m.plan)}` : null).filter(Boolean).join(' · ')
     : '';
 
   let needsSave = false;
@@ -1512,15 +1536,15 @@ function cardUsuario(u, masMap){
         <div style="background:white;border-radius:14px;padding:12px;border:1px solid rgba(26,95,180,.1);">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
             ${m.foto
-              ? `<img src="${m.foto}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid #5BA3E8;">`
+              ? `<img src="${esc(m.foto)}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid #5BA3E8;">`
               : `<div style="width:40px;height:40px;border-radius:50%;background:#EBF3FC;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;">&#128062;</div>`}
             <div style="flex:1;">
               <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-                <strong style="font-size:.85rem;">${m.nombre||'—'}</strong>
-                ${m.plan&&m.plan!=='Sin definir'?`<span style="background:#EBF3FC;color:#1A5FB4;font-size:.65rem;font-weight:700;padding:1px 7px;border-radius:100px;">${m.plan}</span>`:''}
+                <strong style="font-size:.85rem;">${esc(m.nombre||'—')}</strong>
+                ${m.plan&&m.plan!=='Sin definir'?`<span style="background:#EBF3FC;color:#1A5FB4;font-size:.65rem;font-weight:700;padding:1px 7px;border-radius:100px;">${esc(m.plan)}</span>`:''}
               </div>
-              ${m.raza?`<div style="font-size:.75rem;color:#5a6a8a;">${m.raza}</div>`:''}
-              ${m.mascotaId?`<div style="font-size:.68rem;color:#9ca3af;font-family:monospace;">ID: ${m.mascotaId}</div>`:''}
+              ${m.raza?`<div style="font-size:.75rem;color:#5a6a8a;">${esc(m.raza)}</div>`:''}
+              ${m.mascotaId?`<div style="font-size:.68rem;color:#9ca3af;font-family:monospace;">ID: ${esc(m.mascotaId)}</div>`:''}
             </div>
           </div>
           ${(()=>{
@@ -1562,10 +1586,10 @@ function cardUsuario(u, masMap){
             return `<div class="ficha-srv">
               <div class="srv-ico" style="background:${ic.bg}">${ic.icon}</div>
               <div class="srv-body">
-                <div class="srv-nm">${s.nombre}</div>
-                <div class="srv-dt">${s.detalle||''}</div>
+                <div class="srv-nm">${esc(s.nombre)}</div>
+                <div class="srv-dt">${esc(s.detalle||'')}</div>
               </div>
-              <select data-srv-uid="${u.id}" data-srv-idx="${i}" data-srv-key="${s.key}">
+              <select data-srv-uid="${u.id}" data-srv-idx="${i}" data-srv-key="${esc(s.key)}">
                 <option value="activo" ${s.estado==='activo'?'selected':''}>Activo</option>
                 <option value="disponible" ${s.estado==='disponible'?'selected':''}>Disponible</option>
                 <option value="oculto" ${s.estado==='oculto'?'selected':''}>Oculto</option>
@@ -1576,7 +1600,7 @@ function cardUsuario(u, masMap){
             <button onclick="adminGuardarServicios('${u.id}',${i})" style="background:#dcfce7;color:#166534;">Guardar</button>
             ${m.mascotaId?`<button onclick="generarFichaPublica('${m.mascotaId}')" style="background:#ede9fe;color:#5b21b6;">Generar ficha pública</button>`:''}
             ${mcToken?`<button onclick="adminCopiarEnlace('${mcToken}')" style="background:#EBF3FC;color:#1A5FB4;">Copiar enlace</button>`:''}
-            ${mcToken?`<button onclick="adminWhatsApp('${mcToken}','${(m.nombre||'').replace(/'/g,"\\'")}')" style="background:#dcfce7;color:#166534;">WhatsApp</button>`:''}
+            ${mcToken?`<button data-action="wsp" data-token="${esc(mcToken)}" data-nombre="${esc(m.nombre||'')}" style="background:#dcfce7;color:#166534;">WhatsApp</button>`:''}
             ${mcToken?`<button onclick="adminRegenerarToken('${u.id}',${i})" style="background:#fef3c7;color:#92400e;">Regenerar token</button>`:''}
           </div>
         </div>`;
@@ -1587,24 +1611,24 @@ function cardUsuario(u, masMap){
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
       <div style="flex:1;">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;">
-          <strong style="font-size:.9rem;">${u.nombre||''} ${u.apellido||''}</strong>
-          ${u.nroSocio?`<span style="background:#EBF3FC;color:#1A5FB4;font-size:.68rem;font-weight:800;padding:2px 8px;border-radius:100px;">${u.nroSocio}</span>`:''}
+          <strong style="font-size:.9rem;">${esc(u.nombre||'')} ${esc(u.apellido||'')}</strong>
+          ${u.nroSocio?`<span style="background:#EBF3FC;color:#1A5FB4;font-size:.68rem;font-weight:800;padding:2px 8px;border-radius:100px;">${esc(u.nroSocio)}</span>`:''}
         </div>
-        <div style="font-size:.78rem;color:#5a6a8a;">${u.email||''}${u.telefono?' · '+u.telefono:''}</div>
-        ${u.fechaNacimiento?`<div style="font-size:.75rem;color:#5a6a8a;margin-top:2px;">${u.fechaNacimiento}</div>`:''}
+        <div style="font-size:.78rem;color:#5a6a8a;">${esc(u.email||'')}${u.telefono?' · '+esc(u.telefono):''}</div>
+        ${u.fechaNacimiento?`<div style="font-size:.75rem;color:#5a6a8a;margin-top:2px;">${esc(u.fechaNacimiento)}</div>`:''}
 
         <details style="margin-top:8px;">
           <summary style="font-size:.72rem;font-weight:700;color:#9ca3af;cursor:pointer;list-style:none;display:flex;align-items:center;gap:4px;">
             <span>&#9656;</span> Datos internos
           </summary>
           <div style="background:#f8faff;border-radius:10px;padding:10px;margin-top:6px;font-size:.75rem;color:#5a6a8a;border:1px solid rgba(26,95,180,.08);">
-            <div><strong>Nro socio:</strong> ${u.nroSocio||'Sin asignar'}</div>
-            <div><strong>UID Firebase:</strong> <span style="font-family:monospace;font-size:.68rem;">${u.uid||u.id}</span></div>
-            <div><strong>Email:</strong> ${u.email||'—'}</div>
-            <div><strong>Estado:</strong> ${u.estado||'—'}</div>
-            <div><strong>Roles:</strong> ${(getUserRoles(u)).join(', ')}</div>
+            <div><strong>Nro socio:</strong> ${esc(u.nroSocio||'Sin asignar')}</div>
+            <div><strong>UID Firebase:</strong> <span style="font-family:monospace;font-size:.68rem;">${esc(u.uid||u.id)}</span></div>
+            <div><strong>Email:</strong> ${esc(u.email||'—')}</div>
+            <div><strong>Estado:</strong> ${esc(u.estado||'—')}</div>
+            <div><strong>Roles:</strong> ${esc((getUserRoles(u)).join(', '))}</div>
             <div><strong>Fecha alta:</strong> ${fecha||'—'}</div>
-            ${mascotas.map(m=>`<div><strong>${m.nombre||'mascota'}:</strong> ${m.plan||'Sin plan'} ${m.mascotaId?'('+m.mascotaId+')':''}</div>`).join('')}
+            ${mascotas.map(m=>`<div><strong>${esc(m.nombre||'mascota')}:</strong> ${esc(m.plan||'Sin plan')} ${m.mascotaId?'('+esc(m.mascotaId)+')':''}</div>`).join('')}
           </div>
         </details>
 
@@ -1617,8 +1641,8 @@ function cardUsuario(u, masMap){
       ${u.estado!=='activo'?`<button onclick="cambiarEstado('${u.id}','activo')" class="bmini bverde">Activar</button>`:''}
       ${u.estado==='activo'?`<button onclick="cambiarEstado('${u.id}','suspendido')" class="bmini brojo">Suspender</button>`:''}
       ${u.estado==='suspendido'?`<button onclick="cambiarEstado('${u.id}','activo')" class="bmini bverde">Reactivar</button>`:''}
-      <button onclick="reenviarCredenciales('${u.email||''}')" class="bmini" style="background:#f0fdf4;color:#166534;">Reenviar acceso</button>
-      <button onclick="confirmarEliminarUsuario('${u.id}','${u.nombre} ${u.apellido||''}')" class="bmini" style="background:#fee2e2;color:#991b1b;opacity:0.7;">Eliminar</button>
+      <button data-action="reenviar" data-email="${esc(u.email||'')}" class="bmini" style="background:#f0fdf4;color:#166534;">Reenviar acceso</button>
+      <button data-action="eliminar-usuario" data-id="${esc(u.id)}" data-nombre="${esc((u.nombre||'')+' '+(u.apellido||''))}" class="bmini" style="background:#fee2e2;color:#991b1b;opacity:0.7;">Eliminar</button>
     </div>
   </div>`;
 }
@@ -1797,10 +1821,10 @@ async function cargarAtencionesAdmin(){
       return `<div class="aitem">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;">
           <div>
-            <strong>${a.prestadorNombre}</strong>
-            ${tipo?`<span class="hc-tipo tipo-${tipo}" style="margin-left:6px;">${tipo}</span>`:''}
-            <div style="font-size:.8rem;color:#5a6a8a;">${a.diagnostico||a.descripcion||''}</div>
-            <div style="font-size:.75rem;color:#9ca3af;">${fecha} · ${a.mascotaNombre||a.mascota||''} ${a.mascotaId?'('+a.mascotaId+')':''}</div>
+            <strong>${esc(a.prestadorNombre)}</strong>
+            ${tipo?`<span class="hc-tipo tipo-${esc(tipo)}" style="margin-left:6px;">${esc(tipo)}</span>`:''}
+            <div style="font-size:.8rem;color:#5a6a8a;">${esc(a.diagnostico||a.descripcion||'')}</div>
+            <div style="font-size:.75rem;color:#9ca3af;">${fecha} · ${esc(a.mascotaNombre||a.mascota||'')} ${a.mascotaId?'('+esc(a.mascotaId)+')':''}</div>
           </div>
           <div style="text-align:right;"><strong style="color:#1A5FB4;">$${a.monto?.toLocaleString('es-AR')}</strong><div style="margin-top:4px;"><span style="background:${col};color:white;font-size:.65rem;font-weight:700;padding:2px 9px;border-radius:100px;">${a.estado.toUpperCase()}</span></div></div>
         </div>
@@ -1854,11 +1878,11 @@ function compAdminCard(c, u){
   const b={pagada:['#dcfce7','#166534','Pagado'],vencida:['#fee2e2','#991b1b','Vencido'],pendiente:['#fef3c7','#92400e','Pendiente']}[est];
   return `<div class="uitem">
     <div style="display:flex;justify-content:space-between;align-items:center;">
-      <strong>${((u.nombre||'')+' '+(u.apellido||'')).replace(/</g,'&lt;')} <span style="font-family:monospace;font-size:.72rem;color:#9ca3af;">${c.nroComprobante||''}</span></strong>
+      <strong>${esc((u.nombre||'')+' '+(u.apellido||''))} <span style="font-family:monospace;font-size:.72rem;color:#9ca3af;">${esc(c.nroComprobante||'')}</span></strong>
       <span style="background:${b[0]};color:${b[1]};font-size:.64rem;font-weight:800;padding:3px 9px;border-radius:100px;text-transform:uppercase;">${b[2]}</span>
     </div>
-    <div style="font-size:.76rem;color:#5a6a8a;">${c.periodo||''}${u.nroSocio?(' · '+u.nroSocio):''}</div>
-    <div style="font-size:.78rem;margin-top:4px;color:#1a2340;">${(c.items||[]).map(it=>`${(it.mascotaNombre||'').replace(/</g,'&lt;')} ($${(Number(it.monto)||0).toLocaleString('es-AR')})`).join(' · ')||'—'}</div>
+    <div style="font-size:.76rem;color:#5a6a8a;">${esc(c.periodo||'')}${u.nroSocio?(' · '+esc(u.nroSocio)):''}</div>
+    <div style="font-size:.78rem;margin-top:4px;color:#1a2340;">${(c.items||[]).map(it=>`${esc(it.mascotaNombre||'')} ($${(Number(it.monto)||0).toLocaleString('es-AR')})`).join(' · ')||'—'}</div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
       <span style="font-weight:900;">Total $${(Number(c.total)||0).toLocaleString('es-AR')}</span>
       ${c.estado!=='pagada' ? `<button onclick="marcarPagado('${c.id}')" class="bmini bverde">Marcar pagado</button>` : `<span style="font-size:.72rem;color:#166534;">Pagado${c.pagadaEn&&c.pagadaEn.toDate?' '+c.pagadaEn.toDate().toLocaleDateString('es-AR'):''}</span>`}
@@ -1964,17 +1988,17 @@ async function cargarDashboard(){
             const s = d.data();
             const f = s.creadoEn?.toDate?.()?.toLocaleDateString('es-AR')||'';
             const t = TIPO_SOL[s.tipo] || {txt:(s.servicioKey||'Interés'),bg:'#EBF3FC',col:'#1A5FB4'};
-            const detalle = s.tipo==='cambio_plan' ? `${s.mascotaNombre||''}: ${s.planActual||'—'} → <strong>${s.planPedido||'—'}</strong>`
-                          : s.tipo==='baja' ? `${s.mascotaNombre||''}`
-                          : `${s.mascotaNombre||''} · ${s.servicioKey||''}`;
+            const detalle = s.tipo==='cambio_plan' ? `${esc(s.mascotaNombre||'')}: ${esc(s.planActual||'—')} → <strong>${esc(s.planPedido||'—')}</strong>`
+                          : s.tipo==='baja' ? `${esc(s.mascotaNombre||'')}`
+                          : `${esc(s.mascotaNombre||'')} · ${esc(s.servicioKey||'')}`;
             return `<div style="padding:10px 0;border-bottom:1px solid #f5f7fa;font-size:.82rem;">
               <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
-                <span style="background:${t.bg};color:${t.col};font-size:.62rem;font-weight:800;padding:2px 8px;border-radius:100px;text-transform:uppercase;">${t.txt}</span>
+                <span style="background:${t.bg};color:${t.col};font-size:.62rem;font-weight:800;padding:2px 8px;border-radius:100px;text-transform:uppercase;">${esc(t.txt)}</span>
                 <button onclick="marcarSolicitudResuelta('${d.id}')" class="bmini" style="background:#dcfce7;color:#166534;font-size:.7rem;padding:4px 10px;">Marcar resuelta</button>
               </div>
-              <div style="margin-top:4px;"><strong>${s.solicitanteNombre||'—'}</strong>${s.nroSocio?` · ${s.nroSocio}`:''}${s.solicitanteTel?` · ${s.solicitanteTel}`:''}</div>
+              <div style="margin-top:4px;"><strong>${esc(s.solicitanteNombre||'—')}</strong>${s.nroSocio?` · ${esc(s.nroSocio)}`:''}${s.solicitanteTel?` · ${esc(s.solicitanteTel)}`:''}</div>
               <span style="color:var(--suave);">${detalle} · ${f}</span>
-              ${s.nota?`<br><span style="color:#9ca3af;font-style:italic;">${s.nota}</span>`:''}
+              ${s.nota?`<br><span style="color:#9ca3af;font-style:italic;">${esc(s.nota)}</span>`:''}
             </div>`;
           }).join('')}
         </div>`;
@@ -2044,8 +2068,8 @@ async function cargarDashboard(){
               const fecha = u.creadoEn?.toDate?.()?.toLocaleDateString('es-AR')||'—';
               return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f5f7fa;">
                 <div>
-                  <div style="font-size:.85rem;font-weight:700;color:#1a2340;">${u.nombre||''} ${u.apellido||''}</div>
-                  <div style="font-size:.72rem;color:#9ca3af;">${u.email||''} · ${fecha}</div>
+                  <div style="font-size:.85rem;font-weight:700;color:#1a2340;">${esc(u.nombre||'')} ${esc(u.apellido||'')}</div>
+                  <div style="font-size:.72rem;color:#9ca3af;">${esc(u.email||'')} · ${fecha}</div>
                 </div>
                 <span style="background:${col};color:white;font-size:.62rem;font-weight:700;padding:2px 8px;border-radius:100px;white-space:nowrap;">${(u.estado||'').toUpperCase()}</span>
               </div>`;
@@ -2114,14 +2138,14 @@ async function cargarProveedoresAdmin(){
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
           <div style="flex:1;">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;">
-              <strong style="font-size:.95rem;">${p.nombre||''}</strong>
-              <span style="background:${tipoBg};color:${tipoTx};font-size:.65rem;font-weight:800;padding:2px 8px;border-radius:100px;">${PROV_TIPOS[p.tipo]||p.tipo}</span>
+              <strong style="font-size:.95rem;">${esc(p.nombre||'')}</strong>
+              <span style="background:${tipoBg};color:${tipoTx};font-size:.65rem;font-weight:800;padding:2px 8px;border-radius:100px;">${esc(PROV_TIPOS[p.tipo]||p.tipo)}</span>
             </div>
-            ${p.razonSocial?`<div style="font-size:.8rem;color:#5a6a8a;">${p.razonSocial}</div>`:''}
-            ${p.cuit?`<div style="font-size:.78rem;color:#5a6a8a;">CUIT: ${p.cuit}</div>`:''}
-            <div style="font-size:.78rem;color:#5a6a8a;">${p.contacto?.email||''}${p.contacto?.telefono?' · '+p.contacto.telefono:''}</div>
-            ${p.condicionesPago?`<div style="font-size:.72rem;color:var(--azul);margin-top:4px;">Condiciones: ${p.condicionesPago}</div>`:''}
-            ${p.notas?`<div style="font-size:.72rem;color:#9ca3af;font-style:italic;margin-top:2px;">${p.notas}</div>`:''}
+            ${p.razonSocial?`<div style="font-size:.8rem;color:#5a6a8a;">${esc(p.razonSocial)}</div>`:''}
+            ${p.cuit?`<div style="font-size:.78rem;color:#5a6a8a;">CUIT: ${esc(p.cuit)}</div>`:''}
+            <div style="font-size:.78rem;color:#5a6a8a;">${esc(p.contacto?.email||'')}${p.contacto?.telefono?' · '+esc(p.contacto.telefono):''}</div>
+            ${p.condicionesPago?`<div style="font-size:.72rem;color:var(--azul);margin-top:4px;">Condiciones: ${esc(p.condicionesPago)}</div>`:''}
+            ${p.notas?`<div style="font-size:.72rem;color:#9ca3af;font-style:italic;margin-top:2px;">${esc(p.notas)}</div>`:''}
             <div style="font-size:.68rem;color:#9ca3af;margin-top:4px;">Alta: ${fecha}</div>
           </div>
           <span style="background:${col};color:white;font-size:.65rem;font-weight:700;padding:3px 9px;border-radius:100px;white-space:nowrap;flex-shrink:0;">${(p.estado||'activo').toUpperCase()}</span>
@@ -2157,10 +2181,10 @@ function renderPanel(data){
     <div class="panel-header">
       <div>
         <div class="panel-rol">Mis mascotas</div>
-        <div class="panel-nombre">${nombre} ${apellido||''}</div>
-        ${data.nroSocio?`<div style="font-size:.8rem;color:#1A5FB4;font-weight:700;margin-top:2px;">${data.nroSocio}</div>`:''}
+        <div class="panel-nombre">${esc(nombre)} ${esc(apellido||'')}</div>
+        ${data.nroSocio?`<div style="font-size:.8rem;color:#1A5FB4;font-weight:700;margin-top:2px;">${esc(data.nroSocio)}</div>`:''}
       </div>
-      ${fotoHeader?`<img src="${fotoHeader}" class="mascota-foto" alt="${nombre}">`:`<div class="mascota-ph">&#128062;</div>`}
+      ${fotoHeader?`<img src="${esc(fotoHeader)}" class="mascota-foto" alt="${esc(nombre)}">`:`<div class="mascota-ph">&#128062;</div>`}
     </div>
 
     <div class="seccion">
@@ -2202,24 +2226,24 @@ function renderPanel(data){
             <div style="font-size:.6rem;font-weight:700;letter-spacing:2px;opacity:.6;text-transform:uppercase;margin-bottom:2px;">PLAN</div>
             <div style="font-size:.85rem;font-weight:800;color:#5BA3E8;margin-bottom:10px;">${m.plan||'Sin definir'}</div>
             <div style="display:flex;align-items:center;gap:12px;">
-              ${m.foto?`<img src="${m.foto}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,.4);">`:`<div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:1.3rem;">&#128062;</div>`}
+              ${m.foto?`<img src="${esc(m.foto)}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,.4);">`:`<div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:1.3rem;">&#128062;</div>`}
               <div>
-                <div style="font-size:1.2rem;font-weight:900;line-height:1;">${m.nombre||'—'}</div>
-                <div style="font-size:.65rem;opacity:.65;text-transform:uppercase;letter-spacing:1px;">${m.raza||''}</div>
+                <div style="font-size:1.2rem;font-weight:900;line-height:1;">${esc(m.nombre||'—')}</div>
+                <div style="font-size:.65rem;opacity:.65;text-transform:uppercase;letter-spacing:1px;">${esc(m.raza||'')}</div>
               </div>
             </div>
             <div style="margin-top:10px;border-top:1px solid rgba(255,255,255,.1);padding-top:8px;display:flex;justify-content:space-between;align-items:flex-end;">
               <div>
                 <div style="font-size:.58rem;opacity:.6;font-weight:700;">TITULAR</div>
-                <div style="font-size:.78rem;font-weight:700;">${nombre} ${apellido||''}</div>
-                ${data.nroSocio?`<div style="font-size:.58rem;opacity:.5;letter-spacing:1px;">${data.nroSocio}</div>`:''}
+                <div style="font-size:.78rem;font-weight:700;">${esc(nombre)} ${esc(apellido||'')}</div>
+                ${data.nroSocio?`<div style="font-size:.58rem;opacity:.5;letter-spacing:1px;">${esc(data.nroSocio)}</div>`:''}
               </div>
               ${(()=>{const c=MC.coberturaMascota(m);return `<div style="display:inline-flex;align-items:center;gap:4px;background:${c.ok?'rgba(74,222,128,.18)':'rgba(248,113,113,.20)'};border-radius:100px;padding:3px 9px;font-size:.65rem;font-weight:700;"><span style="width:5px;height:5px;background:${c.ok?'#4ade80':'#f87171'};border-radius:50%;display:inline-block;"></span> ${c.chip}</div>`;})()}
             </div>
           </div>
           ${(()=>{const c=MC.coberturaMascota(m);const cuota=MC.planCuota(m.plan);return `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:8px;padding:8px 12px;border-radius:12px;background:${c.ok?'#f0fdf4':'#fef2f2'};">
             <div style="font-size:.78rem;font-weight:700;color:${c.color};">${c.emoji} ${c.label}${c.ok&&cuota?` · $${cuota.toLocaleString('es-AR')}/mes`:''}</div>
-            <button onclick="descargarCarnet(${i},'${(m.nombre||'').replace(/'/g,"\\'")}')" class="bmini" style="background:#EBF3FC;color:#1A5FB4;font-size:.78rem;padding:7px 12px;flex-shrink:0;">Descargar carnet</button>
+            <button data-action="descargar-carnet" data-idx="${i}" data-nombre="${esc(m.nombre||'')}" class="bmini" style="background:#EBF3FC;color:#1A5FB4;font-size:.78rem;padding:7px 12px;flex-shrink:0;">Descargar carnet</button>
           </div>`;})()}
           ${m.mascotaId?`<details style="margin-top:6px;">
             <summary style="cursor:pointer;font-size:.74rem;color:#1A5FB4;font-weight:700;list-style:none;">Solicitar cambio de plan o baja</summary>
@@ -2234,9 +2258,9 @@ function renderPanel(data){
                   <option value="MEDIPaw Adulto">MEDIPaw Adulto</option>
                   <option value="MEDIPaw Senior">MEDIPaw Senior</option>
                 </select>
-                <button onclick="pedirCambioPlan('${m.mascotaId}','${(m.nombre||'').replace(/'/g,"\\'")}','${(m.plan||'').replace(/'/g,"\\'")}',${i})" class="bmini" style="background:#EBF3FC;color:#1A5FB4;font-size:.76rem;">Pedir cambio</button>
+                <button data-action="pedir-cambio" data-mascota-id="${esc(m.mascotaId)}" data-nombre="${esc(m.nombre||'')}" data-plan="${esc(m.plan||'')}" data-idx="${i}" class="bmini" style="background:#EBF3FC;color:#1A5FB4;font-size:.76rem;">Pedir cambio</button>
               </div>
-              <button onclick="pedirBaja('${m.mascotaId}','${(m.nombre||'').replace(/'/g,"\\'")}')" class="bmini brojo" style="margin-top:8px;font-size:.76rem;">Pedir baja de ${m.nombre||'esta mascota'}</button>
+              <button data-action="pedir-baja" data-mascota-id="${esc(m.mascotaId)}" data-nombre="${esc(m.nombre||'')}" class="bmini brojo" style="margin-top:8px;font-size:.76rem;">Pedir baja de ${esc(m.nombre||'esta mascota')}</button>
               <p id="pedirMsg-${i}" style="font-size:.72rem;margin-top:6px;"></p>
             </div>
           </details>`:''}
@@ -2245,7 +2269,7 @@ function renderPanel(data){
 
     <div class="seccion">
       <div class="stit">Mi foto de perfil</div>
-      ${data.fotoTitular?`<img src="${data.fotoTitular}" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:3px solid #5BA3E8;margin-bottom:10px;">`:''}
+      ${data.fotoTitular?`<img src="${esc(data.fotoTitular)}" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:3px solid #5BA3E8;margin-bottom:10px;">`:''}
       <label class="foto-label" for="uploadFotoTitular">${data.fotoTitular?'Cambiar foto':'Subir mi foto'}</label>
       <input type="file" id="uploadFotoTitular" accept="image/*" style="display:none" onchange="actualizarFotoTitular(this,'${data.uid}')">
       <p id="fotoTitularMsg" style="font-size:.8rem;margin-top:6px;"></p>
@@ -2263,8 +2287,8 @@ function renderPanel(data){
     <div class="panel-header">
       <div>
         <div class="panel-rol veterinario">Veterinario</div>
-        <div class="panel-nombre">${nombre} ${apellido||''}</div>
-        ${clinica?`<div style="font-size:.85rem;color:#5a6a8a;">${clinica}</div>`:''}
+        <div class="panel-nombre">${esc(nombre)} ${esc(apellido||'')}</div>
+        ${clinica?`<div style="font-size:.85rem;color:#5a6a8a;">${esc(clinica)}</div>`:''}
       </div>
       <div style="font-size:3rem;">&#127973;</div>
     </div>
