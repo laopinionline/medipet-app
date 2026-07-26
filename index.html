@@ -1217,7 +1217,7 @@ async function vetGuardarAtencion(mascotaId, mascotaNombre) {
     const titularUid = mDoc ? (mDoc.titularUid || '') : '';
     if (!titularUid) { setMsg('vetAtenMsg','No pude identificar al titular de esta mascota. Buscala de nuevo desde la colección.',false); return; }
 
-    await db.collection('atenciones').add({
+    const atenRef = await db.collection('atenciones').add({
       prestadorId: uid,
       prestadorNombre: (p.nombre||'') + ' ' + (p.apellido||''),
       mascotaId: mascotaId,
@@ -1231,6 +1231,16 @@ async function vetGuardarAtencion(mascotaId, mascotaNombre) {
       estado: 'pendiente',
       fecha: TS()
     });
+
+    // Link caso→atención: si esta atención viene de derivar un caso ("Cerrar + atención") y es de la
+    // MISMA mascota, escribimos su id en casos/{casoId}.atencionId. Best-effort: no bloquea el alta si falla.
+    if (_casoParaAtencion && _casoParaAtencion.mascotaId === mascotaId) {
+      const casoId = _casoParaAtencion.casoId;
+      _casoParaAtencion = null;
+      try {
+        await db.collection('casos').doc(casoId).set({ atencionId: atenRef.id }, {merge:true});
+      } catch(e) {}
+    }
 
     toast('Atencion registrada correctamente.');
     document.getElementById('formNuevaAtencionWrap').style.display = 'none';
@@ -1314,6 +1324,7 @@ function tmsV(t){ return t&&t.toMillis?t.toMillis():0; }
 function desdeTexto(v){ return {hoy:'hoy', ayer:'ayer', varios_dias:'hace varios días'}[v]||v||''; }
 
 async function cargarBandejaCasos(){
+  _casoParaAtencion = null; // volver a la bandeja descarta una derivación "Cerrar + atención" abandonada
   const el=document.getElementById('vet-casos-content'); if(!el) return;
   el.innerHTML='<p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p>';
   try{
@@ -1373,6 +1384,10 @@ function casoCard(c, cl, u, tomadoPorNombre){
   </div>`;
 }
 
+// Caso cuya atención está por registrarse (derivación "Cerrar + atención"): al guardar la atención
+// escribimos su id de vuelta en casos/{casoId}.atencionId (link caso→atención). Guardamos también la
+// mascota esperada para no vincular una atención de otra mascota si el vet se desvía. Se limpia tras usarse.
+let _casoParaAtencion = null; // { casoId, mascotaId } | null
 async function casoTomar(id){
   // Guardia ATÓMICA (guardia 24hs, vets rotando): solo se toma si sigue 'nuevo'. Si otro lo tomó, avisa y refresca.
   try{
@@ -1406,6 +1421,8 @@ async function casoCerrar(id, mascotaIdOrFalse){
     await db.collection('casos').doc(id).set(upd, {merge:true});
     if(mascotaIdOrFalse && mascotaIdOrFalse!=='false'){
       // Derivar a atención: cerramos el caso y abrimos la historia/alta de atención de esa mascota.
+      // Recordamos el caso para vincularle la atención que el vet registre a continuación.
+      _casoParaAtencion = { casoId: id, mascotaId: mascotaIdOrFalse };
       toast('Caso cerrado. Registrá la atención.');
       vetVerHistoria(mascotaIdOrFalse);
     } else {
