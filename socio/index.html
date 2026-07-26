@@ -197,10 +197,10 @@ function getRoles(u){
 }
 
 // ── Estado único ──
-const S = { view:'boot', sub:'home', cred:null, mascotaSel:0, deferredPrompt:null, caso:null };
-// Dispatcher del sub-view: home | caso | cuenta | alta (embudo de alta de mascota)
-function render(){ if(S.sub==='caso') casoView(); else if(S.sub==='cuenta') cuentaView(); else if(S.sub==='alta') altaView(); else homeView(); }
-function volverHome(){ S.sub='home'; S.caso=null; S.alta=null; render(); }
+const S = { view:'boot', sub:'home', cred:null, mascotaSel:0, deferredPrompt:null, caso:null, chequeo:null };
+// Dispatcher del sub-view: home | caso | cuenta | alta (embudo de alta de mascota) | chequeo (peso)
+function render(){ if(S.sub==='caso') casoView(); else if(S.sub==='cuenta') cuentaView(); else if(S.sub==='alta') altaView(); else if(S.sub==='chequeo') chequeoView(); else homeView(); }
+function volverHome(){ S.sub='home'; S.caso=null; S.alta=null; S.chequeo=null; render(); }
 
 // ── Colección mascotas (fuente de verdad; reusa el núcleo) ──
 async function mascGetByTitular(uid){
@@ -545,8 +545,109 @@ async function enviarCaso(){
   }catch(e){ if(msg) msg.textContent='Error: '+e.message; }
 }
 function bloqueTurnos(m){ return tilePlaceholder('📅','Turnos','Pedí un turno para tu mascota'); }
-function bloqueChequeo(m){ return tilePlaceholder('⚖️',`Chequeo y peso de ${esc(nombreMasc(m))}`,'Seguimiento de salud y peso'); }
+// Chequeo y peso — tile REAL (abre la serie de peso). Append-only, sin juicio de si el peso está bien o mal.
+function bloqueChequeo(m){
+  return `<button class="tile" onclick="abrirChequeo(mascotaActiva())">
+    <div class="t-ico">⚖️</div>
+    <div class="t-body"><div class="t-title">Chequeo y peso de ${esc(nombreMasc(m))}</div><div class="t-sub">Seguimiento de peso</div></div>
+    <span class="t-arrow">›</span>
+  </button>`;
+}
 function bloqueHistoria(m){ return tilePlaceholder('📋',`Historia de ${esc(nombreMasc(m))}`,'Atenciones, vacunas y estudios'); }
+
+// ── Chequeo y peso (serie `pesos`, append-only) ──────────────────────────────
+// El titular ve la serie de peso de la mascota y agrega mediciones. Sin gráfico, sin rango saludable,
+// sin editar/borrar (update/delete = solo admin por reglas). El peso es dato titular-safe (no N3).
+function abrirChequeo(m){ S.sub='chequeo'; S.chequeo=null; render(); }
+function pesoNum(x){ const n=Number(x); return isFinite(n)?n:0; }
+function fmtKg(n){ return Number(n||0).toLocaleString('es-AR',{maximumFractionDigits:2})+' kg'; }
+function fmtFechaP(f){ const d=f&&f.toDate?f.toDate():(f&&f.seconds?new Date(f.seconds*1000):null); return d?d.toLocaleDateString('es-AR'):''; }
+function origenPeso(o){ return ({alta:'cargado en el alta', titular:'lo cargaste vos', vet:'veterinario'})[o] || (o||''); }
+
+async function cargarPesosChequeo(){
+  const m=mascotaActiva(); const uid=(S.cred&&S.cred.u)?S.cred.u.uid:null;
+  if(!m||!uid){ S.chequeo={serie:[]}; chequeoView(); return; }
+  try{
+    // titularUid EN el where: la regla `pesos` list exige resource.data.titularUid==uid por doc; sin eso rechaza la query entera.
+    const snap=await db.collection('pesos').where('titularUid','==',uid).where('mascotaId','==',m.mascotaId).get();
+    const serie=snap.docs.map(d=>d.data()).sort((a,b)=>tms(a.fecha)-tms(b.fecha)); // ascendente por fecha
+    S.chequeo={serie};
+  }catch(e){ S.chequeo={serie:[], err:'No pudimos cargar el historial de peso.'}; }
+  chequeoView();
+}
+
+function chequeoView(){
+  const back=`<button class="link-btn" style="margin-bottom:10px;display:inline-block;" onclick="volverHome()">‹ Volver</button>`;
+  const m=mascotaActiva();
+  if(!S.chequeo){ // aún sin cargar → mostrar cargando y disparar la lectura
+    document.getElementById('home').innerHTML = back + `<div class="seccion"><p style="font-size:.85rem;color:var(--suave);">Cargando…</p></div>`;
+    cargarPesosChequeo(); return;
+  }
+  const titulo=`<div class="stit" style="text-transform:none;font-size:1rem;">Chequeo y peso de ${esc(nombreMasc(m))}</div>`;
+  if(!m){
+    document.getElementById('home').innerHTML = back + `<div class="seccion">${titulo}<p style="font-size:.85rem;color:var(--suave);margin-top:8px;">Primero agregá una mascota.</p></div>`;
+    return;
+  }
+  const err = S.chequeo.err ? `<p class="errmsg">${esc(S.chequeo.err)}</p>` : '';
+  const serie=S.chequeo.serie||[]; const n=serie.length;
+  // Peso actual = último punto. Si hay ≥2, diferencia contra el anterior (gris neutro, sin semáforo).
+  let actual;
+  if(n){
+    const ult=serie[n-1];
+    let diff='';
+    if(n>=2){
+      const d=Math.round((pesoNum(ult.peso)-pesoNum(serie[n-2].peso))*100)/100;
+      const dTxt=(d>0?'+':'')+d.toLocaleString('es-AR',{maximumFractionDigits:2});
+      diff=`<div style="font-size:.8rem;color:var(--suave);margin-top:2px;">${esc(dTxt)} kg desde la última</div>`;
+    }
+    actual=`<div style="text-align:center;margin:6px 0 14px;">
+      <div style="font-size:2.4rem;font-weight:900;color:var(--noche);line-height:1;">${esc(fmtKg(ult.peso))}</div>
+      <div style="font-size:.76rem;color:var(--suave);margin-top:4px;">${esc(fmtFechaP(ult.fecha))}</div>
+      ${diff}
+    </div>`;
+  } else {
+    actual=`<p style="font-size:.85rem;color:var(--suave);margin:6px 0 12px;">Todavía no hay mediciones. Cargá la primera abajo.</p>`;
+  }
+  // Historial: serie completa, más nuevo arriba.
+  let hist='';
+  if(n){
+    const filas=[...serie].reverse().map(p=>`
+      <div style="display:flex;justify-content:space-between;align-items:baseline;padding:8px 0;border-bottom:1px solid rgba(26,95,180,.06);">
+        <span style="font-weight:800;color:var(--noche);">${esc(fmtKg(p.peso))}</span>
+        <span style="font-size:.74rem;color:var(--suave);">${esc(fmtFechaP(p.fecha))} · ${esc(origenPeso(p.origen))}</span>
+      </div>`).join('');
+    hist=`<div style="margin-top:4px;"><div class="stit" style="text-transform:none;font-size:.85rem;color:var(--suave);">Historial</div>${filas}</div>`;
+  }
+  const agregar=`<div style="margin-top:16px;">
+    <div class="stit" style="text-transform:none;font-size:.9rem;">Agregar medición</div>
+    <div class="fstack" style="margin-top:8px;">
+      <input id="chequeoPeso" class="input-field" inputmode="decimal" placeholder="Peso en kg (ej. 12,5)">
+      <p id="chequeoMsg" class="errmsg"></p>
+      <button class="btn-primary" onclick="guardarPeso()">Guardar</button>
+    </div>
+  </div>`;
+  document.getElementById('home').innerHTML = back + `<div class="seccion">${titulo}${err}${actual}${hist}${agregar}</div>`;
+}
+
+async function guardarPeso(){
+  const m=mascotaActiva(); const uid=(S.cred&&S.cred.u)?S.cred.u.uid:null;
+  const msg=document.getElementById('chequeoMsg'); if(msg) msg.textContent='';
+  if(!m||!uid) return;
+  // El titular escribe "12,5" con coma → coma a punto ANTES de Number(). Rechazar NaN, ≤0 y absurdos (>200 kg).
+  const raw=v('chequeoPeso'); const nkg=Number(raw.replace(/,/g,'.'));
+  if(!raw || !isFinite(nkg) || isNaN(nkg) || nkg<=0 || nkg>200){
+    if(msg) msg.textContent='Ingresá un peso válido en kg (mayor a 0 y hasta 200).';
+    return;
+  }
+  const btn=document.querySelector('#home .btn-primary'); if(btn){ btn.disabled=true; btn.textContent='Guardando…'; }
+  try{
+    await db.collection('pesos').add({ mascotaId:m.mascotaId, titularUid:uid, peso:nkg, fecha:TS(), origen:'titular' });
+    S.chequeo=null; chequeoView(); // re-lee la serie y re-renderiza
+  }catch(e){
+    if(btn){ btn.disabled=false; btn.textContent='Guardar'; }
+    if(msg) msg.textContent='Error al guardar: '+e.message;
+  }
+}
 // Cómo se paga HOY (sin pasarela) — constante única, fácil de cambiar cuando entre Mercado Pago.
 const PAGO_INFO = 'Por ahora el pago se coordina con MEDIPaw (transferencia o en la clínica). Todavía no se puede pagar desde la app.';
 const LEYENDA_NO_FISCAL = 'Comprobantes internos de MEDIPaw. No son facturas fiscales (AFIP).';
