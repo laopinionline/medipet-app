@@ -3,6 +3,10 @@ seed/serviceAccountKey.json
 serviceAccountKey.json
 *serviceAccount*.json
 
+# Entorno demo (medipaw-demo) — key + passwords fijos: NUNCA commitear
+seed/serviceAccountKey.demo.json
+seed/demo-secrets.json
+
 # Dependencias
 node_modules/
 seed/node_modules/
