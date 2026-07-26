@@ -1,0 +1,8 @@
+{
+  "firestore": {
+    "rules": "firestore.rules",
+    "predeploy": [
+      "node scripts/predeploy-guard.js"
+    ]
+  }
+}
