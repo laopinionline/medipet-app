@@ -70,13 +70,19 @@ const SERVICIOS_STD = [
   { key: 'tienda',    nombre: 'Tienda MEDIPaw',         detalle: 'Productos exclusivos para socios',  estado: 'disponible' },
   { key: 'vacuna',    nombre: 'Recordatorio de vacunas', detalle: 'Te avisamos cuando toque',          estado: 'disponible' },
 ];
+// Variación de Michi para verificar la lógica de la vista "Mis mascotas y servicios":
+// 2 'activo' (salud + vacuna), 1 'oculto' (gps, NO se renderiza), resto 'disponible' (descuento + tienda).
+const SERVICIOS_MICHI = SERVICIOS_STD.map(s =>
+  (s.key === 'salud' || s.key === 'vacuna') ? { ...s, estado: 'activo' }
+  : s.key === 'gps'                          ? { ...s, estado: 'oculto' }
+  : { ...s, estado: 'disponible' });
 
 // 3 mascotas = los 3 estados de "Chequeo y peso": multi-punto · un-punto · vacío.
 // Plan/cuota los computa el NÚCLEO por especie+edad (no hardcodeado).  ⚠️ La 3ª especie es elección
 // (ave→Básico) para sumar variedad de plan; ajustá libremente.
 const MASCOTAS = [
   { key: 'perro', mascotaId: 'DEMO-perro-01', nombre: 'Firulais', especie: 'perro', edadAprox: 'adulto',
-    raza: 'Mestizo', sexo: 'macho', token: 'DEMOtokenPerro0001',
+    raza: 'Mestizo', sexo: 'macho', token: 'DEMOtokenPerro0001', servicios: SERVICIOS_STD, // template estándar
     pesos: [ // multi-punto → estado "peso actual + comparación"
       { p: 8.0, fecha: '2026-06-01T12:00:00-03:00', origen: 'alta' },
       { p: 8.3, fecha: '2026-06-15T12:00:00-03:00', origen: 'titular' },
@@ -84,12 +90,12 @@ const MASCOTAS = [
       { p: 8.5, fecha: '2026-07-20T12:00:00-03:00', origen: 'titular' },
     ] },
   { key: 'gato', mascotaId: 'DEMO-gato-01', nombre: 'Michi', especie: 'gato', edadAprox: 'cachorro',
-    raza: 'Siames', sexo: 'hembra', token: 'DEMOtokenGato0001',
+    raza: 'Siames', sexo: 'hembra', token: 'DEMOtokenGato0001', servicios: SERVICIOS_MICHI, // 2 activo · 1 oculto · resto disponible
     pesos: [ // un-punto → estado "un solo peso, sin comparación"
       { p: 1.2, fecha: '2026-07-10T12:00:00-03:00', origen: 'alta' },
     ] },
   { key: 'ave', mascotaId: 'DEMO-ave-01', nombre: 'Pipo', especie: 'ave', edadAprox: 'adulto',
-    raza: 'Canario', sexo: 'macho', token: 'DEMOtokenAve0001',
+    raza: 'Canario', sexo: 'macho', token: 'DEMOtokenAve0001', servicios: [], // vacío → "Tus servicios se están configurando."
     pesos: [] }, // vacío → estado "Todavía no hay mediciones"
 ].map(m => { const plan = MC.planPorEdadAprox(m.especie, m.edadAprox); return { ...m, plan, cuota: MC.planCuota(plan) }; });
 
@@ -165,8 +171,8 @@ async function setDoc(pathStr, data, label) {
     await setDoc(`mascotas/${m.mascotaId}`, {
       mascotaId: m.mascotaId, titularUid: USERS.titular.uid, nombre: m.nombre, especie: m.especie, edadAprox: m.edadAprox,
       raza: m.raza, sexo: m.sexo, plan: m.plan, cuota: m.cuota, estado: 'activo', foto: '', token: m.token,
-      servicios: SERVICIOS_STD, creadoEn: ts('2026-06-01T10:00:00-03:00'),
-    }, `${m.especie} ${m.edadAprox} → ${m.plan} $${m.cuota}`);
+      servicios: m.servicios, creadoEn: ts('2026-06-01T10:00:00-03:00'),
+    }, `${m.especie} ${m.edadAprox} → ${m.plan} $${m.cuota} · servicios: ${m.servicios.length ? m.servicios.filter(s=>s.estado==='activo').length+' incl/'+m.servicios.filter(s=>s.estado==='disponible').length+' disp/'+m.servicios.filter(s=>s.estado==='oculto').length+' ocultos' : 'VACÍO'}`);
     // serie de pesos con id determinista → set() no duplica al re-correr
     for (let i = 0; i < m.pesos.length; i++) {
       const pt = m.pesos[i];

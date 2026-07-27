@@ -198,8 +198,8 @@ function getRoles(u){
 
 // ── Estado único ──
 const S = { view:'boot', sub:'home', cred:null, mascotaSel:0, deferredPrompt:null, caso:null, chequeo:null, historia:null };
-// Dispatcher del sub-view: home | caso | cuenta | alta (embudo de alta de mascota) | chequeo (peso) | historia (atenciones)
-function render(){ if(S.sub==='caso') casoView(); else if(S.sub==='cuenta') cuentaView(); else if(S.sub==='alta') altaView(); else if(S.sub==='chequeo') chequeoView(); else if(S.sub==='historia') historiaView(); else homeView(); }
+// Dispatcher del sub-view: home | caso | cuenta | alta (embudo) | chequeo (peso) | historia (atenciones) | mismascotas (planes+servicios)
+function render(){ if(S.sub==='caso') casoView(); else if(S.sub==='cuenta') cuentaView(); else if(S.sub==='alta') altaView(); else if(S.sub==='chequeo') chequeoView(); else if(S.sub==='historia') historiaView(); else if(S.sub==='mismascotas') misMascotasView(); else homeView(); }
 function volverHome(){ S.sub='home'; S.caso=null; S.alta=null; S.chequeo=null; S.historia=null; render(); }
 
 // ── Colección mascotas (fuente de verdad; reusa el núcleo) ──
@@ -762,7 +762,64 @@ function cuentaView(){
     ${compsHtml}
     <div class="foot-note" style="margin-top:6px;">${LEYENDA_NO_FISCAL}</div>`;
 }
-function bloqueMisMascotas(c){ return tilePlaceholder('🐾','Mis mascotas y servicios','Tus mascotas, planes y servicios'); }
+// 9) Mis mascotas y servicios — tile VIVO → vista solo-lectura. Fuente = colección `mascotas` (S.cred.mascotas,
+//    ya cargada por mascGetByTitular; JAMÁS el espejo usuarios.mascotas[]). Cobertura real la decide el NÚCLEO.
+function bloqueMisMascotas(c){
+  const n=(c.mascotas||[]).length;
+  const sub = n ? `${n} mascota${n>1?'s':''} · planes y servicios` : 'Tus mascotas, planes y servicios';
+  return `<button class="tile" onclick="abrirMisMascotas()">
+    <div class="t-ico">🐾</div>
+    <div class="t-body"><div class="t-title">Mis mascotas y servicios</div><div class="t-sub">${esc(sub)}</div></div>
+    <span class="t-arrow">›</span>
+  </button>`;
+}
+function abrirMisMascotas(){ S.sub='mismascotas'; render(); }
+// Iconos por servicio (mismo mapeo que la ficha pública /m/). Fallback • si el key es desconocido.
+const SRV_ICONO = { salud:'🩺', descuento:'🏷️', gps:'📍', tienda:'🛒', vacuna:'💉' };
+// Un servicio como fila. mode: 'incluido' (cobertura real) | 'requiere' (activo pero sin plan de catálogo) | 'disponible'.
+function itemServicio(s, mode){
+  const ico = SRV_ICONO[s.key] || '•';
+  const chip = mode==='incluido'
+      ? `background:rgba(74,222,128,.18);color:#166534;` // Incluido en tu plan
+      : mode==='requiere'
+      ? `background:#fef3c7;color:#92400e;`               // Requiere plan activo
+      : `background:#eff6ff;color:var(--azul);`;          // Disponible
+  const txt = mode==='incluido' ? 'Incluido en tu plan' : mode==='requiere' ? 'Requiere plan activo' : 'Disponible';
+  return `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--azul-pale);">
+    <div style="min-width:0;"><div style="font-size:.83rem;font-weight:700;">${ico} ${esc(s.nombre||'')}</div>${s.detalle?`<div style="font-size:.72rem;color:var(--suave);">${esc(s.detalle)}</div>`:''}</div>
+    <span style="${chip}font-size:.62rem;font-weight:800;padding:2px 9px;border-radius:100px;white-space:nowrap;">${txt}</span>
+  </div>`;
+}
+// Card por mascota: cabecera (nombre/raza/plan/cuota/chip estado, mismo lenguaje del carnet del header) + servicios.
+function cardMisMascota(m){
+  const cob = MC.coberturaMascota(m); const cuota = MC.planCuota(m.plan);
+  const servicios = Array.isArray(m.servicios) ? m.servicios : [];
+  const incluidos = servicios.filter(s=>s && s.estado==='activo');       // 'oculto' NO se renderiza
+  const disponibles = servicios.filter(s=>s && s.estado==='disponible');
+  const chipEstado = `<span style="display:inline-flex;align-items:center;gap:5px;background:${cob.ok?'rgba(74,222,128,.18)':'rgba(248,113,113,.15)'};color:${cob.ok?'#166534':'#991b1b'};font-size:.66rem;font-weight:800;padding:3px 10px;border-radius:100px;white-space:nowrap;"><span style="width:7px;height:7px;border-radius:50%;background:${cob.ok?'#4ade80':'#f87171'};"></span>${esc(cob.chip)}</span>`;
+  const head = `<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+      <div style="min-width:0;"><div style="font-weight:800;font-size:1rem;">${esc(m.nombre||'—')}</div><div style="font-size:.75rem;color:var(--suave);">${esc(m.raza||'')}</div></div>
+      ${chipEstado}
+    </div>
+    <div style="font-size:.82rem;margin-top:4px;"><strong>${esc(m.plan||'Sin definir')}</strong>${cob.ok&&cuota?` · $${cuota.toLocaleString('es-AR')}/mes`:''}</div>`;
+  let cuerpo;
+  if(!servicios.length){
+    cuerpo = `<div style="font-size:.8rem;color:var(--suave);margin-top:10px;">Tus servicios se están configurando.</div>`;
+  } else {
+    const secIncl = incluidos.length ? `<div style="font-size:.68rem;font-weight:800;letter-spacing:.5px;color:var(--suave);text-transform:uppercase;margin-top:12px;">Incluidos</div>${incluidos.map(s=>itemServicio(s, cob.ok?'incluido':'requiere')).join('')}` : '';
+    const secDisp = disponibles.length ? `<div style="font-size:.68rem;font-weight:800;letter-spacing:.5px;color:var(--suave);text-transform:uppercase;margin-top:12px;">Disponibles</div>${disponibles.map(s=>itemServicio(s,'disponible')).join('')}` : '';
+    cuerpo = (secIncl + secDisp) || `<div style="font-size:.8rem;color:var(--suave);margin-top:10px;">Tus servicios se están configurando.</div>`;
+  }
+  return `<div class="seccion" style="margin-bottom:12px;">${head}${cuerpo}</div>`;
+}
+function misMascotasView(){
+  const back=`<button class="link-btn" style="margin-bottom:10px;display:inline-block;" onclick="volverHome()">‹ Volver</button>`;
+  const ms=(S.cred&&S.cred.mascotas)||[];
+  const titulo=`<div class="stit" style="margin:4px 2px 8px;text-transform:none;font-size:1rem;">Mis mascotas y servicios</div>`;
+  const cuerpo = ms.length ? ms.map(cardMisMascota).join('')
+    : `<div class="seccion"><p style="font-size:.85rem;color:var(--suave);">Todavía no tenés mascotas. Agregá la primera desde el inicio.</p></div>`;
+  document.getElementById('home').innerHTML = back + titulo + cuerpo;
+}
 
 // 9) Instalar app (solo si no está instalada y hay prompt disponible).
 function bloqueInstalar(){
