@@ -7,6 +7,11 @@ serviceAccountKey.json
 seed/serviceAccountKey.demo.json
 seed/demo-secrets.json
 
+# Entorno demo — carpeta pública generada por scripts/build-hosting-demo.js (artefacto de build)
+hosting-demo/
+# Cache de estado de firebase-tools (deploy)
+.firebase/
+
 # Dependencias
 node_modules/
 seed/node_modules/

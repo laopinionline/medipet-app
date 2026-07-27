@@ -4,5 +4,17 @@
     "predeploy": [
       "node scripts/predeploy-guard.js"
     ]
+  },
+  "hosting": {
+    "public": "hosting-demo",
+    "predeploy": [
+      "node scripts/predeploy-guard.js",
+      "node scripts/build-hosting-demo.js"
+    ],
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ]
   }
 }
