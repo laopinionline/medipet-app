@@ -97,7 +97,15 @@ const MASCOTAS = [
   { key: 'ave', mascotaId: 'DEMO-ave-01', nombre: 'Pipo', especie: 'ave', edadAprox: 'adulto',
     raza: 'Canario', sexo: 'macho', token: 'DEMOtokenAve0001', servicios: [], // vacío → "Tus servicios se están configurando."
     pesos: [] }, // vacío → estado "Todavía no hay mediciones"
-].map(m => { const plan = MC.planPorEdadAprox(m.especie, m.edadAprox); return { ...m, plan, cuota: MC.planCuota(plan) }; });
+].map(m => { const plan = MC.planPorEdadAprox(m.especie, m.edadAprox); return { ...m, plan, cuota: MC.planCuota(plan) }; })
+  // 4ª mascota: plan LEGACY "Sin definir" (fuera de catálogo → SIN cobertura real, cuota 0). Servicios template
+  // (salud 'activo') → verifica el borde "Requiere plan activo" de Mis mascotas y servicios (como Valentin en prod).
+  // plan/cuota FIJOS acá (después del .map) para que NO los recompute el núcleo por especie+edad.
+  .concat([
+    { key: 'legacy', mascotaId: 'DEMO-legacy-01', nombre: 'Rocco', especie: 'perro', edadAprox: 'adulto',
+      raza: 'Ovejero', sexo: 'macho', token: 'DEMOtokenLegacy01', servicios: SERVICIOS_STD,
+      plan: 'Sin definir', cuota: 0, pesos: [] },
+  ]);
 
 // Atenciones = registro clínico del vet, LEGIBLE por el titular dueño (es la Historia). Campos clínicos
 // (fecha/tipo/prestadorNombre/diagnostico/tratamiento/adjuntos) + `monto` y `estado` del REINTEGRO + N3/ruteo
