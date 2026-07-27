@@ -156,5 +156,33 @@ console.log('9) Plan Básico (acceso):');
   eq(post.reintegro, 10000, 'post-cupo = 25% de 40k = 10k');
 }
 
+// ── 10) BUG Fase 2: la fecha de la atención llega como Timestamp de Firestore, NO como número ──
+// La app pasa `fecha` como Timestamp (toMillis) o {seconds,nanoseconds}; el filtro de ventana hacía Number(fecha)=NaN
+// → la atención caía fuera de la ventana → el cupo NO la contaba. Reproduce el caso Firulais reportado en vivo.
+console.log('10) Cupo con fecha Timestamp-like (regresión Fase 2):');
+{
+  const TSlike = (ms) => ({ toMillis: () => ms });                 // Firestore Timestamp (instancia)
+  const secLike = (ms) => ({ seconds: Math.floor(ms / 1000), nanoseconds: 0 }); // Timestamp plano (de d.data() sin instancia)
+  const alta = U(2026, 6, 1), hoy = U(2026, 6, 10);
+  const m = masc('MEDIPaw Adulto', alta); // consulta cupo 2
+  // Firulais exacto: 1 consulta previa el 5/6 dentro de la ventana 1/6→1/6 (Timestamp)
+  const r = MC.cobertura(m, 'consulta', 40000, { fechaMs: hoy, atenciones: [{ tipo: 'consulta', fecha: TSlike(U(2026, 6, 5)) }] });
+  eq(r.restantes, 1, 'consulta previa (Timestamp) SÍ descuenta → quedan 1 de 2 (no 2)');
+  eq(r.reintegro, 35000, 'reintegro capado al tope 35k');
+  eq(r.aCargoSocio, 5000, 'a cargo del socio = 40k - 35k');
+  ok(/quedan 1 de 2/.test(r.motivo), 'motivo dice "quedan 1 de 2"', r.motivo);
+  // los 3 shapes de fecha cuentan igual
+  eq(MC.cupoDisponible(m, 'consulta', [{ tipo: 'consulta', fecha: TSlike(U(2026, 6, 5)) }].filter(a => a.tipo === 'consulta')).usados, 1, 'cupoDisponible cuenta 1 (Timestamp toMillis)');
+  const enVentana = (fecha) => MC.cobertura(m, 'consulta', 40000, { fechaMs: hoy, atenciones: [{ tipo: 'consulta', fecha }] }).restantes;
+  eq(enVentana(secLike(U(2026, 6, 5))), 1, '{seconds,nanoseconds} plano → descuenta');
+  eq(enVentana(new Date(U(2026, 6, 5))), 1, 'Date → descuenta');
+  eq(enVentana(U(2026, 6, 5)), 1, 'number (ms) → descuenta (no regresiona el caso viejo)');
+  // fecha del año ANTERIOR (Timestamp) NO cuenta
+  eq(enVentana(TSlike(U(2025, 6, 5))), 2, 'consulta del año anterior (fuera de ventana) → no descuenta → quedan 2');
+  // alta como creadoEn Timestamp (doc crudo, sin altaMs) → ventana igual computada
+  const mCreado = { plan: 'MEDIPaw Adulto', estado: 'activo', creadoEn: TSlike(alta) };
+  eq(MC.cobertura(mCreado, 'consulta', 40000, { fechaMs: hoy, atenciones: [{ tipo: 'consulta', fecha: TSlike(U(2026, 6, 5)) }] }).restantes, 1, 'mascota con creadoEn Timestamp (sin altaMs) → cupo cuenta bien');
+}
+
 console.log('\n=== ' + (fail ? 'FALLÓ (' + fail + ')' : 'TODO VERDE') + ' · ' + pass + ' asserts OK, ' + fail + ' fallidos ===\n');
 process.exit(fail ? 1 : 0);
