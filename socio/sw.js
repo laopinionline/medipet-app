@@ -4,7 +4,7 @@
    clients.claim toma control (la página recarga por 'controllerchange'). Sin esto el
    deploy sirve la versión vieja por horas (lección MEDICAR).
    Firebase/gstatic/fonts (cross-origin) NO se cachean: van directo a la red. */
-const CACHE = 'medipaw-socio-v8'; // ⬅️ BUMPEAR EN CADA DEPLOY del /socio/
+const CACHE = 'medipaw-socio-v9'; // ⬅️ BUMPEAR EN CADA DEPLOY del /socio/
 const SHELL = [
   './',
   './index.html',
@@ -30,6 +30,10 @@ self.addEventListener('activate', e => {
 
 // Fetch: solo GET same-origin. HTML (navegación) → NETWORK-FIRST (una carga fresca trae la
 // última versión; offline → cache). Resto del shell → cache-first. Cross-origin → red directa.
+// ⚠️ CACHEAR SOLO SI res.ok (v9): un 5xx/4xx transitorio NO debe quedar pegado en cache. Bug real:
+// un 503 de /lib/medipaw-core.js?v=… (transitorio del rollout) quedó cacheado y rompía el post-login
+// ("Cannot read properties of undefined (reading 'esTitular')") hasta borrar la entrada a mano.
+const guardarSiOk = (req, res) => { if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)).catch(()=>{}); } return res; };
 self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET') return;
@@ -39,12 +43,12 @@ self.addEventListener('fetch', e => {
                  url.pathname.endsWith('/') || url.pathname.endsWith('index.html');
   if (esHTML) {
     e.respondWith(
-      fetch(req).then(res => { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)).catch(()=>{}); return res; })
+      fetch(req).then(res => guardarSiOk(req, res))
         .catch(() => caches.match(req).then(hit => hit || caches.match('./index.html')))
     );
     return;
   }
   e.respondWith(
-    caches.match(req).then(hit => hit || fetch(req).then(res => { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)).catch(()=>{}); return res; }))
+    caches.match(req).then(hit => hit || fetch(req).then(res => guardarSiOk(req, res)))
   );
 });
