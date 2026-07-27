@@ -92,7 +92,7 @@ console.log('6) Aniversario resetea cupos:');
 {
   const alta = U(2024, 1, 15);
   const m = masc('MEDIPaw Adulto', alta);
-  const dosDelAnio0 = [{ fecha: U(2024, 3, 1) }, { fecha: U(2024, 9, 1) }]; // ambas en el año 0
+  const dosDelAnio0 = [{ tipo: 'consulta', fecha: U(2024, 3, 1) }, { tipo: 'consulta', fecha: U(2024, 9, 1) }]; // ambas en el año 0 (con tipo, shape real)
   // Evento en el año 0 con 2 usados → agotado → precio socio
   const enAnio0 = MC.cobertura(m, 'consulta', 40000, { fechaMs: U(2024, 12, 1), atenciones: dosDelAnio0 });
   ok(/cupo anual agotado/i.test(enAnio0.motivo), 'año 0 con 2 previas → cupo agotado (precio socio)', enAnio0.motivo);
@@ -150,7 +150,7 @@ console.log('9) Plan Básico (acceso):');
   eq(MC.reglaCobertura('internacion', 'MEDIPaw Básico'), null, 'Básico no incluye internación');
   eq(MC.reglaCobertura('vacunas', 'MEDIPaw Básico'), null, 'Básico no incluye vacunas');
   // post-cupo de consulta (2 usadas este año) → precio socio 25%
-  const dos = [{ fecha: U(2026, 2, 1) }, { fecha: U(2026, 4, 1) }];
+  const dos = [{ tipo: 'consulta', fecha: U(2026, 2, 1) }, { tipo: 'consulta', fecha: U(2026, 4, 1) }];
   const post = MC.cobertura(m, 'consulta', 40000, { fechaMs: fecha, atenciones: dos });
   ok(/cupo anual agotado/i.test(post.motivo), 'Básico consulta post-cupo → precio socio', post.motivo);
   eq(post.reintegro, 10000, 'post-cupo = 25% de 40k = 10k');
@@ -182,6 +182,44 @@ console.log('10) Cupo con fecha Timestamp-like (regresión Fase 2):');
   // alta como creadoEn Timestamp (doc crudo, sin altaMs) → ventana igual computada
   const mCreado = { plan: 'MEDIPaw Adulto', estado: 'activo', creadoEn: TSlike(alta) };
   eq(MC.cobertura(mCreado, 'consulta', 40000, { fechaMs: hoy, atenciones: [{ tipo: 'consulta', fecha: TSlike(U(2026, 6, 5)) }] }).restantes, 1, 'mascota con creadoEn Timestamp (sin altaMs) → cupo cuenta bien');
+}
+
+// ── 11) BUGS Fase 2 (verificación en vivo 28/07): filtro por prestación + carencia fail-safe ──
+// REGLA: los tests del motor usan SHAPES REALES de Firestore (Timestamp como único campo de fecha; mascota con
+// creadoEn, sin altaMs) y listas CRUDAS/MIXTAS (varias prestaciones juntas). Sin esto, 1 y 2 pasaban de casualidad.
+console.log('11) Filtro por prestación + carencia fail-safe (shapes reales):');
+{
+  const TS = (ms) => ({ toMillis: () => ms, seconds: Math.floor(ms / 1000), nanoseconds: 0 }); // Timestamp real (toMillis+seconds)
+  const alta = U(2026, 6, 1), hoy = U(2027, 1, 15); // dentro de la ventana; carencias ya cumplidas
+  const mDoc = { plan: 'MEDIPaw Adulto', estado: 'activo', creadoEn: TS(alta) }; // SOLO creadoEn (sin altaMs)
+
+  // (a) LISTA MIXTA cruda: cada prestación cuenta SOLO lo suyo (bug 1). Sin el fix, las 3 contaban contra cualquiera.
+  const mixta = [
+    { tipo: 'consulta', fecha: TS(U(2026, 6, 5)) },
+    { tipo: 'vacunas',  fecha: TS(U(2026, 6, 20)) },
+    { tipo: 'cirugia',  fecha: TS(U(2026, 8, 1)) },
+  ];
+  eq(MC.cobertura(mDoc, 'consulta', 10000, { fechaMs: hoy, atenciones: mixta }).restantes, 1, '(a) consulta cuenta 1 (no 3) → quedan 1 de 2');
+  eq(MC.cobertura(mDoc, 'vacunas', 5000, { fechaMs: hoy, atenciones: mixta }).restantes, 1, '(a) vacunas cuenta 1 de 2 → quedan 1');
+  const cir = MC.cobertura(mDoc, 'cirugia', 100000, { fechaMs: hoy, atenciones: mixta });
+  ok(/cupo anual agotado/i.test(cir.motivo), '(a) cirugia (cupo 1, 1 previa) → agotado, sin mezclar con consulta/vacuna', cir.motivo);
+
+  // (b) creadoEn Timestamp, prestación 90d, alta hace 30d → EN CARENCIA (bug 2: antes fail-open → cubierta)
+  const mCar = { plan: 'MEDIPaw Adulto', estado: 'activo', creadoEn: TS(U(2026, 6, 1)) };
+  const rCar = MC.cobertura(mCar, 'cirugia', 300000, { fechaMs: U(2026, 7, 1), atenciones: [] }); // +30 días
+  eq(rCar.cubre, false, '(b) cirugia a 30 días (carencia 90) → NO cubre');
+  ok(/en carencia/i.test(rCar.motivo), '(b) motivo "en carencia"', rCar.motivo);
+  eq(rCar.reintegro, 0, '(b) reintegro 0 en carencia');
+  eq(MC.cobertura(mCar, 'cirugia', 300000, { fechaMs: U(2026, 9, 15), atenciones: [] }).cubre, true, '(b) pasados 90 días → cubre');
+  eq(MC.carenciaCumplida(mCar, 'cirugia', U(2026, 7, 1)).desdeMs != null, true, '(b) carenciaCumplida resuelve el alta (desdeMs != null) con creadoEn Timestamp');
+
+  // (c) mascota SIN ningún campo de fecha → carencia NO cumplida (fail-safe, nunca fail-open)
+  const mSF = { plan: 'MEDIPaw Adulto', estado: 'activo' };
+  const rSF = MC.cobertura(mSF, 'cirugia', 300000, { fechaMs: hoy, atenciones: [] });
+  eq(rSF.cubre, false, '(c) sin fecha de alta + carencia 90 → NO cubre (fail-safe)');
+  ok(/sin fecha de alta/i.test(rSF.motivo), '(c) motivo "sin fecha de alta verificable"', rSF.motivo);
+  eq(MC.carenciaCumplida(mSF, 'cirugia', hoy).sinAlta, true, '(c) flag sinAlta=true');
+  eq(MC.carenciaCumplida(mSF, 'consulta', hoy).cumplida, true, '(c) consulta (carencia 0) sin alta → cumplida (nada que esperar)');
 }
 
 console.log('\n=== ' + (fail ? 'FALLÓ (' + fail + ')' : 'TODO VERDE') + ' · ' + pass + ' asserts OK, ' + fail + ' fallidos ===\n');

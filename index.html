@@ -273,7 +273,7 @@ document.addEventListener('click', (ev) => {
     case 'descargar-carnet':descargarCarnet(Number(d.idx), d.nombre); break;
     case 'pedir-cambio':    pedirCambioPlan(d.mascotaId, d.nombre, d.plan, Number(d.idx)); break;
     case 'pedir-baja':      pedirBaja(d.mascotaId, d.nombre); break;
-    case 'form-atencion':   vetMostrarFormAtencion(d.mascotaId, d.nombre); break;
+    case 'form-atencion':   vetMostrarFormAtencion(d.mascotaId); break; // (el botón usa onclick inline; case dejado por compat)
     case 'guardar-atencion':vetGuardarAtencion(d.mascotaId, d.nombre); break;
   }
 });
@@ -1107,7 +1107,7 @@ async function vetVerHistoria(mascotaId) {
           <div style="font-size:.78rem;color:var(--suave);">${esc(mascotaRaza)} · ${esc(mascotaPlan)} · ${esc(mascotaId)}</div>
           <div style="font-size:.72rem;color:#9ca3af;">Titular: ${esc(titularNombre)}</div>
         </div>
-        <button data-action="form-atencion" data-mascota-id="${esc(mascotaId)}" data-nombre="${esc(mascotaNombre)}" class="bmini bverde" style="font-size:.8rem;padding:8px 14px;">+ Nueva atencion</button>
+        <button onclick="vetMostrarFormAtencion('${esc(mascotaId)}')" class="bmini bverde" style="font-size:.8rem;padding:8px 14px;">+ Nueva atencion</button>
       </div>
       <div id="formNuevaAtencionWrap" style="display:none;"></div>
       ${atenciones.length === 0
@@ -1158,11 +1158,9 @@ function parseMontoAten(raw) {
   const n = parseFloat(s);
   return (isFinite(n) && n >= 0) ? n : null;
 }
-// mascota → objeto que consume el motor (altaMs desde creadoEn).
-function _mascParaMotor(m) {
-  const alta = (m && m.creadoEn && m.creadoEn.toMillis) ? m.creadoEn.toMillis() : (typeof (m && m.altaMs) === 'number' ? m.altaMs : null);
-  return { plan: m && m.plan, estado: m && m.estado, altaMs: alta };
-}
+// Nota (fix Fase 2): se pasa el DOC de mascota CRUDO al motor (tiene plan/estado/creadoEn). MC._altaMs resuelve el
+// alta desde creadoEn (Timestamp) de forma robusta. NO se pre-convierte acá — esa conversión era un punto de falla
+// (daba altaMs null → la carencia caía en fail-open → cirugía figuraba cubierta en vez de EN CARENCIA).
 // Panel de veredicto: INFORMA, no bloquea. Colores por estado. Todo texto por esc().
 function _panelVeredicto(cob, monto) {
   const socio = /precio socio/i.test(cob.motivo || '');
@@ -1183,18 +1181,17 @@ function actualizarVeredicto() {
   const montoEl = document.getElementById('vetAtenMonto');
   const monto = parseMontoAten(montoEl ? montoEl.value : '');
   if (monto === null) { cont.innerHTML = _panelVeredicto({ cubre: false, motivo: 'Monto inválido — revisá el número (sin negativos).' }, 0); return; }
-  const atsPrest = (_atenCtx.atenciones || []).filter(a => a.tipo === prest);
-  const cob = MC.cobertura(_mascParaMotor(_atenCtx.mascota), prest, monto, { fechaMs: Date.now(), atenciones: atsPrest });
+  // El motor filtra por prestación (tipo) y ventana internamente → se le pasan TODAS las atenciones crudas (fecha Timestamp).
+  const cob = MC.cobertura(_atenCtx.mascota, prest, monto, { fechaMs: Date.now(), atenciones: _atenCtx.atenciones || [] });
   cont.innerHTML = _panelVeredicto(cob, monto);
 }
 
-async function vetMostrarFormAtencion(mascotaId, mascotaNombre) {
-  const wrap = document.getElementById('formNuevaAtencionWrap');
+async function vetMostrarFormAtencion(mascotaId) {
+  let wrap = document.getElementById('formNuevaAtencionWrap');
   if (!wrap) return;
   if (wrap.style.display !== 'none') { wrap.style.display = 'none'; return; }
 
   // Verificar auto-atencion: vet no puede cargar atencion a su propia mascota
-  const uid = auth.currentUser.uid;
   const userData = currentUserData;
   const propiasMascotas = (userData?.mascotas || []).map(m => m.mascotaId).filter(Boolean);
   if (propiasMascotas.includes(mascotaId)) {
@@ -1202,14 +1199,21 @@ async function vetMostrarFormAtencion(mascotaId, mascotaNombre) {
     return;
   }
 
-  // Cargar mascota + sus atenciones (para el cupo del veredicto). where mascotaId a secas → sin índice compuesto.
+  // Cargar mascota (doc crudo, con creadoEn) + sus atenciones (para el cupo). where mascotaId a secas → sin índice.
   _atenCtx = null;
+  let mascota = null, atenciones = [];
   try {
-    const mascota = await mascGet(mascotaId);
+    mascota = await mascGet(mascotaId);
     const snap = await db.collection('atenciones').where('mascotaId', '==', mascotaId).get();
-    _atenCtx = { mascotaId, mascota, atenciones: snap.docs.map(d => d.data()) };
-  } catch (e) { _atenCtx = { mascotaId, mascota: null, atenciones: [] }; }
+    atenciones = snap.docs.map(d => d.data());
+  } catch (e) {}
+  _atenCtx = { mascotaId, mascota, atenciones };
+  const mascotaNombre = (mascota && mascota.nombre) || mascotaId;
 
+  // Re-fetch del wrap: si la vista historia se re-renderizó durante el await, el `wrap` capturado quedó DETACHED
+  // (el form se armaba en un nodo viejo, invisible → "el botón no hace nada"). Tomamos el nodo vigente.
+  wrap = document.getElementById('formNuevaAtencionWrap');
+  if (!wrap) return;
   wrap.style.display = 'block';
   wrap.innerHTML = `
     <div class="form-box" style="margin-bottom:16px;">
@@ -1283,8 +1287,8 @@ async function vetGuardarAtencion(mascotaId, mascotaNombre) {
     let snapCob = { cubre: false, pct: 0, tope: null, aCargoSocio: monto, motivo: 'No se pudo calcular', calculadoEn: ahora };
     try {
       const atsSnap = await db.collection('atenciones').where('mascotaId','==',mascotaId).get();
-      const atsPrest = atsSnap.docs.map(d => d.data()).filter(a => a.tipo === tipo);
-      const cob = MC.cobertura(_mascParaMotor(mDoc), tipo, monto, { fechaMs: ahora, atenciones: atsPrest });
+      // mDoc CRUDO (creadoEn) + TODAS las atenciones → el motor filtra por prestación y ventana (fix bug de cupo/carencia).
+      const cob = MC.cobertura(mDoc, tipo, monto, { fechaMs: ahora, atenciones: atsSnap.docs.map(d => d.data()) });
       snapCob = { cubre: cob.cubre, pct: cob.pct, tope: cob.tope, aCargoSocio: cob.aCargoSocio, motivo: cob.motivo, calculadoEn: ahora };
     } catch(e) {}
 
