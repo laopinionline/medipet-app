@@ -1247,14 +1247,13 @@ async function vetGuardarAtencion(mascotaId, mascotaNombre) {
   const monto = parseMontoAten(montoEl ? montoEl.value : '');
   setMsg('vetAtenMsg','',true);
 
-  if (!diagnostico) {
-    setMsg('vetAtenMsg','Completa el diagnostico.',false);
-    return;
-  }
-  if (monto === null) {
-    setMsg('vetAtenMsg','Revisá el monto (número, sin negativos). Poné 0 si no hay cargo.',false);
-    return;
-  }
+  // REGLA UX (mostrador): si el guardado aborta, SIEMPRE feedback VISIBLE (toast prominente + msg inline). Un
+  // "Guardar" que no guarda y no dice nada es inaceptable. `abortarGuardado` centraliza el aviso doble.
+  const abortarGuardado = (msg) => { setMsg('vetAtenMsg', msg, false); toast('No se guardó: ' + msg); };
+
+  if (!mascotaId) { abortarGuardado('no pude determinar la mascota. Cerrá y reabrí "Nueva atención".'); return; }
+  if (!diagnostico) { abortarGuardado('completá el diagnóstico.'); return; }
+  if (monto === null) { abortarGuardado('revisá el monto (número, sin negativos; 0 si no hay cargo).'); return; }
 
   try {
     const uid = auth.currentUser.uid;
@@ -1278,7 +1277,7 @@ async function vetGuardarAtencion(mascotaId, mascotaNombre) {
     // Buscar titularUid (dueño de la mascota) en la colección. La regla EXIGE titularUid no vacío en el create.
     const mDoc = await mascGet(mascotaId);
     const titularUid = mDoc ? (mDoc.titularUid || '') : '';
-    if (!titularUid) { setMsg('vetAtenMsg','No pude identificar al titular de esta mascota. Buscala de nuevo desde la colección.',false); return; }
+    if (!titularUid) { abortarGuardado('no pude identificar al titular de esta mascota. Buscala de nuevo desde la colección.'); return; }
 
     // SNAPSHOT del veredicto de cobertura al momento de crear (auditable: lo que el sistema dijo ese día,
     // aunque la matriz cambie después). Cupo: atenciones de la MISMA prestación (where mascotaId a secas → sin índice),
@@ -1323,6 +1322,7 @@ async function vetGuardarAtencion(mascotaId, mascotaNombre) {
     vetVerHistoria(mascotaId);
   } catch(e) {
     setMsg('vetAtenMsg','Error: '+e.message,false);
+    toast('No se pudo guardar la atención.');
   }
 }
 
