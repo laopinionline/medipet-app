@@ -93,6 +93,35 @@ const MASCOTAS = [
     pesos: [] }, // vacío → estado "Todavía no hay mediciones"
 ].map(m => { const plan = MC.planPorEdadAprox(m.especie, m.edadAprox); return { ...m, plan, cuota: MC.planCuota(plan) }; });
 
+// Atenciones = registro clínico del vet, LEGIBLE por el titular dueño (es la Historia). Campos clínicos
+// (fecha/tipo/prestadorNombre/diagnostico/tratamiento/adjuntos) + `monto` y `estado` del REINTEGRO + N3/ruteo
+// (titularUid, mascotaId, mascotaNombre). MEDIPaw es matriz de cobertura por prestación (topes/%/frecuencia/carencia
+// por plan): el `monto` es la base del cálculo y `estado` (pendiente/pagado/rechazado) es el circuito de reintegro.
+// En Historia v1 el monto/estado van como DATO informativo del reintegro (sin cálculo; el motor de coberturas es
+// subsistema aparte, no entra en v1). Montos verosímiles vs. los topes de la landing.
+const ATENCIONES = [
+  // Firulais (DEMO-perro-01): 3 atenciones variadas — cubre los 3 estados de reintegro
+  { id: 'DEMO-aten-perro-01', mascotaId: 'DEMO-perro-01', tipo: 'consulta', fecha: '2026-06-05T11:00:00-03:00',
+    diagnostico: 'Control anual — mascota sana.', tratamiento: 'Sin medicación. Refuerzo de vacunas al día.',
+    adjuntos: [], monto: 35000, estado: 'pagado' },
+  { id: 'DEMO-aten-perro-02', mascotaId: 'DEMO-perro-01', tipo: 'vacuna', fecha: '2026-06-20T16:30:00-03:00',
+    diagnostico: 'Vacunación antirrábica anual.', tratamiento: 'Vacuna aplicada. Próximo refuerzo en 12 meses.',
+    adjuntos: [], monto: 15000, estado: 'pendiente' },
+  { id: 'DEMO-aten-perro-03', mascotaId: 'DEMO-perro-01', tipo: 'estudio', fecha: '2026-07-10T10:15:00-03:00',
+    diagnostico: 'Otitis leve en oído derecho.', tratamiento: 'Limpieza + gotas óticas 2 veces/día por 7 días. Control en 10 días.',
+    adjuntos: [], monto: 25000, estado: 'rechazado' },
+  // Michi (DEMO-gato-01): 1 atención — sin reintegro (monto 0)
+  { id: 'DEMO-aten-gato-01', mascotaId: 'DEMO-gato-01', tipo: 'consulta', fecha: '2026-07-12T09:45:00-03:00',
+    diagnostico: 'Primera consulta de cachorro — buen estado general.', tratamiento: 'Desparasitación interna. Se inicia plan de vacunación.',
+    adjuntos: [], monto: 0, estado: 'pagado' },
+  // Pipo (DEMO-ave-01): SIN atenciones → empty state de Historia.
+];
+
+// casos_clinico SEÑUELO: doc INTERNO del vet que el titular ['afiliado'] NUNCA debe poder leer (prueba N3 en demo).
+const CASO_CLINICO_DECOY = { id: 'DEMO-caso-01', fecha: '2026-07-10T10:00:00-03:00',
+  prioridadInterna: 'media', notasVet: 'SEÑUELO N3 — nota clínica interna del vet. El titular NO debe poder leer esto.',
+  tomadoPor: 'demo-vet-0001' };
+
 // ── Helpers de escritura (upsert) ────────────────────────────────────────────
 async function upsertAuthUser(u) {
   let exists = false;
@@ -148,8 +177,29 @@ async function setDoc(pathStr, data, label) {
     if (!m.pesos.length) console.log(`  [pesos] ${m.mascotaId}: SIN puntos (estado vacío de Chequeo)`);
   }
 
+  // 4) atenciones (registro clínico, LEGIBLE por el titular dueño = Historia). Solo campos clínicos (sin monto/estado).
+  console.log('\n— atenciones (Historia) —');
+  const nombreDe = Object.fromEntries(MASCOTAS.map(m => [m.mascotaId, m.nombre]));
+  for (const a of ATENCIONES) {
+    await setDoc(`atenciones/${a.id}`, {
+      prestadorId: USERS.vet.uid, prestadorNombre: `${USERS.vet.nombre} ${USERS.vet.apellido}`,
+      mascotaId: a.mascotaId, mascotaNombre: nombreDe[a.mascotaId] || '', titularUid: USERS.titular.uid,
+      tipo: a.tipo, diagnostico: a.diagnostico, tratamiento: a.tratamiento, adjuntos: a.adjuntos, fecha: ts(a.fecha),
+      monto: a.monto, estado: a.estado,
+    }, `${nombreDe[a.mascotaId]} · ${a.tipo} · $${a.monto} ${a.estado}`);
+  }
+  console.log(`  (Pipo/DEMO-ave-01 SIN atenciones → empty state de Historia)`);
+
+  // 5) casos_clinico SEÑUELO (prueba N3: el titular ['afiliado'] debe RECHAZAR get/list de esto).
+  console.log('\n— casos_clinico (señuelo N3) —');
+  await setDoc(`casos_clinico/${CASO_CLINICO_DECOY.id}`, {
+    prioridadInterna: CASO_CLINICO_DECOY.prioridadInterna, notasVet: CASO_CLINICO_DECOY.notasVet,
+    tomadoPor: CASO_CLINICO_DECOY.tomadoPor, tomadoEn: ts(CASO_CLINICO_DECOY.fecha),
+  }, '(señuelo — el titular NO debe poder leerlo)');
+
   console.log(`\n=== ${WRITE ? 'ESCRITO' : 'DRY-RUN (nada escrito; correr con --write)'} ===`);
   console.log(`Titular: ${USERS.titular.email} · Admin: ${USERS.admin.email} · Vet: ${USERS.vet.email}`);
   console.log(`Mascotas: ${MASCOTAS.map(m => `${m.nombre}(${m.plan.replace('MEDIPaw ', '')}/${m.pesos.length}pts)`).join(' · ')}`);
+  console.log(`Atenciones: ${ATENCIONES.length} (Firulais 3 · Michi 1 · Pipo 0) · casos_clinico señuelo: 1`);
   process.exit(0);
 })().catch(e => { console.error('ERROR:', e.message); process.exit(1); });
