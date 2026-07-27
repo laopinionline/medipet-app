@@ -114,14 +114,17 @@ const MASCOTAS = [
 // En Historia v1 el monto/estado van como DATO informativo del reintegro (sin cálculo; el motor de coberturas es
 // subsistema aparte, no entra en v1). Montos verosímiles vs. los topes de la landing.
 const ATENCIONES = [
-  // Firulais (DEMO-perro-01): 3 atenciones variadas — cubre los 3 estados de reintegro
+  // Firulais (DEMO-perro-01): 3 atenciones — cubre los 3 estados de reintegro. `tipo` = CLAVE canónica de COBERTURAS
+  // (Fase 2): 2 'consulta' (control + otitis) + 1 'vacunas'. Las 2 consultas dentro de la ventana → cupo 2/2 → una 3ª
+  // consulta cae en post-cupo (precio socio 25%), justo el caso de verificación. La otitis se registra como 'consulta'
+  // (diagnóstico clínico por otoscopía + gotas tópicas; no es 'imagen'/radiología ni 'analisis'/laboratorio).
   { id: 'DEMO-aten-perro-01', mascotaId: 'DEMO-perro-01', tipo: 'consulta', fecha: '2026-06-05T11:00:00-03:00',
     diagnostico: 'Control anual — mascota sana.', tratamiento: 'Sin medicación. Refuerzo de vacunas al día.',
     adjuntos: [], monto: 35000, estado: 'pagado' },
-  { id: 'DEMO-aten-perro-02', mascotaId: 'DEMO-perro-01', tipo: 'vacuna', fecha: '2026-06-20T16:30:00-03:00',
+  { id: 'DEMO-aten-perro-02', mascotaId: 'DEMO-perro-01', tipo: 'vacunas', fecha: '2026-06-20T16:30:00-03:00',
     diagnostico: 'Vacunación antirrábica anual.', tratamiento: 'Vacuna aplicada. Próximo refuerzo en 12 meses.',
     adjuntos: [], monto: 15000, estado: 'pendiente' },
-  { id: 'DEMO-aten-perro-03', mascotaId: 'DEMO-perro-01', tipo: 'estudio', fecha: '2026-07-10T10:15:00-03:00',
+  { id: 'DEMO-aten-perro-03', mascotaId: 'DEMO-perro-01', tipo: 'consulta', fecha: '2026-07-10T10:15:00-03:00',
     diagnostico: 'Otitis leve en oído derecho.', tratamiento: 'Limpieza + gotas óticas 2 veces/día por 7 días. Control en 10 días.',
     adjuntos: [], monto: 25000, estado: 'rechazado' },
   // Michi (DEMO-gato-01): 1 atención — sin reintegro (monto 0)
