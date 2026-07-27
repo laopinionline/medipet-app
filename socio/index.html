@@ -197,10 +197,10 @@ function getRoles(u){
 }
 
 // ── Estado único ──
-const S = { view:'boot', sub:'home', cred:null, mascotaSel:0, deferredPrompt:null, caso:null, chequeo:null };
-// Dispatcher del sub-view: home | caso | cuenta | alta (embudo de alta de mascota) | chequeo (peso)
-function render(){ if(S.sub==='caso') casoView(); else if(S.sub==='cuenta') cuentaView(); else if(S.sub==='alta') altaView(); else if(S.sub==='chequeo') chequeoView(); else homeView(); }
-function volverHome(){ S.sub='home'; S.caso=null; S.alta=null; S.chequeo=null; render(); }
+const S = { view:'boot', sub:'home', cred:null, mascotaSel:0, deferredPrompt:null, caso:null, chequeo:null, historia:null };
+// Dispatcher del sub-view: home | caso | cuenta | alta (embudo de alta de mascota) | chequeo (peso) | historia (atenciones)
+function render(){ if(S.sub==='caso') casoView(); else if(S.sub==='cuenta') cuentaView(); else if(S.sub==='alta') altaView(); else if(S.sub==='chequeo') chequeoView(); else if(S.sub==='historia') historiaView(); else homeView(); }
+function volverHome(){ S.sub='home'; S.caso=null; S.alta=null; S.chequeo=null; S.historia=null; render(); }
 
 // ── Colección mascotas (fuente de verdad; reusa el núcleo) ──
 async function mascGetByTitular(uid){
@@ -553,7 +553,14 @@ function bloqueChequeo(m){
     <span class="t-arrow">›</span>
   </button>`;
 }
-function bloqueHistoria(m){ return tilePlaceholder('📋',`Historia de ${esc(nombreMasc(m))}`,'Atenciones, vacunas y estudios'); }
+// Historia — tile REAL (abre las atenciones del titular). Solo lectura; el titular no carga, escribe el vet.
+function bloqueHistoria(m){
+  return `<button class="tile" onclick="abrirHistoria(mascotaActiva())">
+    <div class="t-ico">📋</div>
+    <div class="t-body"><div class="t-title">Historia de ${esc(nombreMasc(m))}</div><div class="t-sub">Atenciones, vacunas y estudios</div></div>
+    <span class="t-arrow">›</span>
+  </button>`;
+}
 
 // ── Chequeo y peso (serie `pesos`, append-only) ──────────────────────────────
 // El titular ve la serie de peso de la mascota y agrega mediciones. Sin gráfico, sin rango saludable,
@@ -648,6 +655,58 @@ async function guardarPeso(){
     if(msg) msg.textContent='Error al guardar: '+e.message;
   }
 }
+// ── Historia (atenciones del titular) ────────────────────────────────────────
+// N3: el titular ve SUS `atenciones` (safe); `casos_clinico` JAMÁS (reglas). Solo lectura, sin form, sin writes.
+// Historia v1 = clínico + reintegro REGISTRADO (monto/estado informativo, sin cálculo; el motor de coberturas es aparte).
+function abrirHistoria(m){ S.sub='historia'; S.historia=null; render(); }
+function capitaliz(s){ s=String(s||''); return s ? s.charAt(0).toUpperCase()+s.slice(1) : ''; }
+function estadoReintegro(e){ return ({ pagado:'pagado', pendiente:'en proceso', rechazado:'rechazado' })[e] || (e||''); }
+
+async function cargarAtencionesHistoria(){
+  const m=mascotaActiva(); const uid=(S.cred&&S.cred.u)?S.cred.u.uid:null;
+  if(!m||!uid){ S.historia={lista:[]}; historiaView(); return; }
+  try{
+    // titularUid EN el where (la regla `atenciones` list lo exige por doc). Orden por fecha en el CLIENTE
+    // (desc) → dos filtros de igualdad sin orderBy en la query = SIN índice compuesto (igual que `pesos`).
+    const snap=await db.collection('atenciones').where('titularUid','==',uid).where('mascotaId','==',m.mascotaId).get();
+    const lista=snap.docs.map(d=>d.data()).sort((a,b)=>tms(b.fecha)-tms(a.fecha)); // más nueva arriba
+    S.historia={lista};
+  }catch(e){ S.historia={lista:[], err:'No pudimos cargar la historia.'}; }
+  historiaView();
+}
+
+function itemAtencion(a){
+  const monto=Number(a.monto)||0;
+  const reintegro = monto>0
+    ? `<div style="font-size:.78rem;color:var(--suave);margin-top:6px;">Reintegro: $${monto.toLocaleString('es-AR')} — ${esc(estadoReintegro(a.estado))}</div>` : '';
+  const adj = (Array.isArray(a.adjuntos) && a.adjuntos.length)
+    ? `<div style="font-size:.74rem;color:var(--suave);margin-top:4px;">📎 ${a.adjuntos.length} adjunto${a.adjuntos.length>1?'s':''}</div>` : '';
+  return `<div style="background:white;border:1px solid rgba(26,95,180,.08);border-radius:14px;padding:12px 14px;margin-bottom:10px;box-shadow:0 2px 8px rgba(26,95,180,.04);">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">
+      <strong style="font-size:.9rem;color:var(--noche);">${esc(capitaliz(a.tipo))}</strong>
+      <span style="font-size:.74rem;color:var(--suave);white-space:nowrap;">${esc(fmtFechaP(a.fecha))}</span>
+    </div>
+    ${a.prestadorNombre?`<div style="font-size:.74rem;color:var(--suave);margin-top:1px;">${esc(a.prestadorNombre)}</div>`:''}
+    ${a.diagnostico?`<div style="font-size:.82rem;color:var(--texto);margin-top:6px;"><strong>Diagnóstico:</strong> ${esc(a.diagnostico)}</div>`:''}
+    ${a.tratamiento?`<div style="font-size:.82rem;color:var(--texto);margin-top:2px;"><strong>Tratamiento:</strong> ${esc(a.tratamiento)}</div>`:''}
+    ${reintegro}${adj}
+  </div>`;
+}
+
+function historiaView(){
+  const back=`<button class="link-btn" style="margin-bottom:10px;display:inline-block;" onclick="volverHome()">‹ Volver</button>`;
+  const m=mascotaActiva();
+  if(!S.historia){ document.getElementById('home').innerHTML = back + `<div class="seccion"><p style="font-size:.85rem;color:var(--suave);">Cargando…</p></div>`; cargarAtencionesHistoria(); return; }
+  const titulo=`<div class="stit" style="text-transform:none;font-size:1rem;">Historia de ${esc(nombreMasc(m))}</div>`;
+  if(!m){ document.getElementById('home').innerHTML = back + `<div class="seccion">${titulo}<p style="font-size:.85rem;color:var(--suave);margin-top:8px;">Primero agregá una mascota.</p></div>`; return; }
+  const err=S.historia.err?`<p class="errmsg">${esc(S.historia.err)}</p>`:'';
+  const lista=S.historia.lista||[];
+  const cuerpo = lista.length
+    ? lista.map(itemAtencion).join('')
+    : `<p style="font-size:.85rem;color:var(--suave);margin-top:10px;">Todavía no hay atenciones registradas.</p>`;
+  document.getElementById('home').innerHTML = back + `<div class="seccion">${titulo}${err}<div style="margin-top:10px;">${cuerpo}</div></div>`;
+}
+
 // Cómo se paga HOY (sin pasarela) — constante única, fácil de cambiar cuando entre Mercado Pago.
 const PAGO_INFO = 'Por ahora el pago se coordina con MEDIPaw (transferencia o en la clínica). Todavía no se puede pagar desde la app.';
 const LEYENDA_NO_FISCAL = 'Comprobantes internos de MEDIPaw. No son facturas fiscales (AFIP).';
