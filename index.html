@@ -243,7 +243,7 @@ body{font-family:'Nunito',sans-serif;background:var(--fondo);color:var(--texto);
 <div class="toast" id="toast"></div>
 
 <script>
-firebase.initializeApp({
+firebase.initializeApp(window.__FB_CONFIG || {
   apiKey:"AIzaSyBW3nLFqr55xYN16rSpapqIb6yVnyKbp-4",
   authDomain:"medipet-c3a4d.firebaseapp.com",
   projectId:"medipet-c3a4d",
