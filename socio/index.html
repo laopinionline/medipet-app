@@ -660,6 +660,9 @@ async function guardarPeso(){
 // Historia v1 = clínico + reintegro REGISTRADO (monto/estado informativo, sin cálculo; el motor de coberturas es aparte).
 function abrirHistoria(m){ S.sub='historia'; S.historia=null; render(); }
 function capitaliz(s){ s=String(s||''); return s ? s.charAt(0).toUpperCase()+s.slice(1) : ''; }
+// Etiqueta humana de la prestación (clave→label del núcleo). Fallback a capitalizar el crudo si el lib es viejo
+// (VPS) o si el tipo es legacy (ej. 'estudio'/'urgencia' de atenciones viejas).
+function etiquetaPrestacion(t){ return (MC.ETIQUETAS_PRESTACION && MC.ETIQUETAS_PRESTACION[t]) || capitaliz(t); }
 function estadoReintegro(e){ return ({ pagado:'pagado', pendiente:'en proceso', rechazado:'rechazado' })[e] || (e||''); }
 
 async function cargarAtencionesHistoria(){
@@ -683,7 +686,7 @@ function itemAtencion(a){
     ? `<div style="font-size:.74rem;color:var(--suave);margin-top:4px;">📎 ${a.adjuntos.length} adjunto${a.adjuntos.length>1?'s':''}</div>` : '';
   return `<div style="background:white;border:1px solid rgba(26,95,180,.08);border-radius:14px;padding:12px 14px;margin-bottom:10px;box-shadow:0 2px 8px rgba(26,95,180,.04);">
     <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">
-      <strong style="font-size:.9rem;color:var(--noche);">${esc(capitaliz(a.tipo))}</strong>
+      <strong style="font-size:.9rem;color:var(--noche);">${esc(etiquetaPrestacion(a.tipo))}</strong>
       <span style="font-size:.74rem;color:var(--suave);white-space:nowrap;">${esc(fmtFechaP(a.fecha))}</span>
     </div>
     ${a.prestadorNombre?`<div style="font-size:.74rem;color:var(--suave);margin-top:1px;">${esc(a.prestadorNombre)}</div>`:''}

@@ -9,7 +9,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
-<script src="/lib/medipaw-core.js?v=20260724f"></script>
+<script src="/lib/medipaw-core.js?v=20260728a"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--azul:#1A5FB4;--azul-medio:#2272D9;--azul-claro:#5BA3E8;--azul-pale:#EBF3FC;--noche:#0D1B3E;--fondo:#F5F7FA;--texto:#1a2340;--suave:#5a6a8a}
@@ -1139,8 +1139,56 @@ async function vetVerHistoria(mascotaId) {
 }
 
 let vetCurrentMascotaId = '';
+// Contexto del form de atención abierto: mascota (doc) + sus atenciones (para el cupo del veredicto). Motor Fase 2.
+let _atenCtx = null;
 
-function vetMostrarFormAtencion(mascotaId, mascotaNombre) {
+// Prestaciones agrupadas en <optgroup> (value = clave de COBERTURAS). Fuente única: el núcleo.
+function opcionesPrestacion() {
+  return MC.prestacionesPorCategoria().map(g =>
+    `<optgroup label="${esc(g.categoria)}">` +
+    g.items.map(it => `<option value="${esc(it.key)}">${esc(it.label)}</option>`).join('') +
+    `</optgroup>`
+  ).join('');
+}
+// Monto: coma→punto, 0 permitido (beneficios sin cargo), rechazo NaN/negativos → null. Patrón pesos.
+function parseMontoAten(raw) {
+  const s = String(raw == null ? '' : raw).trim().replace(',', '.');
+  if (s === '') return 0;
+  if (!/^\d+(\.\d+)?$/.test(s)) return null;
+  const n = parseFloat(s);
+  return (isFinite(n) && n >= 0) ? n : null;
+}
+// mascota → objeto que consume el motor (altaMs desde creadoEn).
+function _mascParaMotor(m) {
+  const alta = (m && m.creadoEn && m.creadoEn.toMillis) ? m.creadoEn.toMillis() : (typeof (m && m.altaMs) === 'number' ? m.altaMs : null);
+  return { plan: m && m.plan, estado: m && m.estado, altaMs: alta };
+}
+// Panel de veredicto: INFORMA, no bloquea. Colores por estado. Todo texto por esc().
+function _panelVeredicto(cob, monto) {
+  const socio = /precio socio/i.test(cob.motivo || '');
+  const col = cob.cubre ? ['#f0fdf4', '#166534', '#4ade80'] : (socio ? ['#fffbeb', '#92400e', '#f59e0b'] : ['#fef2f2', '#991b1b', '#f87171']);
+  let linea2 = '';
+  if (cob.cubre || socio) {
+    linea2 = `<div style="font-size:.8rem;margin-top:4px;">Reintegro: <strong>$${(Number(cob.reintegro) || 0).toLocaleString('es-AR')}</strong> · A cargo del socio: <strong>$${(Number(cob.aCargoSocio) || 0).toLocaleString('es-AR')}</strong></div>`;
+  }
+  return `<div style="background:${col[0]};border-left:4px solid ${col[2]};border-radius:8px;padding:10px 12px;margin-top:8px;">
+    <div style="font-size:.8rem;font-weight:800;color:${col[1]};">${esc(cob.motivo || '')}</div>${linea2}
+    <div style="font-size:.68rem;color:#9ca3af;margin-top:4px;">El veredicto informa — podés guardar igual.</div>
+  </div>`;
+}
+function actualizarVeredicto() {
+  const cont = document.getElementById('vetVeredicto');
+  if (!cont || !_atenCtx || !_atenCtx.mascota) return;
+  const prest = v('vetAtenTipo');
+  const montoEl = document.getElementById('vetAtenMonto');
+  const monto = parseMontoAten(montoEl ? montoEl.value : '');
+  if (monto === null) { cont.innerHTML = _panelVeredicto({ cubre: false, motivo: 'Monto inválido — revisá el número (sin negativos).' }, 0); return; }
+  const atsPrest = (_atenCtx.atenciones || []).filter(a => a.tipo === prest);
+  const cob = MC.cobertura(_mascParaMotor(_atenCtx.mascota), prest, monto, { fechaMs: Date.now(), atenciones: atsPrest });
+  cont.innerHTML = _panelVeredicto(cob, monto);
+}
+
+async function vetMostrarFormAtencion(mascotaId, mascotaNombre) {
   const wrap = document.getElementById('formNuevaAtencionWrap');
   if (!wrap) return;
   if (wrap.style.display !== 'none') { wrap.style.display = 'none'; return; }
@@ -1154,18 +1202,22 @@ function vetMostrarFormAtencion(mascotaId, mascotaNombre) {
     return;
   }
 
+  // Cargar mascota + sus atenciones (para el cupo del veredicto). where mascotaId a secas → sin índice compuesto.
+  _atenCtx = null;
+  try {
+    const mascota = await mascGet(mascotaId);
+    const snap = await db.collection('atenciones').where('mascotaId', '==', mascotaId).get();
+    _atenCtx = { mascotaId, mascota, atenciones: snap.docs.map(d => d.data()) };
+  } catch (e) { _atenCtx = { mascotaId, mascota: null, atenciones: [] }; }
+
   wrap.style.display = 'block';
   wrap.innerHTML = `
     <div class="form-box" style="margin-bottom:16px;">
       <div style="font-size:.75rem;font-weight:800;color:var(--noche);margin-bottom:10px;text-transform:uppercase;">Nueva atencion — ${esc(mascotaNombre)}</div>
       <div class="fstack">
-        <select id="vetAtenTipo" class="input-field">
-          <option value="consulta">Consulta</option>
-          <option value="vacuna">Vacuna</option>
-          <option value="estudio">Estudio</option>
-          <option value="cirugia">Cirugia</option>
-          <option value="urgencia">Urgencia</option>
-        </select>
+        <select id="vetAtenTipo" class="input-field" onchange="actualizarVeredicto()">${opcionesPrestacion()}</select>
+        <input id="vetAtenMonto" class="input-field" inputmode="decimal" placeholder="Monto de la prestación ($) — 0 si sin cargo" oninput="actualizarVeredicto()">
+        <div id="vetVeredicto"></div>
         <textarea id="vetAtenDiag" placeholder="Diagnostico *" class="input-field" style="height:70px;resize:vertical;"></textarea>
         <textarea id="vetAtenTrat" placeholder="Tratamiento" class="input-field" style="height:60px;resize:vertical;"></textarea>
         <div>
@@ -1180,16 +1232,23 @@ function vetMostrarFormAtencion(mascotaId, mascotaNombre) {
       </div>
     </div>
   `;
+  actualizarVeredicto(); // veredicto inicial (consulta / monto 0)
 }
 
 async function vetGuardarAtencion(mascotaId, mascotaNombre) {
   const tipo = v('vetAtenTipo');
   const diagnostico = v('vetAtenDiag');
   const tratamiento = v('vetAtenTrat');
+  const montoEl = document.getElementById('vetAtenMonto');
+  const monto = parseMontoAten(montoEl ? montoEl.value : '');
   setMsg('vetAtenMsg','',true);
 
   if (!diagnostico) {
     setMsg('vetAtenMsg','Completa el diagnostico.',false);
+    return;
+  }
+  if (monto === null) {
+    setMsg('vetAtenMsg','Revisá el monto (número, sin negativos). Poné 0 si no hay cargo.',false);
     return;
   }
 
@@ -1217,6 +1276,18 @@ async function vetGuardarAtencion(mascotaId, mascotaNombre) {
     const titularUid = mDoc ? (mDoc.titularUid || '') : '';
     if (!titularUid) { setMsg('vetAtenMsg','No pude identificar al titular de esta mascota. Buscala de nuevo desde la colección.',false); return; }
 
+    // SNAPSHOT del veredicto de cobertura al momento de crear (auditable: lo que el sistema dijo ese día,
+    // aunque la matriz cambie después). Cupo: atenciones de la MISMA prestación (where mascotaId a secas → sin índice),
+    // el motor las acota a la ventana de aniversario. Legacy 'Sin definir' → cob.cubre false, se guarda igual.
+    const ahora = Date.now();
+    let snapCob = { cubre: false, pct: 0, tope: null, aCargoSocio: monto, motivo: 'No se pudo calcular', calculadoEn: ahora };
+    try {
+      const atsSnap = await db.collection('atenciones').where('mascotaId','==',mascotaId).get();
+      const atsPrest = atsSnap.docs.map(d => d.data()).filter(a => a.tipo === tipo);
+      const cob = MC.cobertura(_mascParaMotor(mDoc), tipo, monto, { fechaMs: ahora, atenciones: atsPrest });
+      snapCob = { cubre: cob.cubre, pct: cob.pct, tope: cob.tope, aCargoSocio: cob.aCargoSocio, motivo: cob.motivo, calculadoEn: ahora };
+    } catch(e) {}
+
     const atenRef = await db.collection('atenciones').add({
       prestadorId: uid,
       prestadorNombre: (p.nombre||'') + ' ' + (p.apellido||''),
@@ -1226,9 +1297,10 @@ async function vetGuardarAtencion(mascotaId, mascotaNombre) {
       tipo: tipo,
       diagnostico: diagnostico,
       tratamiento: tratamiento,
-      monto: 0,
+      monto: monto,
       adjuntos: adjuntos,
       estado: 'pendiente',
+      cobertura: snapCob,
       fecha: TS()
     });
 
