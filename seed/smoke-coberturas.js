@@ -129,5 +129,32 @@ console.log('8) Reintegro % simple (medicamentos 25%):');
   eq(r.aCargoSocio, 7500, 'a cargo del socio = 7500');
 }
 
+// ── 9) Plan BÁSICO ($40.000, ave/otros) = plan de acceso (confirmado Lucas 27/07) ──
+console.log('9) Plan Básico (acceso):');
+{
+  const alta = U(2020, 1, 1), fecha = U(2026, 6, 1);
+  const m = masc('MEDIPaw Básico', alta);
+  // consulta CUBIERTA (tope $35.000, 100%)
+  const c1 = MC.cobertura(m, 'consulta', 20000, { fechaMs: fecha, atenciones: [] });
+  eq(c1.cubre, true, 'Básico: consulta cubierta');
+  eq(c1.reintegro, 20000, 'consulta $20k < tope → reintegro pleno 20k');
+  eq(MC.cobertura(m, 'consulta', 50000, { fechaMs: fecha, atenciones: [] }).reintegro, 35000, 'consulta $50k → capado a tope 35k');
+  // medicamentos 25%, traslado/vetOnline/descuentos/legal incluidos
+  eq(MC.cobertura(m, 'medicamentos', 8000, { fechaMs: fecha, atenciones: [] }).reintegro, 2000, 'Básico: medicamentos 25% de 8k');
+  eq(MC.reglaCobertura('vetOnline', 'MEDIPaw Básico') !== null, true, 'Básico incluye veterinario online');
+  eq(MC.reglaCobertura('descuentos', 'MEDIPaw Básico') !== null, true, 'Básico incluye descuentos');
+  // cirugía y demás clínicas NO incluidas
+  const cir = MC.cobertura(m, 'cirugia', 300000, { fechaMs: fecha, atenciones: [] });
+  eq(cir.cubre, false, 'Básico: cirugía NO incluida');
+  ok(/no incluye/i.test(cir.motivo), 'motivo cirugía dice "no incluye"', cir.motivo);
+  eq(MC.reglaCobertura('internacion', 'MEDIPaw Básico'), null, 'Básico no incluye internación');
+  eq(MC.reglaCobertura('vacunas', 'MEDIPaw Básico'), null, 'Básico no incluye vacunas');
+  // post-cupo de consulta (2 usadas este año) → precio socio 25%
+  const dos = [{ fecha: U(2026, 2, 1) }, { fecha: U(2026, 4, 1) }];
+  const post = MC.cobertura(m, 'consulta', 40000, { fechaMs: fecha, atenciones: dos });
+  ok(/cupo anual agotado/i.test(post.motivo), 'Básico consulta post-cupo → precio socio', post.motivo);
+  eq(post.reintegro, 10000, 'post-cupo = 25% de 40k = 10k');
+}
+
 console.log('\n=== ' + (fail ? 'FALLÓ (' + fail + ')' : 'TODO VERDE') + ' · ' + pass + ' asserts OK, ' + fail + ' fallidos ===\n');
 process.exit(fail ? 1 : 0);
