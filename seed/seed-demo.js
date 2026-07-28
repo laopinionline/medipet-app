@@ -127,10 +127,13 @@ const ATENCIONES = [
   { id: 'DEMO-aten-perro-03', mascotaId: 'DEMO-perro-01', tipo: 'consulta', fecha: '2026-07-10T10:15:00-03:00',
     diagnostico: 'Otitis leve en oído derecho.', tratamiento: 'Limpieza + gotas óticas 2 veces/día por 7 días. Control en 10 días.',
     adjuntos: [], monto: 25000, estado: 'rechazado' },
-  // Michi (DEMO-gato-01): 1 atención — sin reintegro (monto 0)
+  // Michi (DEMO-gato-01): consulta (sin reintegro) + 1 vacuna → 1 de 5 del cupo Joven usada (Cobertura: "quedan 4").
   { id: 'DEMO-aten-gato-01', mascotaId: 'DEMO-gato-01', tipo: 'consulta', fecha: '2026-07-12T09:45:00-03:00',
     diagnostico: 'Primera consulta de cachorro — buen estado general.', tratamiento: 'Desparasitación interna. Se inicia plan de vacunación.',
     adjuntos: [], monto: 0, estado: 'pagado' },
+  { id: 'DEMO-aten-gato-02', mascotaId: 'DEMO-gato-01', tipo: 'vacunas', fecha: '2026-07-18T10:30:00-03:00',
+    diagnostico: 'Vacunación triple felina (1ª dosis).', tratamiento: 'Vacuna aplicada. Próxima dosis en 21 días.',
+    adjuntos: [], monto: 12000, estado: 'pendiente' },
   // Pipo (DEMO-ave-01): SIN atenciones → empty state de Historia.
 ];
 
