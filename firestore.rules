@@ -215,6 +215,18 @@ service cloud.firestore {
     }
 
     // ══════════════════════════════════════
+    // ══  CARTILLA (directorio informativo) ══
+    // ══════════════════════════════════════
+    // Directorio de prestadores para el socio. NO vinculado a mascotas/atenciones (informativo puro).
+    // Lectura: cualquier autenticado (el filtro estado=='visible' lo hace la QUERY del socio; el admin ve todo).
+    // Escritura (alta/edición/ocultar/baja): SOLO admin. `estado` no se filtra en la regla (es un directorio público
+    // dentro de la app, sin datos sensibles: nombre/especialidad/dirección/teléfono/horarios de prestadores).
+    match /cartilla/{id} {
+      allow get, list: if request.auth != null;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // ══════════════════════════════════════
     // ══  CATCH-ALL: DENEGAR              ══
     // ══════════════════════════════════════
     // Cualquier colección no listada arriba queda bloqueada.

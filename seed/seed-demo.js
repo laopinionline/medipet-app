@@ -142,6 +142,19 @@ const CASO_CLINICO_DECOY = { id: 'DEMO-caso-01', fecha: '2026-07-10T10:00:00-03:
   prioridadInterna: 'media', notasVet: 'SEÑUELO N3 — nota clínica interna del vet. El titular NO debe poder leer esto.',
   tomadoPor: 'demo-vet-0001' };
 
+// CARTILLA: directorio informativo de prestadores (no vinculado a mascotas). 4 fichas: 2 localidades (Pergamino/Colón)
+// y 1 'oculto' (DEMO-cart-04) → sirve para verificar el filtro estado=='visible' de la query del socio.
+const CARTILLA = [
+  { id: 'DEMO-cart-01', nombre: 'Clínica Veterinaria San Roque', especialidad: 'Clínica general y guardia 24hs',
+    direccion: 'Av. Illia 1234', localidad: 'Pergamino', telefono: '2477412345', horarios: 'Lun a Vie 9-19 · Sáb 9-13', estado: 'visible' },
+  { id: 'DEMO-cart-02', nombre: 'Dra. Marta Giménez', especialidad: 'Dermatología',
+    direccion: 'San Martín 567', localidad: 'Pergamino', telefono: '2477498765', horarios: 'Mar y Jue 14-19 (con turno)', estado: 'visible' },
+  { id: 'DEMO-cart-03', nombre: 'Centro Veterinario del Norte', especialidad: 'Diagnóstico por imagen',
+    direccion: 'Ruta 8 km 220', localidad: 'Colón', telefono: '2477455555', horarios: 'Lun a Sáb 8-20', estado: 'visible' },
+  { id: 'DEMO-cart-04', nombre: 'Consultorio en revisión', especialidad: 'Oftalmología',
+    direccion: 'Belgrano 890', localidad: 'Colón', telefono: '2477400000', horarios: 'A confirmar', estado: 'oculto' },
+];
+
 // ── Helpers de escritura (upsert) ────────────────────────────────────────────
 async function upsertAuthUser(u) {
   let exists = false;
@@ -217,9 +230,20 @@ async function setDoc(pathStr, data, label) {
     tomadoPor: CASO_CLINICO_DECOY.tomadoPor, tomadoEn: ts(CASO_CLINICO_DECOY.fecha),
   }, '(señuelo — el titular NO debe poder leerlo)');
 
+  // 6) cartilla (directorio informativo de prestadores). 3 visibles (2 localidades) + 1 oculto (verifica el filtro).
+  console.log('\n— cartilla (directorio) —');
+  for (const c of CARTILLA) {
+    await setDoc(`cartilla/${c.id}`, {
+      nombre: c.nombre, especialidad: c.especialidad, direccion: c.direccion, localidad: c.localidad,
+      telefono: c.telefono, horarios: c.horarios, estado: c.estado,
+      creadoEn: ts('2026-07-28T10:00:00-03:00'), actualizadoEn: ts('2026-07-28T10:00:00-03:00'),
+    }, `${c.localidad} · ${c.nombre} · ${c.estado}`);
+  }
+
   console.log(`\n=== ${WRITE ? 'ESCRITO' : 'DRY-RUN (nada escrito; correr con --write)'} ===`);
   console.log(`Titular: ${USERS.titular.email} · Admin: ${USERS.admin.email} · Vet: ${USERS.vet.email}`);
   console.log(`Mascotas: ${MASCOTAS.map(m => `${m.nombre}(${m.plan.replace('MEDIPaw ', '')}/${m.pesos.length}pts)`).join(' · ')}`);
   console.log(`Atenciones: ${ATENCIONES.length} (Firulais 3 · Michi 1 · Pipo 0) · casos_clinico señuelo: 1`);
+  console.log(`Cartilla: ${CARTILLA.length} (${CARTILLA.filter(c => c.estado === 'visible').length} visibles · ${CARTILLA.filter(c => c.estado === 'oculto').length} oculto)`);
   process.exit(0);
 })().catch(e => { console.error('ERROR:', e.message); process.exit(1); });

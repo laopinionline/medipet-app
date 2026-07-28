@@ -197,10 +197,10 @@ function getRoles(u){
 }
 
 // ── Estado único ──
-const S = { view:'boot', sub:'home', cred:null, mascotaSel:0, deferredPrompt:null, caso:null, chequeo:null, historia:null, mismascotas:null };
+const S = { view:'boot', sub:'home', cred:null, mascotaSel:0, deferredPrompt:null, caso:null, chequeo:null, historia:null, mismascotas:null, cartilla:null };
 // Dispatcher del sub-view: home | caso | cuenta | alta (embudo) | chequeo (peso) | historia (atenciones) | mismascotas (planes+servicios)
-function render(){ if(S.sub==='caso') casoView(); else if(S.sub==='cuenta') cuentaView(); else if(S.sub==='alta') altaView(); else if(S.sub==='chequeo') chequeoView(); else if(S.sub==='historia') historiaView(); else if(S.sub==='mismascotas') misMascotasView(); else homeView(); }
-function volverHome(){ S.sub='home'; S.caso=null; S.alta=null; S.chequeo=null; S.historia=null; S.mismascotas=null; render(); }
+function render(){ if(S.sub==='caso') casoView(); else if(S.sub==='cuenta') cuentaView(); else if(S.sub==='alta') altaView(); else if(S.sub==='chequeo') chequeoView(); else if(S.sub==='historia') historiaView(); else if(S.sub==='mismascotas') misMascotasView(); else if(S.sub==='cartilla') cartillaView(); else homeView(); }
+function volverHome(){ S.sub='home'; S.caso=null; S.alta=null; S.chequeo=null; S.historia=null; S.mismascotas=null; S.cartilla=null; render(); }
 
 // ── Colección mascotas (fuente de verdad; reusa el núcleo) ──
 async function mascGetByTitular(uid){
@@ -300,6 +300,7 @@ function homeView(){
     bloqueHistoria(m) +
     bloqueCuota(c) +
     bloqueMisMascotas(c) +
+    bloqueCartilla() +
     bloqueInstalar() +
     bloqueFeed();
 }
@@ -893,6 +894,49 @@ function misMascotasView(){
   const err=S.mismascotas.err?`<p class="errmsg">${esc(S.mismascotas.err)}</p>`:'';
   const cuerpo = ms.length ? ms.map(m=>cardMisMascota(m, atByMasc[m.mascotaId]||[])).join('')
     : `<div class="seccion"><p style="font-size:.85rem;color:var(--suave);">Todavía no tenés mascotas. Agregá la primera desde el inicio.</p></div>`;
+  document.getElementById('home').innerHTML = back + titulo + err + cuerpo;
+}
+
+// Cartilla — directorio informativo de prestadores (solo lectura). Query estado=='visible' (single-field → sin índice);
+// agrupa por localidad en el cliente. tel: link para discar. NO vinculada a mascotas.
+function bloqueCartilla(){
+  return `<button class="tile" onclick="abrirCartilla()">
+    <div class="t-ico">🏥</div>
+    <div class="t-body"><div class="t-title">Cartilla de prestadores</div><div class="t-sub">Veterinarias y especialistas cerca tuyo</div></div>
+    <span class="t-arrow">›</span>
+  </button>`;
+}
+function abrirCartilla(){ S.sub='cartilla'; S.cartilla=null; render(); }
+async function cargarCartilla(){
+  try{
+    const snap=await db.collection('cartilla').where('estado','==','visible').get(); // filtro en la QUERY (el oculto no viaja)
+    S.cartilla={lista:snap.docs.map(d=>d.data())};
+  }catch(e){ S.cartilla={lista:[], err:'No pudimos cargar la cartilla.'}; }
+  cartillaView();
+}
+function itemCartilla(p){
+  const tel=String(p.telefono||'').replace(/[^0-9+]/g,''); // sanitizado para el href tel:
+  return `<div style="background:white;border:1px solid rgba(26,95,180,.08);border-radius:14px;padding:12px 14px;margin-bottom:10px;box-shadow:0 2px 8px rgba(26,95,180,.04);">
+    <div style="font-size:.92rem;font-weight:800;color:var(--noche);">${esc(p.nombre||'—')}</div>
+    ${p.especialidad?`<div style="font-size:.78rem;color:var(--azul);font-weight:700;margin-top:1px;">${esc(p.especialidad)}</div>`:''}
+    ${p.direccion?`<div style="font-size:.8rem;color:var(--texto);margin-top:6px;">📍 ${esc(p.direccion)}</div>`:''}
+    ${p.horarios?`<div style="font-size:.78rem;color:var(--suave);margin-top:2px;">🕑 ${esc(p.horarios)}</div>`:''}
+    ${tel?`<a href="tel:${esc(tel)}" style="display:inline-block;font-size:.82rem;color:var(--azul);font-weight:700;margin-top:6px;text-decoration:none;">📞 ${esc(p.telefono)}</a>`:''}
+  </div>`;
+}
+function cartillaView(){
+  const back=`<button class="link-btn" style="margin-bottom:10px;display:inline-block;" onclick="volverHome()">‹ Volver</button>`;
+  const titulo=`<div class="stit" style="margin:4px 2px 8px;text-transform:none;font-size:1rem;">Cartilla de prestadores</div>`;
+  if(!S.cartilla){ document.getElementById('home').innerHTML = back + titulo + `<div class="seccion"><p style="font-size:.85rem;color:var(--suave);">Cargando…</p></div>`; cargarCartilla(); return; }
+  const err=S.cartilla.err?`<p class="errmsg">${esc(S.cartilla.err)}</p>`:'';
+  const lista=S.cartilla.lista||[];
+  if(!lista.length){ document.getElementById('home').innerHTML = back + titulo + err + `<div class="seccion"><p style="font-size:.85rem;color:var(--suave);">Estamos sumando prestadores.</p></div>`; return; }
+  const porLoc={};
+  lista.forEach(p=>{ const l=p.localidad||'Otras'; (porLoc[l]=porLoc[l]||[]).push(p); });
+  const cuerpo=Object.keys(porLoc).sort((a,b)=>a.localeCompare(b)).map(loc=>{
+    const items=porLoc[loc].slice().sort((a,b)=>String(a.nombre||'').localeCompare(String(b.nombre||''))).map(itemCartilla).join('');
+    return `<div class="stit" style="margin:10px 2px 6px;text-transform:none;font-size:.85rem;">${esc(loc)}</div>${items}`;
+  }).join('');
   document.getElementById('home').innerHTML = back + titulo + err + cuerpo;
 }
 

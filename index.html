@@ -2032,6 +2032,7 @@ function switchTab(tab,btn){
   if(tab==='proveedores')cargarProveedoresAdmin();
   if(tab==='cuotas')cargarCuotasAdmin();
   if(tab==='pagos')cargarAtencionesAdmin();
+  if(tab==='cartilla')cargarCartillaAdmin();
 }
 
 async function cargarDashboard(){
@@ -2256,6 +2257,69 @@ async function cambiarEstadoProveedor(id,estado){
   cargarProveedoresAdmin();
 }
 
+// ── CARTILLA (directorio de prestadores) — CRUD admin. Colección `cartilla`; escritura solo admin (reglas). ──
+function toggleFormCartilla(show){ const f=document.getElementById('formCartilla'); if(f) f.style.display = show?'block':'none'; }
+function nuevaCartilla(){
+  ['cartId','cartNombre','cartEspecialidad','cartDireccion','cartLocalidad','cartTelefono','cartHorarios'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  const es=document.getElementById('cartEstado'); if(es)es.value='visible';
+  const t=document.getElementById('cartFormTit'); if(t)t.textContent='Nuevo prestador';
+  setMsg('cartMsg','',true); toggleFormCartilla(true);
+}
+async function cargarCartillaAdmin(){
+  const lista=document.getElementById('listaCartilla'); if(!lista)return;
+  lista.innerHTML='<p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p>';
+  try{
+    const snap=await db.collection('cartilla').orderBy('localidad').get(); // el admin ve TODO (visible + oculto)
+    if(snap.empty){ lista.innerHTML='<p style="color:#5a6a8a;font-size:.85rem;">No hay prestadores en la cartilla.</p>'; return; }
+    lista.innerHTML=snap.docs.map(d=>{
+      const p=d.data(); const vis=p.estado!=='oculto'; const col=vis?'#22c55e':'#9ca3af';
+      return `<div class="uitem">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+          <div style="flex:1;">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><strong style="font-size:.95rem;">${esc(p.nombre||'')}</strong>${p.especialidad?`<span style="font-size:.72rem;color:var(--azul);">${esc(p.especialidad)}</span>`:''}</div>
+            <div style="font-size:.78rem;color:#5a6a8a;">${esc(p.localidad||'')}${p.direccion?' · '+esc(p.direccion):''}</div>
+            ${p.telefono?`<div style="font-size:.78rem;color:#5a6a8a;">${esc(p.telefono)}</div>`:''}
+            ${p.horarios?`<div style="font-size:.72rem;color:#9ca3af;">${esc(p.horarios)}</div>`:''}
+          </div>
+          <span style="background:${col};color:white;font-size:.65rem;font-weight:700;padding:3px 9px;border-radius:100px;white-space:nowrap;flex-shrink:0;">${vis?'VISIBLE':'OCULTO'}</span>
+        </div>
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button onclick="editarCartilla('${d.id}')" class="bmini">Editar</button>
+          ${vis?`<button onclick="cambiarEstadoCartilla('${d.id}','oculto')" class="bmini brojo">Ocultar</button>`:`<button onclick="cambiarEstadoCartilla('${d.id}','visible')" class="bmini bverde">Mostrar</button>`}
+          <button onclick="eliminarCartilla('${d.id}')" class="bmini brojo">Eliminar</button>
+        </div>
+      </div>`;
+    }).join('');
+  }catch(e){ lista.innerHTML='<p style="color:#ef4444;">Error: '+e.message+'</p>'; }
+}
+async function guardarCartilla(){
+  const id=v('cartId'), nombre=v('cartNombre'), localidad=v('cartLocalidad');
+  setMsg('cartMsg','',true);
+  if(!nombre){ setMsg('cartMsg','Completa el nombre.',false); return; }
+  if(!localidad){ setMsg('cartMsg','Completa la localidad.',false); return; }
+  const datos={ nombre, especialidad:v('cartEspecialidad'), direccion:v('cartDireccion'), localidad,
+    telefono:v('cartTelefono'), horarios:(document.getElementById('cartHorarios')?.value||'').trim(),
+    estado:(document.getElementById('cartEstado')?.value||'visible'), actualizadoEn:TS() };
+  try{
+    if(id){ await db.collection('cartilla').doc(id).update(datos); }
+    else{ datos.creadoEn=TS(); await db.collection('cartilla').add(datos); }
+    toast('Cartilla actualizada.'); toggleFormCartilla(false); cargarCartillaAdmin();
+  }catch(e){ setMsg('cartMsg','Error: '+e.message,false); }
+}
+async function editarCartilla(id){
+  try{
+    const d=await db.collection('cartilla').doc(id).get(); if(!d.exists)return; const p=d.data();
+    const set=(k,val)=>{const e=document.getElementById(k);if(e)e.value=(val==null?'':val);};
+    set('cartId',id); set('cartNombre',p.nombre); set('cartEspecialidad',p.especialidad); set('cartDireccion',p.direccion);
+    set('cartLocalidad',p.localidad); set('cartTelefono',p.telefono); set('cartHorarios',p.horarios);
+    const es=document.getElementById('cartEstado'); if(es)es.value=(p.estado||'visible');
+    const t=document.getElementById('cartFormTit'); if(t)t.textContent='Editar prestador';
+    setMsg('cartMsg','',true); toggleFormCartilla(true);
+  }catch(e){}
+}
+async function cambiarEstadoCartilla(id,estado){ try{ await db.collection('cartilla').doc(id).update({estado, actualizadoEn:TS()}); }catch(e){} cargarCartillaAdmin(); }
+async function eliminarCartilla(id){ if(!confirm('¿Eliminar este prestador de la cartilla?'))return; try{ await db.collection('cartilla').doc(id).delete(); }catch(e){} cargarCartillaAdmin(); }
+
 // ══════════════════════════════════════════════
 // ══  RENDER PRINCIPAL (por rol activo)        ══
 // ══════════════════════════════════════════════
@@ -2459,6 +2523,7 @@ function renderPanel(data){
       <button class="tab" onclick="switchTab('proveedores',this)">Prestadores</button>
       <button class="tab" onclick="switchTab('cuotas',this)">Cuotas</button>
       <button class="tab" onclick="switchTab('pagos',this)">Pagos</button>
+      <button class="tab" onclick="switchTab('cartilla',this)">Cartilla</button>
     </div>
     <div id="tab-cuotas" class="tab-content" style="display:none;">
       <div class="seccion">
@@ -2571,6 +2636,38 @@ function renderPanel(data){
     </div>
     <div id="tab-pagos" class="tab-content" style="display:none;">
       <div class="seccion"><div class="stit">Atenciones y pagos</div><div id="listaAtenciones"><p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p></div></div>
+    </div>
+    <div id="tab-cartilla" class="tab-content" style="display:none;">
+      <div class="seccion">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+          <div class="stit" style="margin-bottom:0;">Cartilla de prestadores</div>
+          <button onclick="nuevaCartilla()" class="bmini" style="background:#e0f2fe;color:#0369a1;font-size:.8rem;padding:7px 14px;">+ Nuevo</button>
+        </div>
+        <div id="formCartilla" style="display:none;" class="form-box">
+          <p style="font-size:.75rem;font-weight:800;color:var(--noche);margin-bottom:10px;text-transform:uppercase;" id="cartFormTit">Nuevo prestador</p>
+          <div class="fstack">
+            <input type="hidden" id="cartId">
+            <input type="text" id="cartNombre" placeholder="Nombre / razon social *" class="input-field">
+            <input type="text" id="cartEspecialidad" placeholder="Especialidad" class="input-field">
+            <div class="frow">
+              <input type="text" id="cartDireccion" placeholder="Direccion" class="input-field">
+              <input type="text" id="cartLocalidad" placeholder="Localidad *" class="input-field">
+            </div>
+            <input type="tel" id="cartTelefono" placeholder="Telefono" class="input-field">
+            <textarea id="cartHorarios" placeholder="Horarios (texto libre)" class="input-field" style="height:52px;resize:vertical;"></textarea>
+            <select id="cartEstado" class="input-field">
+              <option value="visible">Visible en la app</option>
+              <option value="oculto">Oculto</option>
+            </select>
+            <div style="display:flex;gap:8px;">
+              <button onclick="guardarCartilla()" class="btn-primary" style="flex:1;">Guardar</button>
+              <button onclick="toggleFormCartilla(false)" class="bmini brojo" style="padding:10px 16px;">X</button>
+            </div>
+            <p id="cartMsg" style="font-size:.8rem;"></p>
+          </div>
+        </div>
+        <div id="listaCartilla"><p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p></div>
+      </div>
     </div>`;
     setTimeout(cargarDashboard,300);
   }
