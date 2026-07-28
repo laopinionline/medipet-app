@@ -197,10 +197,10 @@ function getRoles(u){
 }
 
 // ── Estado único ──
-const S = { view:'boot', sub:'home', cred:null, mascotaSel:0, deferredPrompt:null, caso:null, chequeo:null, historia:null };
+const S = { view:'boot', sub:'home', cred:null, mascotaSel:0, deferredPrompt:null, caso:null, chequeo:null, historia:null, mismascotas:null };
 // Dispatcher del sub-view: home | caso | cuenta | alta (embudo) | chequeo (peso) | historia (atenciones) | mismascotas (planes+servicios)
 function render(){ if(S.sub==='caso') casoView(); else if(S.sub==='cuenta') cuentaView(); else if(S.sub==='alta') altaView(); else if(S.sub==='chequeo') chequeoView(); else if(S.sub==='historia') historiaView(); else if(S.sub==='mismascotas') misMascotasView(); else homeView(); }
-function volverHome(){ S.sub='home'; S.caso=null; S.alta=null; S.chequeo=null; S.historia=null; render(); }
+function volverHome(){ S.sub='home'; S.caso=null; S.alta=null; S.chequeo=null; S.historia=null; S.mismascotas=null; render(); }
 
 // ── Colección mascotas (fuente de verdad; reusa el núcleo) ──
 async function mascGetByTitular(uid){
@@ -789,7 +789,62 @@ function bloqueMisMascotas(c){
     <span class="t-arrow">›</span>
   </button>`;
 }
-function abrirMisMascotas(){ S.sub='mismascotas'; render(); }
+function abrirMisMascotas(){ S.sub='mismascotas'; S.mismascotas=null; render(); }
+// Carga las atenciones del titular (UNA query: where titularUid==uid → la regla lo exige) agrupadas por mascotaId,
+// para la sección Cobertura de cada mascota. Reusa el patrón/regla de Historia. NO duplica el conteo: el conteo por
+// prestación + ventana de aniversario lo hace el MOTOR dentro de cobertura(); la UI solo muestra.
+async function cargarCoberturaMisMascotas(){
+  const uid=(S.cred&&S.cred.u)?S.cred.u.uid:null;
+  if(!uid){ S.mismascotas={atByMasc:{}}; misMascotasView(); return; }
+  try{
+    const snap=await db.collection('atenciones').where('titularUid','==',uid).get();
+    const atByMasc={};
+    snap.docs.forEach(d=>{ const a=d.data(); const k=a.mascotaId||''; (atByMasc[k]=atByMasc[k]||[]).push(a); });
+    S.mismascotas={atByMasc};
+  }catch(e){ S.mismascotas={atByMasc:{}, err:'No pudimos cargar la cobertura.'}; }
+  misMascotasView();
+}
+function fmtFechaMs(ms){ const d=new Date(ms); return d.getUTCDate()+'/'+(d.getUTCMonth()+1)+'/'+d.getUTCFullYear(); }
+// Sufijo de reintegro (tope/%) desde la regla efectiva del plan. pct pleno (1.0) → no muestra "%".
+function sufReintegro(r){
+  if(r.pct!=null && r.pct<1) return r.tope!=null ? ` · ${Math.round(r.pct*100)}% hasta $${r.tope.toLocaleString('es-AR')}` : ` · ${Math.round(r.pct*100)}% off`;
+  if(r.tope!=null) return ` · hasta $${r.tope.toLocaleString('es-AR')}`;
+  return '';
+}
+// Una prestación del plan como fila. El MOTOR decide (cupo/carencia/límite), la UI muestra. '' si el plan no la incluye.
+function lineaCobertura(m, key, atsMasc, nowMs){
+  const regla=MC.reglaCobertura(key, m.plan); if(!regla) return '';
+  const label=(MC.ETIQUETAS_PRESTACION && MC.ETIQUETAS_PRESTACION[key]) || key;
+  let estado;
+  if(regla.cupoAnual==null){
+    estado='sin límite';
+  }else{
+    const car=MC.carenciaCumplida(m, key, nowMs);
+    if(!car.cumplida){
+      estado = car.sinAlta ? 'sin fecha de alta' : ('disponible desde el '+fmtFechaMs(car.desdeMs));
+    }else{
+      const cob=MC.cobertura(m, key, 0, { fechaMs:nowMs, atenciones:atsMasc });
+      estado = (cob.restantes===0)
+        ? 'cupo del año usado · próxima con 25% off'
+        : ('quedan '+cob.restantes+' de '+regla.cupoAnual+' este año'+sufReintegro(regla));
+    }
+  }
+  return `<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:5px 0;border-top:1px solid var(--azul-pale);">
+    <span style="font-size:.8rem;">${esc(label)}</span><span style="font-size:.72rem;color:var(--suave);text-align:right;">${esc(estado)}</span>
+  </div>`;
+}
+// Sección "Cobertura y consumos" por mascota (colapsable — ahorra espacio en la card). Solo con plan de catálogo.
+function seccionCobertura(m, atsMasc){
+  const cob=MC.coberturaMascota(m);
+  if(!cob.ok) return `<div style="font-size:.8rem;color:var(--suave);margin-top:12px;">Sin plan activo — sin cobertura vigente.</div>`;
+  const now=Date.now(); const altaMs=tms(m.creadoEn)||null;
+  const vent=(altaMs!=null)?MC.ventanaAniversario(altaMs, now):null;
+  const ancla=vent?`<div style="font-size:.72rem;color:var(--suave);margin:2px 0 6px;">Tu año de cobertura renueva el <strong>${esc(fmtFechaMs(vent.fin))}</strong>.</div>`:'';
+  const lineas=Object.keys(MC.COBERTURAS).map(k=>lineaCobertura(m,k,atsMasc||[],now)).filter(Boolean).join('');
+  return `<details style="margin-top:12px;"><summary style="font-size:.68rem;font-weight:800;letter-spacing:.5px;color:var(--suave);text-transform:uppercase;cursor:pointer;">Cobertura y consumos</summary>
+    <div style="margin-top:8px;">${ancla}${lineas}</div>
+  </details>`;
+}
 // Iconos por servicio (mismo mapeo que la ficha pública /m/). Fallback • si el key es desconocido.
 const SRV_ICONO = { salud:'🩺', descuento:'🏷️', gps:'📍', tienda:'🛒', vacuna:'💉' };
 // Un servicio como fila. mode: 'incluido' (cobertura real) | 'requiere' (activo pero sin plan de catálogo) | 'disponible'.
@@ -806,8 +861,8 @@ function itemServicio(s, mode){
     <span style="${chip}font-size:.62rem;font-weight:800;padding:2px 9px;border-radius:100px;white-space:nowrap;">${txt}</span>
   </div>`;
 }
-// Card por mascota: cabecera (nombre/raza/plan/cuota/chip estado, mismo lenguaje del carnet del header) + servicios.
-function cardMisMascota(m){
+// Card por mascota: cabecera + servicios + sección Cobertura y consumos (colapsable). `atsMasc` = atenciones de esta mascota.
+function cardMisMascota(m, atsMasc){
   const cob = MC.coberturaMascota(m); const cuota = MC.planCuota(m.plan);
   const servicios = Array.isArray(m.servicios) ? m.servicios : [];
   const incluidos = servicios.filter(s=>s && s.estado==='activo');       // 'oculto' NO se renderiza
@@ -826,15 +881,19 @@ function cardMisMascota(m){
     const secDisp = disponibles.length ? `<div style="font-size:.68rem;font-weight:800;letter-spacing:.5px;color:var(--suave);text-transform:uppercase;margin-top:12px;">Disponibles</div>${disponibles.map(s=>itemServicio(s,'disponible')).join('')}` : '';
     cuerpo = (secIncl + secDisp) || `<div style="font-size:.8rem;color:var(--suave);margin-top:10px;">Tus servicios se están configurando.</div>`;
   }
-  return `<div class="seccion" style="margin-bottom:12px;">${head}${cuerpo}</div>`;
+  return `<div class="seccion" style="margin-bottom:12px;">${head}${cuerpo}${seccionCobertura(m, atsMasc)}</div>`;
 }
 function misMascotasView(){
   const back=`<button class="link-btn" style="margin-bottom:10px;display:inline-block;" onclick="volverHome()">‹ Volver</button>`;
-  const ms=(S.cred&&S.cred.mascotas)||[];
   const titulo=`<div class="stit" style="margin:4px 2px 8px;text-transform:none;font-size:1rem;">Mis mascotas y servicios</div>`;
-  const cuerpo = ms.length ? ms.map(cardMisMascota).join('')
+  // Las atenciones (para Cobertura) se cargan una vez y quedan en S.mismascotas.atByMasc. Mientras, loading.
+  if(!S.mismascotas){ document.getElementById('home').innerHTML = back + titulo + `<div class="seccion"><p style="font-size:.85rem;color:var(--suave);">Cargando…</p></div>`; cargarCoberturaMisMascotas(); return; }
+  const ms=(S.cred&&S.cred.mascotas)||[];
+  const atByMasc=S.mismascotas.atByMasc||{};
+  const err=S.mismascotas.err?`<p class="errmsg">${esc(S.mismascotas.err)}</p>`:'';
+  const cuerpo = ms.length ? ms.map(m=>cardMisMascota(m, atByMasc[m.mascotaId]||[])).join('')
     : `<div class="seccion"><p style="font-size:.85rem;color:var(--suave);">Todavía no tenés mascotas. Agregá la primera desde el inicio.</p></div>`;
-  document.getElementById('home').innerHTML = back + titulo + cuerpo;
+  document.getElementById('home').innerHTML = back + titulo + err + cuerpo;
 }
 
 // 9) Instalar app (solo si no está instalada y hay prompt disponible).
