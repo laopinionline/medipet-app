@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "mcp__firebase__firebase_get_security_rules"
+      "mcp__firebase__firebase_get_security_rules",
+      "Bash(diff *)"
     ]
   },
   "enabledMcpjsonServers": [
