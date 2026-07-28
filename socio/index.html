@@ -680,8 +680,21 @@ async function cargarAtencionesHistoria(){
 
 function itemAtencion(a){
   const monto=Number(a.monto)||0;
-  const reintegro = monto>0
-    ? `<div style="font-size:.78rem;color:var(--suave);margin-top:6px;">Reintegro: $${monto.toLocaleString('es-AR')} — ${esc(estadoReintegro(a.estado))}</div>` : '';
+  // Historia v2: si la atención trae snapshot cobertura{} (Fase 2), mostramos el REINTEGRO real (monto − aCargoSocio),
+  // no el monto crudo. reintegro 0 → "Sin reintegro — [motivo]" sin estado de pago. Atenciones viejas (sin cobertura{})
+  // → comportamiento intacto (monto + estado). esc() en todo, incl. cobertura.motivo (texto del snapshot).
+  const cob=a.cobertura;
+  const tieneCob = cob && typeof cob==='object' && typeof cob.aCargoSocio==='number';
+  let reintegro='';
+  if(tieneCob){
+    const rein=Math.max(0, monto-(Number(cob.aCargoSocio)||0));
+    const motivo=cob.motivo?esc(String(cob.motivo)):'';
+    reintegro = rein>0
+      ? `<div style="font-size:.78rem;color:var(--suave);margin-top:6px;">Reintegro: $${rein.toLocaleString('es-AR')} de $${monto.toLocaleString('es-AR')} — ${esc(estadoReintegro(a.estado))}</div>`
+      : `<div style="font-size:.78rem;color:var(--suave);margin-top:6px;">Sin reintegro${motivo?` — ${motivo}`:''}</div>`;
+  } else if(monto>0){
+    reintegro = `<div style="font-size:.78rem;color:var(--suave);margin-top:6px;">Reintegro: $${monto.toLocaleString('es-AR')} — ${esc(estadoReintegro(a.estado))}</div>`;
+  }
   const adj = (Array.isArray(a.adjuntos) && a.adjuntos.length)
     ? `<div style="font-size:.74rem;color:var(--suave);margin-top:4px;">📎 ${a.adjuntos.length} adjunto${a.adjuntos.length>1?'s':''}</div>` : '';
   return `<div style="background:white;border:1px solid rgba(26,95,180,.08);border-radius:14px;padding:12px 14px;margin-bottom:10px;box-shadow:0 2px 8px rgba(26,95,180,.04);">
