@@ -63,13 +63,7 @@ const USERS = {
 };
 
 // Servicios estándar (mismo template que la ficha pública; para que el carnet demo se vea completo).
-const SERVICIOS_STD = [
-  { key: 'salud',     nombre: 'Cobertura de salud',      detalle: 'Segun tu plan MEDIPaw',              estado: 'activo' },
-  { key: 'descuento', nombre: 'Descuento 10%',           detalle: 'En comercios adheridos',            estado: 'disponible' },
-  { key: 'gps',       nombre: 'GPS MEDIPaw',             detalle: 'Localizador para tu mascota',       estado: 'disponible' },
-  { key: 'tienda',    nombre: 'Tienda MEDIPaw',         detalle: 'Productos exclusivos para socios',  estado: 'disponible' },
-  { key: 'vacuna',    nombre: 'Recordatorio de vacunas', detalle: 'Te avisamos cuando toque',          estado: 'disponible' },
-];
+const SERVICIOS_STD = MC.plantillaServicios(); // fuente única: la plantilla vive en el núcleo (la misma que usa el alta /socio/)
 // Variación de Michi para verificar la lógica de la vista "Mis mascotas y servicios":
 // 2 'activo' (salud + vacuna), 1 'oculto' (gps, NO se renderiza), resto 'disponible' (descuento + tienda).
 const SERVICIOS_MICHI = SERVICIOS_STD.map(s =>

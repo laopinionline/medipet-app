@@ -393,7 +393,9 @@ async function finalizarAlta(){
     // Mascota ACTIVA; plan/cuota los pone el sistema por EDAD APROXIMADA (la regla los revalida por el bucket).
     const doc={
       mascotaId, titularUid:uid, nombre:a.nombre, especie:a.especie, edadAprox:a.edadAprox, raza:a.raza, sexo:a.sexo,
-      plan:p.plan, cuota:p.cuota, estado:'activo', foto:'', token, servicios:[], creadoEn:TS()
+      plan:p.plan, cuota:p.cuota, estado:'activo', foto:'', token,
+      servicios:(typeof MC.plantillaServicios==='function'?MC.plantillaServicios():[]), // plantilla del núcleo (fuente única); antes []
+      creadoEn:TS()
     };
     // Fecha exacta OPCIONAL: solo si el titular la cargó (refina el recálculo futuro).
     if(a.fnac){ doc.fechaNacimiento=firebase.firestore.Timestamp.fromDate(new Date(a.fnac+'T00:00:00-03:00')); }

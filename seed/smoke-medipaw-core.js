@@ -165,6 +165,15 @@ var a = JSON.stringify(C.migrarUsuario(titularActivo).docs);
 var b = JSON.stringify(C.migrarUsuario(titularActivo).docs);
 check(a === b, 'misma entrada → mismos docs (idempotente)');
 
+console.log('\n— PLANTILLA DE SERVICIOS (fuente única; el alta nace con estos 5) —');
+var srv = C.plantillaServicios();
+check(Array.isArray(srv) && srv.length === 5, '5 servicios');
+check(srv[0].key === 'salud' && srv[0].estado === 'activo', 'salud = activo');
+check(srv.filter(function (s) { return s.estado === 'disponible'; }).length === 4, 'los otros 4 = disponible');
+check(srv.every(function (s) { return s.key && s.nombre && ('detalle' in s) && s.estado; }), 'shape {key,nombre,detalle,estado}');
+srv[0].estado = 'PISADO';
+check(C.plantillaServicios()[0].estado === 'activo', 'copia fresca: mutar el resultado NO altera la plantilla');
+
 console.log('\n———');
 console.log((fail === 0 ? '✓ TODO EN VERDE' : '✗ HAY FALLOS') + ' — ' + ok + ' ok, ' + fail + ' fallos');
 process.exit(fail === 0 ? 0 : 1);
