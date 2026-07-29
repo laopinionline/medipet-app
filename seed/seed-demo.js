@@ -77,9 +77,10 @@ const SERVICIOS_MICHI = SERVICIOS_STD.map(s =>
 const MASCOTAS = [
   { key: 'perro', mascotaId: 'DEMO-perro-01', nombre: 'Firulais', especie: 'perro', edadAprox: 'adulto',
     raza: 'Mestizo', sexo: 'macho', token: 'DEMOtokenPerro0001', servicios: SERVICIOS_STD, // template estándar
-    pesos: [ // multi-punto → estado "peso actual + comparación"
+    pesos: [ // multi-punto → estado "peso actual + comparación"; el 15/6 tiene DOS registros (par del mismo día → item 1 muestra hora)
       { p: 8.0, fecha: '2026-06-01T12:00:00-03:00', origen: 'alta' },
       { p: 8.3, fecha: '2026-06-15T12:00:00-03:00', origen: 'titular' },
+      { p: 8.35, fecha: '2026-06-15T18:00:00-03:00', origen: 'titular' }, // mismo día que el anterior → verifica el item 1 (hora)
       { p: 8.6, fecha: '2026-07-01T12:00:00-03:00', origen: 'titular' },
       { p: 8.5, fecha: '2026-07-20T12:00:00-03:00', origen: 'titular' },
     ] },
