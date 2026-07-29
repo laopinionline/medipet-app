@@ -155,6 +155,7 @@ body{font-family:'Nunito',sans-serif;background:var(--fondo);color:var(--texto);
       <input type="email" id="regEmail" placeholder="Email *" class="input-field" autocomplete="email">
       <input type="tel" id="regTel" placeholder="Teléfono / WhatsApp" class="input-field">
       <input type="password" id="regPass" placeholder="Contraseña (mín. 6) *" class="input-field" autocomplete="new-password">
+      <input type="password" id="regPass2" placeholder="Repetir contraseña *" class="input-field" autocomplete="new-password">
       <button onclick="doRegistro()" class="btn-primary" id="btnRegistro">Crear mi cuenta</button>
       <p id="regError" class="errmsg"></p>
       <p style="font-size:.72rem;color:var(--suave);text-align:center;">Después vas a poder dar de alta a tu mascota: te preguntamos su especie y edad y le asignamos el plan que le corresponde.</p>
@@ -229,9 +230,11 @@ async function doLogin(){
 async function doRegistro(){
   const nombre=v('regNombre'),apellido=v('regApellido'),email=v('regEmail'),tel=v('regTel');
   const pass=document.getElementById('regPass').value;
+  const pass2=document.getElementById('regPass2').value;
   setErr('regError','');
-  if(!nombre||!email||!pass){ setErr('regError','Completá los campos con *.'); return; }
+  if(!nombre||!email||!pass||!pass2){ setErr('regError','Completá los campos con *.'); return; }
   if(pass.length<6){ setErr('regError','La contraseña necesita al menos 6 caracteres.'); return; }
+  if(pass!==pass2){ setErr('regError','Las contraseñas no coinciden.'); return; } // valida ANTES de llamar a Auth
   const btn=document.getElementById('btnRegistro'); btn.disabled=true; btn.textContent='Creando cuenta…';
   try{
     const cred=await auth.createUserWithEmailAndPassword(email,pass);
@@ -301,7 +304,6 @@ function homeView(){
     bloqueCuota(c) +
     bloqueMisMascotas(c) +
     bloqueCartilla() +
-    bloqueInstalar() +
     bloqueFeed();
 }
 function mascotaActiva(){ const ms=S.cred.mascotas||[]; return ms[S.mascotaSel]||ms[0]||null; }
@@ -940,17 +942,9 @@ function cartillaView(){
   document.getElementById('home').innerHTML = back + titulo + err + cuerpo;
 }
 
-// 9) Instalar app (solo si no está instalada y hay prompt disponible).
-function bloqueInstalar(){
-  if(esStandalone()) return '';
-  return `<div class="seccion" id="instalBlock" style="display:${S.deferredPrompt?'block':'none'};">
-    <div class="stit">Instalá MEDIPaw</div>
-    <p style="font-size:.82rem;color:var(--suave);margin-bottom:10px;">Tenela en tu teléfono, siempre a mano.</p>
-    <button class="btn-primary" onclick="instalarApp()">Agregar a mi pantalla</button>
-  </div>`;
-}
-function esStandalone(){ return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone===true; }
-async function instalarApp(){ if(!S.deferredPrompt) return; S.deferredPrompt.prompt(); try{ await S.deferredPrompt.userChoice; }catch(_){ } S.deferredPrompt=null; const b=document.getElementById('instalBlock'); if(b) b.style.display='none'; }
+// 9) [Bloque de instalación PWA quitado del home (2026-07-29): se removió el cluster completo (el builder del bloque,
+//     su helper de standalone, el handler del botón y el listener de install-prompt). manifest y SW NO se tocaron;
+//     el alcance app-only queda como decisión aparte de Lucas.]
 
 // 10) Feed (placeholder por ahora; el contenido real llega más adelante).
 function bloqueFeed(){
@@ -961,8 +955,6 @@ function bloqueFeed(){
   </div>`;
 }
 
-// ── PWA install prompt ──
-window.addEventListener('beforeinstallprompt', e=>{ e.preventDefault(); S.deferredPrompt=e; const b=document.getElementById('instalBlock'); if(b) b.style.display='block'; });
 
 /* ── Service worker (SOLO en /socio/): cache versionado por deploy + skipWaiting/clients.claim ── */
 if('serviceWorker' in navigator){
