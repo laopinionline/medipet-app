@@ -445,7 +445,7 @@ function bloqueMascotaCarnet(c, m){
     <div class="cplan">${esc(m.plan||'Sin definir')}</div>
     <div class="mrow">
       ${m.foto?`<img class="mfoto" src="${esc(m.foto)}" alt="">`:`<div class="mph">🐾</div>`}
-      <div><div class="mname">${esc(m.nombre||'—')}</div><div class="mraza">${esc(m.raza||'')}</div></div>
+      <div><div class="mname">${esc(m.nombre||'—')}</div><div class="mraza">${esc(tituloCaso(m.raza||''))}</div></div>
     </div>
     <div class="cfoot">
       <div>
@@ -574,6 +574,12 @@ function abrirChequeo(m){ S.sub='chequeo'; S.chequeo=null; render(); }
 function pesoNum(x){ const n=Number(x); return isFinite(n)?n:0; }
 function fmtKg(n){ return Number(n||0).toLocaleString('es-AR',{maximumFractionDigits:2})+' kg'; }
 function fmtFechaP(f){ const d=f&&f.toDate?f.toDate():(f&&f.seconds?new Date(f.seconds*1000):null); return d?d.toLocaleDateString('es-AR'):''; }
+function _dateOf(f){ return f&&f.toDate?f.toDate():(f&&f.seconds?new Date(f.seconds*1000):null); }
+function fmtHoraP(f){ const d=_dateOf(f); return d?d.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}):''; }
+// Días (redondeados) entre dos fechas Timestamp. null si falta alguna.
+function diasEntre(fA,fB){ const a=tms(fA),b=tms(fB); return (a&&b)?Math.round(Math.abs(a-b)/86400000):null; }
+// Título-caso por palabra: normaliza casing de un descriptor legacy para MOSTRAR ('THERIAN' → 'Therian'). El dato NO se toca.
+function tituloCaso(s){ return String(s==null?'':s).replace(/\S+/g,w=>w.charAt(0).toUpperCase()+w.slice(1).toLowerCase()); }
 function origenPeso(o){ return ({alta:'cargado en el alta', titular:'lo cargaste vos', vet:'veterinario'})[o] || (o||''); }
 
 async function cargarPesosChequeo(){
@@ -602,6 +608,9 @@ function chequeoView(){
   }
   const err = S.chequeo.err ? `<p class="errmsg">${esc(S.chequeo.err)}</p>` : '';
   const serie=S.chequeo.serie||[]; const n=serie.length;
+  // Item 1: si dos+ registros caen el MISMO día, en esos se muestra también la hora (los de días únicos, sin hora).
+  const diaCount={}; serie.forEach(p=>{ const k=fmtFechaP(p.fecha); if(k) diaCount[k]=(diaCount[k]||0)+1; });
+  function fechaMostrar(f){ const base=fmtFechaP(f); if(!base) return ''; if(diaCount[base]>=2){ const h=fmtHoraP(f); return h?(base+' '+h):base; } return base; }
   // Peso actual = último punto. Si hay ≥2, diferencia contra el anterior (gris neutro, sin semáforo).
   let actual;
   if(n){
@@ -610,11 +619,14 @@ function chequeoView(){
     if(n>=2){
       const d=Math.round((pesoNum(ult.peso)-pesoNum(serie[n-2].peso))*100)/100;
       const dTxt=(d>0?'+':'')+d.toLocaleString('es-AR',{maximumFractionDigits:2});
-      diff=`<div style="font-size:.8rem;color:var(--suave);margin-top:2px;">${esc(dTxt)} kg desde la última</div>`;
+      const gap=diasEntre(ult.fecha, serie[n-2].fecha); // Item 2: intervalo desde la medición anterior
+      const gapTxt=(gap==null)?'':((gap===0)?'el mismo día que la anterior':('hace '+gap+' día'+(gap>1?'s':'')+' desde la medición anterior'));
+      diff=`<div style="font-size:.8rem;color:var(--suave);margin-top:2px;">${esc(dTxt)} kg desde la última</div>`
+         + (gapTxt?`<div style="font-size:.74rem;color:var(--suave);margin-top:1px;">${esc(gapTxt)}</div>`:'');
     }
     actual=`<div style="text-align:center;margin:6px 0 14px;">
       <div style="font-size:2.4rem;font-weight:900;color:var(--noche);line-height:1;">${esc(fmtKg(ult.peso))}</div>
-      <div style="font-size:.76rem;color:var(--suave);margin-top:4px;">${esc(fmtFechaP(ult.fecha))}</div>
+      <div style="font-size:.76rem;color:var(--suave);margin-top:4px;">${esc(fechaMostrar(ult.fecha))}</div>
       ${diff}
     </div>`;
   } else {
@@ -626,7 +638,7 @@ function chequeoView(){
     const filas=[...serie].reverse().map(p=>`
       <div style="display:flex;justify-content:space-between;align-items:baseline;padding:8px 0;border-bottom:1px solid rgba(26,95,180,.06);">
         <span style="font-weight:800;color:var(--noche);">${esc(fmtKg(p.peso))}</span>
-        <span style="font-size:.74rem;color:var(--suave);">${esc(fmtFechaP(p.fecha))} · ${esc(origenPeso(p.origen))}</span>
+        <span style="font-size:.74rem;color:var(--suave);">${esc(fechaMostrar(p.fecha))} · ${esc(origenPeso(p.origen))}</span>
       </div>`).join('');
     hist=`<div style="margin-top:4px;"><div class="stit" style="text-transform:none;font-size:.85rem;color:var(--suave);">Historial</div>${filas}</div>`;
   }
@@ -874,7 +886,7 @@ function cardMisMascota(m, atsMasc){
   const disponibles = servicios.filter(s=>s && s.estado==='disponible');
   const chipEstado = `<span style="display:inline-flex;align-items:center;gap:5px;background:${cob.ok?'rgba(74,222,128,.18)':'rgba(248,113,113,.15)'};color:${cob.ok?'#166534':'#991b1b'};font-size:.66rem;font-weight:800;padding:3px 10px;border-radius:100px;white-space:nowrap;"><span style="width:7px;height:7px;border-radius:50%;background:${cob.ok?'#4ade80':'#f87171'};"></span>${esc(cob.chip)}</span>`;
   const head = `<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
-      <div style="min-width:0;"><div style="font-weight:800;font-size:1rem;">${esc(m.nombre||'—')}</div><div style="font-size:.75rem;color:var(--suave);">${esc(m.raza||'')}</div></div>
+      <div style="min-width:0;"><div style="font-weight:800;font-size:1rem;">${esc(m.nombre||'—')}</div><div style="font-size:.75rem;color:var(--suave);">${esc(tituloCaso(m.raza||''))}</div></div>
       ${chipEstado}
     </div>
     <div style="font-size:.82rem;margin-top:4px;"><strong>${esc(m.plan||'Sin definir')}</strong>${cob.ok&&cuota?` · $${cuota.toLocaleString('es-AR')}/mes`:''}</div>`;
