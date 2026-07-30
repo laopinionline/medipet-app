@@ -16,6 +16,10 @@ hosting-demo/
 node_modules/
 seed/node_modules/
 
+# VETIA — secreto del servicio (va a mano en el VPS, NUNCA al repo).
+# La key + el service account ya los cubren *.log/glob de arriba (*serviceAccount*.json, node_modules/); falta .env:
+vetia/.env
+
 # Logs / temporales
 *.log
 .DS_Store

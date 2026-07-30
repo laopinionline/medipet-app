@@ -1,0 +1,17 @@
+{
+  "name": "vetia-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "VETIA — asistente IA del plan MEDIPaw. Servicio Node en el VPS (Spark, sin Cloud Functions): POST /api/vetia. Escaneo determinista de banderas rojas + Claude Haiku, auth por ID token de Firebase (medipaw-demo).",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "smoke": "node smoke-banderas-vet.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.7.0"
+  }
+}
