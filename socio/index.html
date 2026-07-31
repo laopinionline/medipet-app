@@ -195,6 +195,9 @@ const TEL_EMERG = '0800-000-0000';
 //    (medipaw.com.ar) sigue como placeholder "Pronto". El endpoint solo permite CORS del origen demo. ──
 const VETIA_ON = /^medipaw-demo\./.test(location.hostname) || location.hostname==='localhost' || location.hostname==='127.0.0.1';
 const VETIA_URL = 'https://medipaw.com.ar/api/vetia';
+// TURNOS — mismo gate demo y mismo servicio del VPS. La reserva/cancelación van SOLO por endpoint (nunca update directo).
+const TURNOS_RESERVAR = 'https://medipaw.com.ar/api/turnos/reservar';
+const TURNOS_CANCELAR = 'https://medipaw.com.ar/api/turnos/cancelar';
 
 // Roles del doc usuario (compat legacy rol→roles, prestador→veterinario vía el núcleo).
 function getRoles(u){
@@ -203,10 +206,10 @@ function getRoles(u){
 }
 
 // ── Estado único ──
-const S = { view:'boot', sub:'home', cred:null, mascotaSel:0, deferredPrompt:null, caso:null, chequeo:null, historia:null, mismascotas:null, cartilla:null, vetia:null };
-// Dispatcher del sub-view: home | caso | cuenta | alta (embudo) | chequeo (peso) | historia (atenciones) | mismascotas (planes+servicios) | vetia (chat IA, solo demo)
-function render(){ if(S.sub==='caso') casoView(); else if(S.sub==='cuenta') cuentaView(); else if(S.sub==='alta') altaView(); else if(S.sub==='chequeo') chequeoView(); else if(S.sub==='historia') historiaView(); else if(S.sub==='mismascotas') misMascotasView(); else if(S.sub==='cartilla') cartillaView(); else if(S.sub==='vetia') vetiaView(); else homeView(); }
-function volverHome(){ S.sub='home'; S.caso=null; S.alta=null; S.chequeo=null; S.historia=null; S.mismascotas=null; S.cartilla=null; S.vetia=null; render(); }
+const S = { view:'boot', sub:'home', cred:null, mascotaSel:0, deferredPrompt:null, caso:null, chequeo:null, historia:null, mismascotas:null, cartilla:null, vetia:null, turnos:null };
+// Dispatcher del sub-view: home | caso | cuenta | alta (embudo) | chequeo (peso) | historia (atenciones) | mismascotas (planes+servicios) | vetia (chat IA, demo) | turnos (agenda, demo)
+function render(){ if(S.sub==='caso') casoView(); else if(S.sub==='cuenta') cuentaView(); else if(S.sub==='alta') altaView(); else if(S.sub==='chequeo') chequeoView(); else if(S.sub==='historia') historiaView(); else if(S.sub==='mismascotas') misMascotasView(); else if(S.sub==='cartilla') cartillaView(); else if(S.sub==='vetia') vetiaView(); else if(S.sub==='turnos') turnosView(); else homeView(); }
+function volverHome(){ S.sub='home'; S.caso=null; S.alta=null; S.chequeo=null; S.historia=null; S.mismascotas=null; S.cartilla=null; S.vetia=null; S.turnos=null; render(); }
 
 // ── Colección mascotas (fuente de verdad; reusa el núcleo) ──
 async function mascGetByTitular(uid){
@@ -624,7 +627,155 @@ async function enviarCaso(){
     S.caso={done:true}; casoView();
   }catch(e){ if(msg) msg.textContent='Error: '+e.message; }
 }
-function bloqueTurnos(m){ return tilePlaceholder('📅','Turnos','Pedí un turno para tu mascota'); }
+// TURNOS — en el DEMO es un tile vivo (agenda del vet de guardia); en PROD sigue "Pronto" (mismo gate que VETIA).
+function bloqueTurnos(m){
+  if(!VETIA_ON) return tilePlaceholder('📅','Turnos','Pedí un turno para tu mascota');
+  return `<button class="tile" onclick="abrirTurnos()">
+    <div class="t-ico">📅</div>
+    <div class="t-body"><div class="t-title">Turnos</div><div class="t-sub">Pedí un turno con el veterinario de guardia</div></div>
+    <span class="t-arrow">›</span>
+  </button>`;
+}
+// ── Helpers de tiempo/fecha (locales al socio; misma grilla que el endpoint) ──
+function tHoyBA(){ return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Argentina/Buenos_Aires',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()); }
+function tAMin(h){ const m=/^(\d{1,2}):(\d{2})$/.exec(String(h||'')); return m?(+m[1]*60+ +m[2]):null; }
+function tDeMin(x){ const h=Math.floor(x/60), mm=x%60; return String(h).padStart(2,'0')+':'+String(mm).padStart(2,'0'); }
+function fmtFechaLarga(ymd){ const p=/^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd||''); if(!p) return ymd||''; const d=new Date(Date.UTC(+p[1],+p[2]-1,+p[3])); return d.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long',timeZone:'UTC'}); }
+function slotsLibres(f){ const ini=tAMin(f.horaInicio), fin=tAMin(f.horaFin), dur=Number(f.duracionSlotMin)||30; const tom=Array.isArray(f.slotsTomados)?f.slotsTomados:[]; const out=[]; if(ini==null||fin==null) return out; for(let x=ini; x+dur<=fin; x+=dur){ const h=tDeMin(x); if(!tom.includes(h)) out.push(h); } return out; }
+
+function abrirTurnos(){ S.sub='turnos'; S.turnos={ loading:true, agenda:[], miTurno:null, confirm:null, confirmCancel:false, busy:false, err:'', info:'', mascotaSel:0 }; render(); cargarTurnos(); }
+
+// Carga la agenda activa + los turnos del titular (read propio permitido por reglas). El turno vivo = 'creado' a futuro.
+async function cargarTurnos(){
+  const uid=(S.cred&&S.cred.u)?S.cred.u.uid:null;
+  if(!uid){ S.turnos.loading=false; turnosView(); return; }
+  try{
+    const [agSnap,tSnap]=await Promise.all([
+      db.collection('agenda_turnos').where('activa','==',true).get(),
+      db.collection('turnos').where('titularUid','==',uid).get()
+    ]);
+    const hoy=tHoyBA();
+    const agenda=agSnap.docs.map(d=>({id:d.id,...d.data()})).filter(f=>String(f.fecha||'')>=hoy);
+    const turnos=tSnap.docs.map(d=>({id:d.id,...d.data()}));
+    S.turnos.miTurno=turnos.filter(t=>t.estado==='creado' && String(t.fecha||'')>=hoy)
+      .sort((a,b)=>String(a.fecha+a.hora).localeCompare(String(b.fecha+b.hora)))[0]||null;
+    S.turnos.agenda=agenda.sort((a,b)=>String(a.fecha).localeCompare(String(b.fecha)));
+    S.turnos.err='';
+  }catch(e){ S.turnos.err='No pudimos cargar los turnos.'; }
+  S.turnos.loading=false; turnosView();
+}
+
+function msgErrorTurno(status, code){
+  if(status===401||status===403) return 'Tu sesión expiró. Cerrá y volvé a entrar.';
+  const M={ 'slot-ocupado':'Ese horario se acaba de ocupar. Elegí otro.',
+    'ya-tiene-turno':'Ya tenés un turno reservado. Cancelalo si querés pedir otro.',
+    'fuera-de-ventana':'Ese día ya no está disponible para reservar.',
+    'hora-invalida':'Ese horario no es válido. Elegí otro.',
+    'agenda-inactiva':'Esa agenda ya no está disponible.',
+    'mascota-no-es-tuya':'No pudimos validar la mascota.',
+    'datos-incompletos':'Faltan datos para reservar.' };
+  return M[code] || 'No pudimos completar la operación. Probá de nuevo.';
+}
+
+function elegirSlotTurno(agendaId, fecha, hora){ S.turnos.confirm={agendaId,fecha,hora}; S.turnos.err=''; S.turnos.mascotaSel=Math.min(S.turnos.mascotaSel||0,(S.cred.mascotas||[]).length-1); turnosView(); }
+function cancelarEleccion(){ S.turnos.confirm=null; S.turnos.err=''; turnosView(); }
+
+async function confirmarReservaTurno(){
+  const c=S.turnos.confirm; if(!c||S.turnos.busy) return;
+  const ms=S.cred.mascotas||[]; const m=ms[S.turnos.mascotaSel]||ms[0];
+  if(!m){ S.turnos.err='Necesitás una mascota para reservar.'; turnosView(); return; }
+  S.turnos.busy=true; S.turnos.err=''; turnosView();
+  try{
+    const token=await auth.currentUser.getIdToken();
+    const res=await fetch(TURNOS_RESERVAR,{ method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}, body:JSON.stringify({ agendaId:c.agendaId, hora:c.hora, mascotaId:m.mascotaId }) });
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok){ S.turnos.busy=false; S.turnos.err=msgErrorTurno(res.status,data&&data.error); turnosView(); return; }
+    S.turnos.info=(data&&data.info)||''; S.turnos.confirm=null; S.turnos.busy=false;
+    await cargarTurnos(); // recarga → muestra la card del turno
+  }catch(e){ S.turnos.busy=false; S.turnos.err='Turnos no está disponible ahora. Probá de nuevo en un rato.'; turnosView(); }
+}
+
+function pedirCancelarTurno(){ S.turnos.confirmCancel=true; S.turnos.err=''; turnosView(); }
+function noCancelar(){ S.turnos.confirmCancel=false; turnosView(); }
+async function cancelarTurnoConfirmado(){
+  const t=S.turnos.miTurno; if(!t||S.turnos.busy) return;
+  S.turnos.busy=true; S.turnos.err=''; turnosView();
+  try{
+    const token=await auth.currentUser.getIdToken();
+    const res=await fetch(TURNOS_CANCELAR,{ method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}, body:JSON.stringify({ turnoId:t.id }) });
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok){ S.turnos.busy=false; S.turnos.confirmCancel=false; S.turnos.err=msgErrorTurno(res.status,data&&data.error); turnosView(); return; }
+    S.turnos.busy=false; S.turnos.confirmCancel=false; S.turnos.info='';
+    await cargarTurnos(); // recarga → vuelve a la agenda con el slot libre
+  }catch(e){ S.turnos.busy=false; S.turnos.err='No pudimos cancelar ahora. Probá de nuevo.'; turnosView(); }
+}
+
+function turnosView(){
+  const st=S.turnos||(S.turnos={loading:true});
+  const back=`<button class="link-btn" style="margin-bottom:10px;display:inline-block;" onclick="volverHome()">‹ Volver</button>`;
+  const errBox = st.err ? `<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:10px 12px;font-size:.83rem;color:#b91c1c;margin-bottom:10px;">${esc(st.err)}</div>` : '';
+  let body;
+  if(st.loading){
+    body=`<div class="seccion"><p style="font-size:.85rem;color:var(--suave);">Cargando turnos…</p></div>`;
+  } else if(st.miTurno){
+    // CON turno futuro: card + cancelar (confirmación inline, sin diálogo nativo).
+    const t=st.miTurno;
+    const cancelUI = st.confirmCancel
+      ? `<div style="margin-top:12px;background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:12px;">
+          <div style="font-size:.85rem;font-weight:700;color:var(--noche);">¿Seguro que querés cancelar este turno?</div>
+          <div style="display:flex;gap:8px;margin-top:10px;">
+            <button class="btn-primary" style="background:#dc2626;flex:1;" onclick="cancelarTurnoConfirmado()" ${st.busy?'disabled':''}>${st.busy?'Cancelando…':'Sí, cancelar'}</button>
+            <button class="link-btn" style="flex:1;" onclick="noCancelar()">No</button>
+          </div></div>`
+      : `<button class="link-btn" style="margin-top:12px;color:#dc2626;" onclick="pedirCancelarTurno()">Cancelar este turno</button>`;
+    body=`<div class="seccion">
+      <div class="stit" style="text-transform:none;font-size:1rem;">Tu turno</div>
+      <div style="margin-top:10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:14px;padding:14px;">
+        <div style="font-size:1.05rem;font-weight:800;color:var(--azul);text-transform:capitalize;">${esc(fmtFechaLarga(t.fecha))}</div>
+        <div style="font-size:1.4rem;font-weight:900;color:var(--noche);margin:2px 0;">${esc(t.hora||'')} hs</div>
+        <div style="font-size:.85rem;color:var(--texto);">Para ${esc(t.mascotaNombre||'tu mascota')} · con el veterinario de guardia</div>
+      </div>
+      ${st.info?`<div style="margin-top:10px;font-size:.8rem;color:var(--suave);">${esc(st.info)}</div>`:''}
+      ${cancelUI}
+    </div>`;
+  } else if(st.confirm){
+    // Confirmación de reserva: selector de mascota (si tiene más de una) + confirmar.
+    const ms=S.cred.mascotas||[]; const c=st.confirm;
+    const selMasc = ms.length>1
+      ? `<div style="margin-top:10px;"><div style="font-size:.78rem;color:var(--suave);margin-bottom:6px;">¿Para cuál?</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;">${ms.map((m,i)=>`<button class="btn-primary" style="background:${i===(st.mascotaSel||0)?'var(--noche)':'var(--azul)'};padding:8px 14px;" onclick="S.turnos.mascotaSel=${i};turnosView()">${esc(m.nombre||'mascota')}</button>`).join('')}</div></div>`
+      : (ms[0]?`<div style="margin-top:8px;font-size:.85rem;color:var(--texto);">Para ${esc(ms[0].nombre||'tu mascota')}</div>`:'');
+    body=`<div class="seccion">
+      <div class="stit" style="text-transform:none;font-size:1rem;">Confirmar turno</div>
+      <div style="margin-top:10px;font-size:.95rem;color:var(--noche);text-transform:capitalize;font-weight:700;">${esc(fmtFechaLarga(c.fecha))} · ${esc(c.hora)} hs</div>
+      ${selMasc}
+      <button class="btn-primary" style="margin-top:14px;" onclick="confirmarReservaTurno()" ${st.busy?'disabled':''}>${st.busy?'Reservando…':'Confirmar turno'}</button>
+      <button class="link-btn" style="margin-top:8px;" onclick="cancelarEleccion()">‹ Elegir otro horario</button>
+    </div>`;
+  } else if(st.agenda && st.agenda.length && st.agenda.some(f=>slotsLibres(f).length)){
+    // SIN turno: agenda disponible, slots libres agrupados por fecha.
+    const bloques=st.agenda.map(f=>{
+      const libres=slotsLibres(f); if(!libres.length) return '';
+      return `<div style="margin-top:14px;">
+        <div style="font-size:.82rem;font-weight:800;color:var(--noche);text-transform:capitalize;">${esc(fmtFechaLarga(f.fecha))}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;">
+          ${libres.map(h=>`<button class="btn-primary" style="background:var(--azul);padding:9px 14px;" onclick="elegirSlotTurno('${esc(f.id)}','${esc(f.fecha)}','${esc(h)}')">${esc(h)}</button>`).join('')}
+        </div></div>`;
+    }).join('');
+    body=`<div class="seccion">
+      <div class="stit" style="text-transform:none;font-size:1rem;">Elegí un horario</div>
+      <p style="font-size:.82rem;color:var(--suave);margin-top:4px;">Turnos con el veterinario de guardia MEDIPaw.</p>
+      ${bloques}
+    </div>`;
+  } else {
+    body=`<div class="seccion" style="text-align:center;">
+      <div style="font-size:2rem;">📅</div>
+      <div class="stit" style="text-transform:none;font-size:1rem;margin-top:6px;">Todavía no hay horarios</div>
+      <p style="font-size:.85rem;color:var(--suave);line-height:1.5;margin-top:6px;">Pronto vamos a publicar horarios de guardia. Volvé a chequear más tarde.</p>
+    </div>`;
+  }
+  document.getElementById('home').innerHTML = back + errBox + body;
+}
 // Chequeo y peso — tile REAL (abre la serie de peso). Append-only, sin juicio de si el peso está bien o mal.
 function bloqueChequeo(m){
   return `<button class="tile" onclick="abrirChequeo(mascotaActiva())">

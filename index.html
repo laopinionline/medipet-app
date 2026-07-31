@@ -253,6 +253,8 @@ firebase.initializeApp(window.__FB_CONFIG || {
 });
 const auth=firebase.auth(), db=firebase.firestore(), storage=firebase.storage();
 const TS=()=>firebase.firestore.FieldValue.serverTimestamp();
+// TURNOS (Fase 2) — gate por hostname: la sección Turnos del vet SOLO aparece en el demo; en prod, no se muestra.
+const TURNOS_ON = /^medipaw-demo\./.test(location.hostname) || location.hostname==='localhost' || location.hostname==='127.0.0.1';
 
 // esc(): escape HTML COMPLETO (& < > " ') — mismo helper que /socio/. Envolver TODO dato de origen usuario
 // (titular/vet) o público (solicitudes del /m/) antes de interpolarlo en innerHTML. Sin esto = XSS almacenado,
@@ -1516,6 +1518,84 @@ function vetSwitchTab(tab, btn) {
   if (tab === 'inicio') cargarDashboardVet();
   if (tab === 'casos') cargarBandejaCasos();
   if (tab === 'pacientes') cargarMisPacientes();
+  if (tab === 'turnos') cargarTurnosVet();
+}
+
+// ══ TURNOS — panel del vet (Fase 2, solo demo). Franjas + turnos + marca de asistencia. Todo por client SDK con las
+//    reglas que ya permiten a vet/admin: create/update de agenda_turnos y update acotado de turnos (campos de marca). ══
+function _tHoyBA(){ return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Argentina/Buenos_Aires',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()); }
+function _tAMin(h){ const m=/^(\d{1,2}):(\d{2})$/.exec(String(h||'')); return m?(+m[1]*60+ +m[2]):null; }
+function _fmtFechaVet(ymd){ const p=/^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd||''); if(!p) return ymd||''; return new Date(Date.UTC(+p[1],+p[2]-1,+p[3])).toLocaleDateString('es-AR',{weekday:'short',day:'numeric',month:'short',timeZone:'UTC'}); }
+
+async function crearFranjaVet(){
+  const msg=document.getElementById('vet-franja-msg');
+  const fecha=document.getElementById('fFecha').value, ini=document.getElementById('fIni').value, fin=document.getElementById('fFin').value;
+  const dur=parseInt(document.getElementById('fDur').value,10);
+  msg.style.color='#dc2626';
+  if(!fecha||!ini||!fin){ msg.textContent='Completá fecha, desde y hasta.'; return; }
+  if(fecha<_tHoyBA()){ msg.textContent='La fecha no puede ser pasada.'; return; }
+  if(_tAMin(ini)==null||_tAMin(fin)==null||_tAMin(ini)>=_tAMin(fin)){ msg.textContent='El horario "desde" tiene que ser menor que "hasta".'; return; }
+  if(!(dur>0)){ msg.textContent='La duración del slot tiene que ser mayor a 0.'; return; }
+  try{
+    await db.collection('agenda_turnos').add({ fecha, horaInicio:ini, horaFin:fin, duracionSlotMin:dur, activa:true, slotsTomados:[], creadoEn:TS(), actualizadoEn:TS() });
+    msg.style.color='#166534'; msg.textContent='Franja publicada.';
+    toast('Franja publicada');
+    cargarTurnosVet();
+  }catch(e){ msg.style.color='#dc2626'; msg.textContent='No se pudo publicar: '+(e.message||e.code||'error'); }
+}
+
+async function bajaFranjaVet(id){
+  try{ await db.collection('agenda_turnos').doc(id).update({ activa:false, actualizadoEn:TS() }); toast('Franja dada de baja'); cargarTurnosVet(); }
+  catch(e){ toast('No se pudo: '+(e.code||e.message||'error')); }
+}
+
+async function marcarAsistenciaVet(turnoId, resultado){
+  try{
+    const uid=auth.currentUser?auth.currentUser.uid:null;
+    await db.collection('turnos').doc(turnoId).update({ estado:resultado, estadoMarcadoPor:uid, estadoMarcadoEn:TS() });
+    toast(resultado==='atendido'?'Marcado como atendido':'Marcado como ausente');
+    cargarTurnosVet();
+  }catch(e){ toast('No se pudo marcar: '+(e.code||e.message||'error')); }
+}
+
+async function cargarTurnosVet(){
+  const wrapF=document.getElementById('vet-franjas-lista'), wrapT=document.getElementById('vet-turnos-lista');
+  if(!wrapF||!wrapT) return;
+  try{
+    const [agSnap,tSnap]=await Promise.all([
+      db.collection('agenda_turnos').where('activa','==',true).get(),
+      db.collection('turnos').get()
+    ]);
+    const hoy=_tHoyBA();
+    const franjas=agSnap.docs.map(d=>({id:d.id,...d.data()})).filter(f=>String(f.fecha||'')>=hoy).sort((a,b)=>String(a.fecha).localeCompare(String(b.fecha)));
+    wrapF.innerHTML = franjas.length ? franjas.map(f=>{
+      const tomados=Array.isArray(f.slotsTomados)?f.slotsTomados.length:0;
+      return `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-top:1px solid #eef2f7;">
+        <div style="font-size:.85rem;"><strong style="text-transform:capitalize;">${esc(_fmtFechaVet(f.fecha))}</strong> · ${esc(f.horaInicio||'')}–${esc(f.horaFin||'')} · slot ${esc(String(f.duracionSlotMin||''))}min · ${tomados} tomado(s)</div>
+        <button class="btn-secondary" style="font-size:.72rem;padding:4px 10px;" data-baja-franja="${esc(f.id)}">Dar de baja</button>
+      </div>`;
+    }).join('') : `<p style="color:#9ca3af;font-size:.82rem;">No hay franjas activas. Publicá una arriba.</p>`;
+    wrapF.querySelectorAll('[data-baja-franja]').forEach(b=>b.addEventListener('click',()=>bajaFranjaVet(b.getAttribute('data-baja-franja'))));
+
+    // Turnos: nombres de titulares (usuarios read permitido). Orden por fecha+hora.
+    const turnos=tSnap.docs.map(d=>({id:d.id,...d.data()})).filter(t=>t.estado!=='cancelado')
+      .sort((a,b)=>String((a.fecha||'')+(a.hora||'')).localeCompare(String((b.fecha||'')+(b.hora||''))));
+    const uids=[...new Set(turnos.map(t=>t.titularUid).filter(Boolean))];
+    const nombres={};
+    await Promise.all(uids.map(async u=>{ try{ const d=await db.collection('usuarios').doc(u).get(); if(d.exists){ const x=d.data(); nombres[u]=((x.nombre||'')+' '+(x.apellido||'')).trim()+(x.nroSocio?` (${x.nroSocio})`:''); } }catch(_){}}));
+    wrapT.innerHTML = turnos.length ? turnos.map(t=>{
+      const pasadoOhoy = String(t.fecha||'')<=hoy;
+      const marca = (t.estado==='creado' && pasadoOhoy)
+        ? `<div style="display:flex;gap:6px;margin-top:6px;"><button class="btn-secondary" style="font-size:.72rem;padding:4px 10px;" data-marca="atendido" data-turno="${esc(t.id)}">Atendido</button><button class="btn-secondary" style="font-size:.72rem;padding:4px 10px;" data-marca="ausente" data-turno="${esc(t.id)}">Ausente</button></div>`
+        : `<span style="font-size:.7rem;font-weight:800;padding:2px 8px;border-radius:100px;background:${t.estado==='atendido'?'#dcfce7':t.estado==='ausente'?'#fee2e2':'#e0e7ff'};color:${t.estado==='atendido'?'#166534':t.estado==='ausente'?'#991b1b':'#3730a3'};">${esc(t.estado||'')}</span>`;
+      return `<div style="padding:9px 0;border-top:1px solid #eef2f7;">
+        <div style="font-size:.85rem;"><strong style="text-transform:capitalize;">${esc(_fmtFechaVet(t.fecha))}</strong> · ${esc(t.hora||'')} hs · ${esc(t.mascotaNombre||'mascota')}</div>
+        <div style="font-size:.78rem;color:#5a6a8a;">${esc(nombres[t.titularUid]||t.titularUid||'')}</div>
+        ${marca}
+      </div>`;
+    }).join('') : `<p style="color:#9ca3af;font-size:.82rem;">No hay turnos reservados.</p>`;
+    wrapT.querySelectorAll('[data-marca]').forEach(b=>b.addEventListener('click',()=>marcarAsistenciaVet(b.getAttribute('data-turno'), b.getAttribute('data-marca'))));
+  }catch(e){ wrapF.innerHTML=`<p style="color:#dc2626;font-size:.82rem;">No se pudieron cargar las franjas (${esc(e.code||e.message||'error')}).</p>`; wrapT.innerHTML=''; }
 }
 
 // ══════════════════════════════════════════════
@@ -2456,6 +2536,7 @@ function renderPanel(data){
       <button class="vet-tab-btn tab" data-tab="buscar" onclick="vetSwitchTab('buscar',this)">Buscar</button>
       <button class="vet-tab-btn tab" data-tab="historia" onclick="vetSwitchTab('historia',this)">Historia</button>
       <button class="vet-tab-btn tab" data-tab="pacientes" onclick="vetSwitchTab('pacientes',this)">Pacientes</button>
+      ${TURNOS_ON?`<button class="vet-tab-btn tab" data-tab="turnos" onclick="vetSwitchTab('turnos',this)">Turnos</button>`:''}
     </div>
 
     <!-- TAB INICIO -->
@@ -2510,7 +2591,27 @@ function renderPanel(data){
         <div class="stit">Mis pacientes</div>
         <div id="vet-pacientes-content"><p style="color:#9ca3af;font-size:.82rem;">Cargando...</p></div>
       </div>
-    </div>`;
+    </div>
+
+    ${TURNOS_ON?`<!-- TAB TURNOS (Fase 2 demo) -->
+    <div id="vet-tab-turnos" class="vet-tab-content" style="display:none;">
+      <div class="seccion">
+        <div class="stit">Publicar franja de agenda</div>
+        <div id="vet-franja-form" style="display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin-top:10px;">
+          <label style="font-size:.75rem;color:#5a6a8a;">Fecha<br><input type="date" id="fFecha" class="input-field" style="margin-top:4px;"></label>
+          <label style="font-size:.75rem;color:#5a6a8a;">Desde<br><input type="time" id="fIni" class="input-field" value="09:00" style="margin-top:4px;"></label>
+          <label style="font-size:.75rem;color:#5a6a8a;">Hasta<br><input type="time" id="fFin" class="input-field" value="13:00" style="margin-top:4px;"></label>
+          <label style="font-size:.75rem;color:#5a6a8a;">Slot (min)<br><input type="number" id="fDur" class="input-field" value="30" min="5" step="5" style="margin-top:4px;width:90px;"></label>
+          <button class="btn-primary" onclick="crearFranjaVet()">Publicar</button>
+        </div>
+        <p id="vet-franja-msg" style="font-size:.8rem;margin-top:8px;"></p>
+        <div id="vet-franjas-lista" style="margin-top:12px;"><p style="color:#9ca3af;font-size:.82rem;">Cargando franjas...</p></div>
+      </div>
+      <div class="seccion">
+        <div class="stit">Turnos reservados</div>
+        <div id="vet-turnos-lista"><p style="color:#9ca3af;font-size:.82rem;">Cargando turnos...</p></div>
+      </div>
+    </div>`:''}`;
     setTimeout(cargarDashboardVet, 300);
 
   // ── VISTA ADMIN ──
