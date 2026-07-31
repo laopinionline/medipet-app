@@ -40,6 +40,14 @@ esperar('se le hinchó toda la cara de golpe', true, 'alergia');
 esperar('no mueve las patas traseras, las arrastra', true, 'paralisis');
 esperar('llora de dolor cuando lo toco', true, 'dolor_agudo');
 esperar('necesito un veterinario ahora mismo, es una emergencia', true, 'urgencia_declarada');
+// Categorías + tóxicos agregados en el veto de Lucas (31/07)
+esperar('mordió un cable y quedó tiritando, se electrocutó', true, 'electrocucion');
+esperar('se quemó con agua hirviendo', true, 'quemadura');
+esperar('el gatito recién nacido no mama y está frío', true, 'neonato_no_mama');
+esperar('lo siento muy frío, tiene el cuerpo helado', true, 'hipotermia');
+esperar('lo atacó un enjambre, tiene muchas picaduras de avispa', true, 'picaduras_multiples');
+esperar('se comió posos de café de la basura', true, 'toxico-cafe');
+esperar('agarró y comió masa cruda con levadura', true, 'toxico-masa');
 
 console.log('\n== TILDES / MAYÚSCULAS (misma decisión que el caso base) ==');
 esperar('Mi Perro Está CONVULSIONANDO', true, 'convulsion+mayus');
@@ -51,6 +59,8 @@ console.log('\n== NEGACIONES LIMPIAS (no deben disparar) ==');
 esperar('no convulsiona, está tranquilo', false, 'neg-convulsion');
 esperar('ya no sangra, se le cortó', false, 'neg-sangrado');
 esperar('no tiene dificultad para respirar', false, 'neg-respira');
+esperar('no quemó la piel, fue solo un susto', false, 'neg-quemadura'); // "no se quemó" NO sirve: "no se" es hedge en AMBIGUO (colisión con "no sé") → dispara a propósito
+esperar('el cachorro no tiene hipotermia, está calentito', false, 'neg-hipotermia');
 
 console.log('\n== LIMPIOS (consultas de plan/cuidado — no deben disparar) ==');
 esperar('¿qué me cubre el plan Joven?', false, 'plan');
@@ -60,6 +70,9 @@ esperar('¿el plan cubre la castración?', false, 'cirugia-consulta');
 esperar('mi gato está jugando y comiendo bien', false, 'sano');
 esperar('quiero pedir un turno para la próxima semana', false, 'turno-no-urgente');
 esperar('¿qué comida le recomiendan para un cachorro?', false, 'nutricion');
+esperar('mi cachorro recién nacido mama bien y sube de peso', false, 'neonato-sano');
+esperar('¿le puedo dar un poquito de café con leche?', false, 'cafe-pregunta');
+esperar('le encanta tomar sol en el patio', false, 'sol-ok');
 
 console.log(`\n== RESULTADO: ${ok} ok, ${fail} fail ==`);
 if (fail) { console.error('SMOKE ROJO'); process.exit(1); }

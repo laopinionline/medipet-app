@@ -20,7 +20,7 @@ function prox(a, b, W) { W = W || 30; return '(?:' + a + ').{0,' + W + '}(?:' + 
 
 // Anclas de ingestión (para tóxicos por proximidad: "comió … chocolate").
 const INGESTA = 'comio|se comio|trago|se trago|ingirio|lamio|mastico|le di|se metio|agarro y comio';
-const TOXICO  = 'veneno|raticida|rodenticida|chocolate|anticongelante|xilitol|uvas?|pasas|cebolla|\\bajo\\b|lavandina|detergente|pastilla|ibuprofen|paracetamol|ivermectin|medicamento|planta toxica|marihuana|porro';
+const TOXICO  = 'veneno|raticida|rodenticida|chocolate|anticongelante|xilitol|uvas?|pasas|cebolla|\\bajo\\b|lavandina|detergente|pastilla|ibuprofen|paracetamol|ivermectin|medicamento|planta toxica|marihuana|porro|cafe\\b|cafeina|masa cruda|masa con levadura';
 
 const PATRONES = [
   // Convulsión / ataque / actividad epiléptica.
@@ -53,6 +53,16 @@ const PATRONES = [
   { k: 'paralisis',        re: /no mueve (las|sus|el|los) (patas|piernas|tren trasero|miembros)|arrastra (las|sus|el) (patas|piernas|tren)|no siente (las patas|el tren trasero)|paraliz|no puede (caminar|pararse|incorporarse)|tren trasero (caido|no responde|dormido)/ },
   // Dolor agudo evidente.
   { k: 'dolor_agudo',      re: /(llora|grita|chilla|aulla|gime) de dolor|tiembla de dolor|no se deja tocar.{0,16}(dolor|duele|queja|grita)|se queja (mucho|todo el tiempo) (de dolor|del dolor)|dolor (insoportable|muy fuerte|terrible)/ },
+  // Electrocución (mordió un cable). [VETO Lucas 31/07]
+  { k: 'electrocucion',    re: /electrocut|descarga electrica|choque electrico|se electrizo|(mordio|mastico|mordisque).{0,14}(un |el )?cable|cable.{0,14}(mordio|pelado con)/ },
+  // Quemadura (agua hirviendo, plancha, fuego, química). [VETO Lucas 31/07]
+  { k: 'quemadura',        re: /quemadura|se quemo|quemo (con|la|el|una)|agua hirviendo|aceite hirviendo|se prendio fuego|quemadura quimica|le cayo (agua|aceite) (caliente|hirviendo)/ },
+  // Neonato que no mama / no come / frío y quieto. El propio "no mama" ES la bandera (no lo suprime la negación). [VETO Lucas 31/07]
+  { k: 'neonato_no_mama',  re: /(recien nacid|neonato|cachorr|gatit|mamon).{0,34}(no mama|no come|no toma la teta|no se prende|frio y quieto|no se mueve)|(no mama|no toma la teta|no se prende).{0,24}(recien nacid|neonato|cachorr|gatit)/ },
+  // Hipotermia / cuerpo frío (sobre todo neonatos y cachorros). [VETO Lucas 31/07]
+  { k: 'hipotermia',       re: /hipotermia|frio extremo|temperatura (muy baja|bajisima)|cuerpo (muy )?frio|esta (helad|congelad)|frio y no reacciona|lo siento (helado|muy frio)/ },
+  // Picaduras múltiples de abeja/avispa / enjambre. [VETO Lucas 31/07]
+  { k: 'picaduras_multiples', re: /muchas picaduras|varias picaduras|un monton de picaduras|picaduras de (abeja|avispa)|un enjambre|avispero|lo (picaron|atacaron) (las |un monton de )?(abeja|avispa)/ },
 ];
 
 // URGENCIA DECLARADA por tiempo (sin síntoma): pide un veterinario CON inmediatez → urgencia; salvo consulta de agenda.
