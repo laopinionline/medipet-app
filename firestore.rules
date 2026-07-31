@@ -227,6 +227,46 @@ service cloud.firestore {
     }
 
     // ══════════════════════════════════════
+    // ══  TURNOS (agenda del vet de guardia) ══
+    // ══════════════════════════════════════
+    // Agenda ÚNICA (un solo vet de guardia MEDIPaw): las FRANJAS (`agenda_turnos`) las mantiene admin/vet; el socio
+    // JAMÁS escribe `slotsTomados`. La RESERVA y su liberación van SOLO por el endpoint del VPS (Admin SDK): la
+    // atomicidad del slot (evitar doble-booking) NO es expresable en reglas puras — por eso `turnos` create = false
+    // para el cliente. Acople al motor de coberturas = INFORMATIVO (el endpoint devuelve el cupo de 'consulta'); el
+    // consumo real lo registra la ATENCIÓN del vet, no el turno.
+    match /agenda_turnos/{id} {
+      allow get, list: if request.auth != null;                 // el socio ve la disponibilidad
+      allow create, update: if isAdmin() || esVeterinario();    // baja lógica (activa:false); nunca delete
+      allow delete: if false;
+    }
+
+    match /turnos/{id} {
+      // Create SOLO por el endpoint (Admin SDK bypassa reglas). El cliente no crea → sin doble-booking por reglas.
+      allow create: if false;
+
+      allow get, list: if request.auth != null
+        && (isAdmin() || esVeterinario() || resource.data.titularUid == request.auth.uid);
+
+      // Update:
+      //  · vet/admin MARCA asistencia — acotado a campos de marca; estado dentro de la máquina.
+      //  · el TITULAR dueño CANCELA su turno — acotado a estado:'cancelado' (+ canceladoEn). El endpoint es la vía que
+      //    además LIBERA el slot; una cancelación directa por cliente deja el slot marcado (se reconcilia por el vet).
+      allow update: if request.auth != null
+        && (
+          ( (isAdmin() || esVeterinario())
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['estado', 'estadoMarcadoPor', 'estadoMarcadoEn', 'canceladoEn'])
+            && request.resource.data.estado in ['creado', 'atendido', 'ausente', 'sin_registrar', 'cancelado'] )
+          ||
+          ( resource.data.titularUid == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado', 'canceladoEn'])
+            && request.resource.data.estado == 'cancelado' )
+        );
+
+      allow delete: if false;
+    }
+
+    // ══════════════════════════════════════
     // ══  CATCH-ALL: DENEGAR              ══
     // ══════════════════════════════════════
     // Cualquier colección no listada arriba queda bloqueada.

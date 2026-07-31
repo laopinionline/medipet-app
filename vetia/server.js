@@ -22,6 +22,8 @@ const path = require('path');
 const { escanear } = require('./banderas-rojas-vet.js');
 const { buildSystem } = require('./vetia-prompt.js');
 const { armarContexto } = require('./contexto.js');
+const turnos = require('./turnos.js');
+const MC = require('../lib/medipaw-core.js'); // núcleo (fuente única) para el veredicto informativo de la reserva
 
 // --- Carga mínima de .env (sin dependencia dotenv). No pisa variables ya presentes en el entorno (PM2 gana). ---
 (function loadEnv() {
@@ -152,7 +154,9 @@ const server = http.createServer((req, res) => {
   // Preflight
   if (req.method === 'OPTIONS') { res.writeHead(204, corsHeaders(origin)); return res.end(); }
 
-  if (req.method !== 'POST' || req.url.split('?')[0] !== '/api/vetia') {
+  const ruta = req.url.split('?')[0];
+  const RUTAS = ['/api/vetia', '/api/turnos/reservar', '/api/turnos/cancelar'];
+  if (req.method !== 'POST' || !RUTAS.includes(ruta)) {
     return enviarJSON(res, 404, { error: 'no encontrado' }, origin);
   }
 
@@ -182,6 +186,27 @@ const server = http.createServer((req, res) => {
       // 2) Payload
       let data = {};
       try { data = JSON.parse(raw || '{}'); } catch (_) { return enviarJSON(res, 400, { error: 'json inválido' }, origin); }
+
+      // ── RUTAS DE TURNOS (reserva/cancelación con TX atómica; Admin SDK) ──
+      if (ruta === '/api/turnos/reservar' || ruta === '/api/turnos/cancelar') {
+        if (!admin || !admin.apps.length) return enviarJSON(res, 503, { error: 'firestore no configurado' }, origin);
+        const db = admin.firestore();
+        const FV = () => admin.firestore.FieldValue.serverTimestamp();
+        try {
+          if (ruta === '/api/turnos/reservar') {
+            const out = await turnos.reservar({ db, FV, MC }, { uid, agendaId: data.agendaId, hora: data.hora, mascotaId: data.mascotaId }, Date.now());
+            return enviarJSON(res, 200, { ok: true, turno: out.turno, info: out.info }, origin);
+          }
+          const out = await turnos.cancelar({ db, FV }, { uid, turnoId: data.turnoId }, Date.now());
+          return enviarJSON(res, 200, { ok: true, cancelado: out }, origin);
+        } catch (e) {
+          if (e && e.code) return enviarJSON(res, 409, { ok: false, error: e.code }, origin); // rechazo de negocio (slot ocupado, etc.)
+          console.error('[turnos] error interno:', e);
+          return enviarJSON(res, 500, { ok: false, error: 'error interno' }, origin);
+        }
+      }
+
+      // ── RUTA VETIA (chat) ──
       let mensaje = typeof data.mensaje === 'string' ? data.mensaje.trim() : '';
       if (!mensaje) return enviarJSON(res, 400, { error: 'mensaje vacío' }, origin);
       if (mensaje.length > CFG.MAX_MSG_CHARS) mensaje = mensaje.slice(0, CFG.MAX_MSG_CHARS);
