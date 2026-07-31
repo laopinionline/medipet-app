@@ -21,6 +21,7 @@ const path = require('path');
 
 const { escanear } = require('./banderas-rojas-vet.js');
 const { buildSystem } = require('./vetia-prompt.js');
+const { armarContexto } = require('./contexto.js');
 
 // --- Carga mínima de .env (sin dependencia dotenv). No pisa variables ya presentes en el entorno (PM2 gana). ---
 (function loadEnv() {
@@ -170,8 +171,10 @@ const server = http.createServer((req, res) => {
       const m = authz.match(/^Bearer\s+(.+)$/i);
       if (!m) return enviarJSON(res, 401, { error: 'falta token' }, origin);
       if (!admin || !admin.apps.length) return enviarJSON(res, 503, { error: 'auth no configurada' }, origin);
+      let uid;
       try {
-        await admin.auth().verifyIdToken(m[1]);
+        const decoded = await admin.auth().verifyIdToken(m[1]);
+        uid = decoded.uid;
       } catch (_) {
         return enviarJSON(res, 401, { error: 'token inválido' }, origin);
       }
@@ -182,19 +185,35 @@ const server = http.createServer((req, res) => {
       let mensaje = typeof data.mensaje === 'string' ? data.mensaje.trim() : '';
       if (!mensaje) return enviarJSON(res, 400, { error: 'mensaje vacío' }, origin);
       if (mensaje.length > CFG.MAX_MSG_CHARS) mensaje = mensaje.slice(0, CFG.MAX_MSG_CHARS);
-      const contexto = (data.contexto && typeof data.contexto === 'object') ? data.contexto : {};
+      const clientCtx = (data.contexto && typeof data.contexto === 'object') ? data.contexto : {};
 
       // 3) Escaneo determinista (manda en urgencias)
       const scan = escanear(mensaje);
 
-      // 4) URGENCIA (rojo) = SHORT-CIRCUIT: NO pasa por el modelo. Respuesta segura fija + derivación a Emergencia.
+      // 4) URGENCIA (rojo) = SHORT-CIRCUIT: NO pasa por el modelo NI lee Firestore (no gastar queries en urgencias).
       //    El escáner es determinista → la urgencia no depende del criterio del modelo (ni de que esté vivo). El front
-      //    muestra su banner en base a `rojo`. Sólo las consultas NO-rojas van al modelo.
+      //    muestra su banner en base a `rojo`. Sólo las consultas NO-rojas leen consumos y van al modelo.
       let respuesta;
       if (scan.rojo) {
         respuesta = respuestaCaida(true);
       } else {
-        const system = buildSystem(contexto, false); // 5) system aterrizado en el contexto + modelo con timeout
+        // 4b) Contexto REAL de consumos: leo mascotas + atenciones del titular con el uid del token (server-side, sin
+        //     ampliar reglas de cliente) y computo consumos con el núcleo. Si la lectura falla, caigo al contexto del
+        //     cliente (plan sin consumos) para no romper la respuesta.
+        let contexto = clientCtx;
+        try {
+          const db = admin.firestore();
+          const [mSnap, aSnap] = await Promise.all([
+            db.collection('mascotas').where('titularUid', '==', uid).get(),
+            db.collection('atenciones').where('titularUid', '==', uid).get(),
+          ]);
+          const mascotasDocs = mSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+          const atByMasc = {};
+          aSnap.docs.forEach((d) => { const a = d.data(); const k = a.mascotaId || ''; (atByMasc[k] = atByMasc[k] || []).push(a); });
+          contexto = armarContexto(mascotasDocs, atByMasc, clientCtx.nroSocio || '', Date.now());
+        } catch (e) { console.warn('[vetia] no se pudo armar contexto de consumos:', e.message); }
+
+        const system = buildSystem(contexto, false, Date.now()); // 5) system aterrizado + fecha de hoy + modelo con timeout
         try {
           respuesta = await callClaude(system, mensaje);
         } catch (e) {
