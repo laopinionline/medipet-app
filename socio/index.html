@@ -191,6 +191,11 @@ const MC=window.MEDIPAW; // núcleo puro compartido (no se duplica lógica)
 // ⚠️ TEL DE GUARDIA VETERINARIA 24hs — PLACEHOLDER. ÚNICO lugar para cambiarlo (one-liner) cuando esté el número real.
 const TEL_EMERG = '0800-000-0000';
 
+// ── VETIA (asistente IA) — endpoint en el VPS. GATE por hostname: SOLO en el demo el tile es un chat vivo; en PROD
+//    (medipaw.com.ar) sigue como placeholder "Pronto". El endpoint solo permite CORS del origen demo. ──
+const VETIA_ON = /^medipaw-demo\./.test(location.hostname) || location.hostname==='localhost' || location.hostname==='127.0.0.1';
+const VETIA_URL = 'https://medipaw.com.ar/api/vetia';
+
 // Roles del doc usuario (compat legacy rol→roles, prestador→veterinario vía el núcleo).
 function getRoles(u){
   let roles = (u && Array.isArray(u.roles) && u.roles.length) ? u.roles.slice() : (u && u.rol ? [u.rol] : []);
@@ -198,10 +203,10 @@ function getRoles(u){
 }
 
 // ── Estado único ──
-const S = { view:'boot', sub:'home', cred:null, mascotaSel:0, deferredPrompt:null, caso:null, chequeo:null, historia:null, mismascotas:null, cartilla:null };
-// Dispatcher del sub-view: home | caso | cuenta | alta (embudo) | chequeo (peso) | historia (atenciones) | mismascotas (planes+servicios)
-function render(){ if(S.sub==='caso') casoView(); else if(S.sub==='cuenta') cuentaView(); else if(S.sub==='alta') altaView(); else if(S.sub==='chequeo') chequeoView(); else if(S.sub==='historia') historiaView(); else if(S.sub==='mismascotas') misMascotasView(); else if(S.sub==='cartilla') cartillaView(); else homeView(); }
-function volverHome(){ S.sub='home'; S.caso=null; S.alta=null; S.chequeo=null; S.historia=null; S.mismascotas=null; S.cartilla=null; render(); }
+const S = { view:'boot', sub:'home', cred:null, mascotaSel:0, deferredPrompt:null, caso:null, chequeo:null, historia:null, mismascotas:null, cartilla:null, vetia:null };
+// Dispatcher del sub-view: home | caso | cuenta | alta (embudo) | chequeo (peso) | historia (atenciones) | mismascotas (planes+servicios) | vetia (chat IA, solo demo)
+function render(){ if(S.sub==='caso') casoView(); else if(S.sub==='cuenta') cuentaView(); else if(S.sub==='alta') altaView(); else if(S.sub==='chequeo') chequeoView(); else if(S.sub==='historia') historiaView(); else if(S.sub==='mismascotas') misMascotasView(); else if(S.sub==='cartilla') cartillaView(); else if(S.sub==='vetia') vetiaView(); else homeView(); }
+function volverHome(){ S.sub='home'; S.caso=null; S.alta=null; S.chequeo=null; S.historia=null; S.mismascotas=null; S.cartilla=null; S.vetia=null; render(); }
 
 // ── Colección mascotas (fuente de verdad; reusa el núcleo) ──
 async function mascGetByTitular(uid){
@@ -479,7 +484,77 @@ function tilePlaceholder(ico, titulo, sub){
     <span class="t-soon">Pronto</span>
   </button>`;
 }
-function bloqueIA(m){ return tilePlaceholder('💬','VETIA','Consultá sobre tu plan, tus mascotas o cómo cuidarlas'); }
+// VETIA — en el DEMO es un tile vivo (abre el chat); en PROD sigue placeholder "Pronto" (gate por hostname).
+function bloqueIA(m){
+  if(!VETIA_ON) return tilePlaceholder('💬','VETIA','Consultá sobre tu plan, tus mascotas o cómo cuidarlas');
+  return `<button class="tile" onclick="abrirVetia()">
+    <div class="t-ico">💬</div>
+    <div class="t-body"><div class="t-title">VETIA</div><div class="t-sub">Consultá sobre tu plan, tus mascotas o cómo cuidarlas</div></div>
+    <span class="t-arrow">›</span>
+  </button>`;
+}
+function abrirVetia(){ S.sub='vetia'; S.vetia={ mensajes:[], busy:false, err:'' }; render(); }
+// Chat simple, historial SOLO en memoria de la sesión (sin persistencia v1). Todo lo renderizado pasa por esc().
+function vetiaView(){
+  const st = S.vetia || (S.vetia={ mensajes:[], busy:false, err:'' });
+  const m = mascotaActiva();
+  const historial = st.mensajes.map(msg=>{
+    if(msg.rol==='user'){
+      return `<div style="align-self:flex-end;max-width:82%;background:var(--azul);color:#fff;padding:9px 12px;border-radius:14px 14px 4px 14px;font-size:.85rem;white-space:pre-wrap;">${esc(msg.texto)}</div>`;
+    }
+    if(msg.rojo){
+      // URGENCIA: banner destacado + derivación a "no está bien". NO se ofrece seguir como si nada.
+      return `<div style="align-self:stretch;">
+        <a class="btn-emerg" href="tel:${TEL_EMERG}"><span class="em-ico">🚑</span><span><span class="em-top">ES UNA URGENCIA — llamá ahora</span><span class="em-sub">Guardia veterinaria 24hs — ${esc(TEL_EMERG)}</span></span></a>
+        <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:10px 12px;margin-top:8px;font-size:.85rem;color:var(--texto);white-space:pre-wrap;">${esc(msg.texto)}</div>
+        <button class="btn-primary" style="margin-top:8px;" onclick="abrirCaso()">Contarle a un veterinario qué le pasa</button>
+      </div>`;
+    }
+    return `<div style="align-self:flex-start;max-width:82%;background:#f1f5f9;color:var(--texto);padding:9px 12px;border-radius:14px 14px 14px 4px;font-size:.85rem;white-space:pre-wrap;">${esc(msg.texto)}</div>`;
+  }).join('');
+  const cargando = st.busy ? `<div style="align-self:flex-start;font-size:.8rem;color:var(--suave);padding:6px 4px;">VETIA está escribiendo…</div>` : '';
+  const errBox = st.err ? `<div style="align-self:stretch;background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:10px 12px;font-size:.83rem;color:#b91c1c;">${esc(st.err)}</div>` : '';
+  const vacio = (!st.mensajes.length && !st.busy) ? `<div style="text-align:center;color:var(--suave);font-size:.85rem;padding:16px 8px;line-height:1.5;">Preguntame sobre tu plan, tu cobertura o cómo cuidar a ${esc(nombreMasc(m))}.<br><span style="opacity:.8;">Ej: “¿qué me cubre?”, “¿cuándo lo vacuno?”</span></div>` : '';
+  const back=`<button class="link-btn" style="margin-bottom:10px;display:inline-block;" onclick="volverHome()">‹ Volver</button>`;
+  document.getElementById('home').innerHTML = back + `
+    <div class="seccion" style="display:flex;flex-direction:column;gap:8px;min-height:300px;">
+      <div style="display:flex;align-items:center;gap:9px;">
+        <span style="font-size:1.4rem;">💬</span>
+        <div><div class="stit" style="text-transform:none;font-size:1rem;">VETIA</div>
+        <div style="font-size:.72rem;color:var(--suave);">Orienta, no diagnostica</div></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;padding:4px 0;">${vacio}${historial}${cargando}${errBox}</div>
+      <div class="fstack" style="margin-top:auto;">
+        <textarea id="vetiaInput" class="input-field" style="height:60px;resize:vertical;" placeholder="Escribí tu consulta…" ${st.busy?'disabled':''}></textarea>
+        <button class="btn-primary" onclick="enviarVetia()" ${st.busy?'disabled':''}>${st.busy?'Enviando…':'Preguntar'}</button>
+      </div>
+      <div style="font-size:.7rem;color:var(--suave);text-align:center;margin-top:2px;">VETIA orienta, no diagnostica. Ante una urgencia, llamá al ${esc(TEL_EMERG)}.</div>
+    </div>`;
+  const inp=document.getElementById('vetiaInput'); if(inp && !st.busy){ inp.focus(); }
+}
+async function enviarVetia(){
+  const st=S.vetia; if(!st || st.busy) return;
+  const texto=v('vetiaInput'); if(!texto) return;
+  st.mensajes.push({ rol:'user', texto }); st.busy=true; st.err=''; vetiaView();
+  try{
+    const user=auth.currentUser; if(!user) throw new Error('sin sesión');
+    const token=await user.getIdToken();
+    const mascotas=(S.cred.mascotas||[]).map(x=>({ nombre:x.nombre||'', especie:x.especie||'', plan:x.plan||'', edadAprox:x.edadAprox||'' }));
+    const contexto={ mascotas, nroSocio:(S.cred.u&&S.cred.u.nroSocio)||'' };
+    const ctrl=new AbortController(); const to=setTimeout(()=>ctrl.abort(),25000);
+    let res;
+    try{
+      res=await fetch(VETIA_URL,{ method:'POST', headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+token }, body:JSON.stringify({ mensaje:texto, contexto }), signal:ctrl.signal });
+    } finally { clearTimeout(to); }
+    if(!res.ok) throw new Error('http '+res.status);
+    const data=await res.json();
+    st.mensajes.push({ rol:'vetia', texto:(data && data.respuesta) ? data.respuesta : '(sin respuesta)', rojo:!!(data && data.rojo) });
+  }catch(e){
+    st.err='VETIA no está disponible en este momento. Si es urgente, no esperes: llamá a la guardia al '+TEL_EMERG+'.';
+  }finally{
+    st.busy=false; vetiaView();
+  }
+}
 
 // "[Nombre] no está bien" — tile REAL (abre el caso) + estado de los casos abiertos de esa mascota (cuidado/acción, sin clasificación).
 function tms(t){ return t&&t.toMillis?t.toMillis():(t&&t.seconds?t.seconds*1000:0); }

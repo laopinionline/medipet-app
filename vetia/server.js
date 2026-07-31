@@ -187,14 +187,20 @@ const server = http.createServer((req, res) => {
       // 3) Escaneo determinista (manda en urgencias)
       const scan = escanear(mensaje);
 
-      // 4) System prompt aterrizado en el contexto + 5) modelo con timeout
-      const system = buildSystem(contexto, scan.rojo);
+      // 4) URGENCIA (rojo) = SHORT-CIRCUIT: NO pasa por el modelo. Respuesta segura fija + derivación a Emergencia.
+      //    El escáner es determinista → la urgencia no depende del criterio del modelo (ni de que esté vivo). El front
+      //    muestra su banner en base a `rojo`. Sólo las consultas NO-rojas van al modelo.
       let respuesta;
-      try {
-        respuesta = await callClaude(system, mensaje);
-      } catch (e) {
-        console.warn('[vetia] modelo caído:', e.message);
-        respuesta = respuestaCaida(scan.rojo);
+      if (scan.rojo) {
+        respuesta = respuestaCaida(true);
+      } else {
+        const system = buildSystem(contexto, false); // 5) system aterrizado en el contexto + modelo con timeout
+        try {
+          respuesta = await callClaude(system, mensaje);
+        } catch (e) {
+          console.warn('[vetia] modelo caído:', e.message);
+          respuesta = respuestaCaida(false);
+        }
       }
 
       return enviarJSON(res, 200, {
