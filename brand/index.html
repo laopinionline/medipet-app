@@ -49,8 +49,8 @@
   /* Wordmark */
   .wm{font-family:'Baloo 2',cursive;line-height:1;color:var(--navy)}
   .wm .paw{color:var(--azul)}
-  .lock{display:flex;align-items:center;gap:14px}
-  .lock.stack{flex-direction:column;gap:10px}
+  .lock{display:flex;align-items:center;gap:2px}
+  .lock.stack{flex-direction:column;gap:4px}
 
   /* Swatches */
   .sw-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}
@@ -106,27 +106,21 @@
       <div class="box"><svg width="96" height="96" style="color:var(--azul);stroke-width:4"><use href="#paw"/></svg><span class="cap">Fino · display</span></div>
       <div class="box navy"><svg width="96" height="96" style="color:#fff;stroke-width:4"><use href="#paw"/></svg><span class="cap">Blanco / navy</span></div>
       <div class="box mono"><svg width="96" height="96" style="color:#000;stroke-width:4"><use href="#paw"/></svg><span class="cap">Monocromo negro</span></div>
-      <div class="box"><svg width="52" height="52" style="color:var(--navy);stroke-width:8"><use href="#paw"/></svg><svg width="32" height="32" style="color:var(--navy);stroke-width:9"><use href="#paw"/></svg><span class="cap">Grueso · chico</span></div>
+      <div class="box" style="background:#eef2f8"><svg width="52" height="52" style="color:var(--navy);stroke-width:8"><use href="#paw"/></svg><svg width="32" height="32" style="color:var(--navy);stroke-width:9"><use href="#paw"/></svg><span class="cap">Utilitario · chico/favicon</span></div>
     </div>
-    <div style="margin-top:12px">
-      <a class="dl" href="assets/medipaw-simbolo.svg" download>⬇ símbolo (SVG fino)</a>
-      <a class="dl" href="assets/medipaw-simbolo-grueso.svg" download>⬇ símbolo (SVG grueso)</a>
+    <p style="font-size:.82rem;color:var(--suave);margin-top:12px"><b style="color:var(--navy)">El logo oficial es el trazo fino.</b> El trazo grueso es <b>solo utilitario</b> para tamaños chicos/favicon (no es una versión de uso libre).</p>
+    <div style="margin-top:8px">
+      <a class="dl" href="assets/medipaw-simbolo.svg" download>⬇ logo oficial (SVG fino)</a>
+      <a class="dl" href="assets/medipaw-simbolo-grueso.svg" download>⬇ utilitario (SVG grueso)</a>
     </div>
   </div>
 
   <div class="card">
-    <div class="lbl">Wordmark "MEDIPaw" · Baloo 2 — 2 tratamientos para tu veto</div>
-    <div class="grid g2" style="margin-top:12px">
-      <div class="box" style="min-height:120px">
-        <span class="wm" style="font-weight:800;font-size:2.6rem">MEDI<span class="paw">Paw</span></span>
-        <span class="cap">A · color-split (MEDI navy / Paw azul)</span>
-      </div>
-      <div class="box" style="min-height:120px">
-        <span class="wm" style="font-weight:800;font-size:2.6rem;color:var(--navy)"><span style="font-weight:600">MEDI</span>Paw</span>
-        <span class="cap">B · un color, peso-split (MEDI 600 / Paw 800)</span>
-      </div>
+    <div class="lbl">Wordmark "MEDIPaw" · Baloo 2 (oficial)</div>
+    <div class="box" style="min-height:130px;margin-top:12px">
+      <span class="wm" style="font-weight:800;font-size:2.8rem">MEDI<span class="paw">Paw</span></span>
+      <span class="cap">Color-split · MEDI navy #0D1B3E / Paw azul #1A5FB4 · Baloo 2 ExtraBold 800</span>
     </div>
-    <div class="warnbox" style="background:var(--azul-pale);border-color:#cfe0f5;color:var(--azul)">A es más expresivo y ata al azul; B es más flexible en monocromo/rotulación (un solo color). Elegí uno.</div>
   </div>
 
   <div class="card">
@@ -149,12 +143,12 @@
 <!-- 2 · FAVICON + PWA -->
 <section>
   <div class="sec-h"><span class="n">2</span><h2>Favicon + PWA</h2></div>
-  <p class="sec-sub">Con el símbolo <b>grueso</b> sobre navy, esquinas redondeadas. Generados como assets del demo (el manifest de la app no se toca todavía).</p>
+  <p class="sec-sub">Es <b>el mismo cachorro del logo</b> (versión de trazo grueso), blanco sobre navy con esquinas redondeadas. Generados como assets del demo — el manifest/íconos de la app no se tocan todavía.</p>
   <div class="grid g4">
-    <div class="box"><svg width="64" height="64" viewBox="0 0 64 64"><rect width="64" height="64" rx="15" fill="var(--navy)"/><svg x="12" y="12" width="40" height="40" style="color:#fff;stroke-width:9"><use href="#paw"/></svg></svg><span class="cap">favicon.svg</span></div>
-    <div class="box"><svg width="96" height="96" viewBox="0 0 64 64" style="border-radius:22px"><rect width="64" height="64" rx="15" fill="var(--navy)"/><svg x="12" y="12" width="40" height="40" style="color:#fff;stroke-width:9"><use href="#paw"/></svg></svg><span class="cap">icon 192/512</span></div>
-    <div class="box"><svg width="32" height="32" viewBox="0 0 64 64" style="border-radius:8px"><rect width="64" height="64" rx="15" fill="var(--navy)"/><svg x="12" y="12" width="40" height="40" style="color:#fff;stroke-width:9"><use href="#paw"/></svg></svg><span class="cap">32px (pestaña)</span></div>
-    <div class="box mono"><svg width="16" height="16" viewBox="0 0 64 64" style="border-radius:4px"><rect width="64" height="64" rx="15" fill="var(--navy)"/><svg x="12" y="12" width="40" height="40" style="color:#fff;stroke-width:10"><use href="#paw"/></svg></svg><span class="cap">16px</span></div>
+    <div class="box"><svg width="64" height="64" viewBox="0 0 64 64"><rect width="64" height="64" rx="15" fill="var(--navy)"/><svg x="8" y="8" width="48" height="48" style="color:#fff;stroke-width:8"><use href="#paw"/></svg></svg><span class="cap">favicon.svg</span></div>
+    <div class="box"><svg width="96" height="96" viewBox="0 0 64 64" style="border-radius:22px"><rect width="64" height="64" rx="15" fill="var(--navy)"/><svg x="8" y="8" width="48" height="48" style="color:#fff;stroke-width:8"><use href="#paw"/></svg></svg><span class="cap">icon 192/512</span></div>
+    <div class="box"><svg width="32" height="32" viewBox="0 0 64 64" style="border-radius:8px"><rect width="64" height="64" rx="15" fill="var(--navy)"/><svg x="8" y="8" width="48" height="48" style="color:#fff;stroke-width:8"><use href="#paw"/></svg></svg><span class="cap">32px (pestaña)</span></div>
+    <div class="box mono"><svg width="16" height="16" viewBox="0 0 64 64" style="border-radius:4px"><rect width="64" height="64" rx="15" fill="var(--navy)"/><svg x="8" y="8" width="48" height="48" style="color:#fff;stroke-width:9"><use href="#paw"/></svg></svg><span class="cap">16px</span></div>
   </div>
   <div style="margin-top:12px">
     <a class="dl" href="assets/favicon.svg" download>⬇ favicon.svg</a>
@@ -224,12 +218,19 @@
 
 <!-- 6 · PRUEBA PARED / AMBULANCIA -->
 <section>
-  <div class="sec-h"><span class="n">6</span><h2>Prueba pared / ambulancia</h2></div>
-  <p class="sec-sub">El logo a gran escala en blanco sobre navy — el uso de mayor visibilidad (fachada, móvil, uniforme).</p>
-  <div style="background:var(--navy);border-radius:20px;padding:56px 24px;display:flex;flex-direction:column;align-items:center;gap:20px">
-    <svg width="150" height="150" style="color:#fff;stroke-width:4"><use href="#paw"/></svg>
-    <span class="wm" style="font-weight:800;font-size:clamp(2.4rem,8vw,4.4rem);color:#fff"><span>MEDI</span><span style="color:var(--azul-claro)">Paw</span></span>
-    <span style="color:#aab6d4;font-size:.9rem;letter-spacing:.14em;text-transform:uppercase;font-weight:700">Plan de salud para mascotas</span>
+  <div class="sec-h"><span class="n">6</span><h2>Prueba pared / uso — dos fondos oficiales</h2></div>
+  <p class="sec-sub">Los <b>dos</b> fondos aprobados, misma jerarquía: <b>(a)</b> blanco sobre navy y <b>(b)</b> logo navy/azul sobre celeste-casi-blanco (el pale de la paleta). Son los únicos usos de gran formato — no mezclar combinaciones intermedias.</p>
+  <div class="grid g2">
+    <div style="background:var(--navy);border-radius:20px;padding:44px 20px;display:flex;flex-direction:column;align-items:center;gap:16px">
+      <svg width="120" height="120" style="color:#fff;stroke-width:4"><use href="#paw"/></svg>
+      <span class="wm" style="font-weight:800;font-size:clamp(2rem,6vw,3.2rem);color:#fff"><span>MEDI</span><span style="color:var(--azul-claro)">Paw</span></span>
+      <span style="color:#aab6d4;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;font-weight:800">(a) blanco sobre navy</span>
+    </div>
+    <div style="background:var(--azul-pale);border:1px solid #dbe7f5;border-radius:20px;padding:44px 20px;display:flex;flex-direction:column;align-items:center;gap:16px">
+      <svg width="120" height="120" style="color:var(--azul);stroke-width:4"><use href="#paw"/></svg>
+      <span class="wm" style="font-weight:800;font-size:clamp(2rem,6vw,3.2rem)"><span style="color:var(--navy)">MEDI</span><span style="color:var(--azul)">Paw</span></span>
+      <span style="color:var(--suave);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;font-weight:800">(b) navy/azul sobre pale</span>
+    </div>
   </div>
   <div class="warnbox"><b>Nota honesta:</b> este vector es la identidad <b>v1 digital</b>. Para <b>rotulación física de gran formato</b> (ambulancias, fachadas), pasá por un diseñador/rotulista usando esta guía y los SVG como base — ellos ajustan trazos, escalas y materiales para producción.</div>
 </section>

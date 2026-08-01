@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 190" width="220" height="190">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 150" width="220" height="150">
   <style>@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@800&display=swap');</style>
-  <svg x="60" y="0" width="100" height="100" viewBox="0 0 100 100">
+  <svg x="76" y="0" width="68" height="68" viewBox="16 13 68 74">
     <g fill="none" stroke="#1A5FB4" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
       <path d="M50 84 C69 84 79 73 79 56 C79 44 72 38 63 37 C58 30 50 31 50 31 C50 31 42 30 37 37 C28 38 21 44 21 56 C21 73 31 84 50 84 Z"/>
       <path d="M37 37 C30 23 41 19 46 26 C48 29 47 33 46 36"/>
@@ -9,5 +9,5 @@
       <circle cx="40" cy="53" r="3.3" fill="#1A5FB4" stroke="none"/><circle cx="60" cy="53" r="3.3" fill="#1A5FB4" stroke="none"/>
     </g>
   </svg>
-  <text x="110" y="165" text-anchor="middle" font-family="'Baloo 2', sans-serif" font-weight="800" font-size="52"><tspan fill="#0D1B3E">MEDI</tspan><tspan fill="#1A5FB4">Paw</tspan></text>
+  <text x="110" y="128" text-anchor="middle" font-family="'Baloo 2', sans-serif" font-weight="800" font-size="50"><tspan fill="#0D1B3E">MEDI</tspan><tspan fill="#1A5FB4">Paw</tspan></text>
 </svg>
