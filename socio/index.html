@@ -512,8 +512,8 @@ function bloqueMascotaCarnet(c, m){
         <div class="resp">${titular}</div>
         ${c.u.nroSocio?`<div style="font-size:.56rem;opacity:.5;letter-spacing:1px;">${esc(c.u.nroSocio)}</div>`:''}
       </div>
-      <div class="cobchip" style="background:${cob.ok?'rgba(74,222,128,.18)':'rgba(248,113,113,.2)'};">
-        <span class="cobdot" style="background:${cob.ok?'#4ade80':'#f87171'};"></span> ${esc(cob.chip)}
+      <div class="cobchip" style="background:${cob.ok?'var(--azul-pale)':'#F1F3F7'};color:${cob.ok?'var(--azul)':'var(--suave)'};">
+        <span class="cobdot" style="background:${cob.ok?'var(--azul)':'var(--tenue)'};"></span> ${esc(cob.chip)}
       </div>
     </div>
   </div>
@@ -1161,7 +1161,7 @@ function cardMisMascota(m, atsMasc){
   const servicios = Array.isArray(m.servicios) ? m.servicios : [];
   const incluidos = servicios.filter(s=>s && s.estado==='activo');       // 'oculto' NO se renderiza
   const disponibles = servicios.filter(s=>s && s.estado==='disponible');
-  const chipEstado = `<span style="display:inline-flex;align-items:center;gap:5px;background:${cob.ok?'rgba(74,222,128,.18)':'rgba(248,113,113,.15)'};color:${cob.ok?'#166534':'#991b1b'};font-size:.66rem;font-weight:800;padding:3px 10px;border-radius:100px;white-space:nowrap;"><span style="width:7px;height:7px;border-radius:50%;background:${cob.ok?'#4ade80':'#f87171'};"></span>${esc(cob.chip)}</span>`;
+  const chipEstado = `<span style="display:inline-flex;align-items:center;gap:5px;background:${cob.ok?'var(--azul-pale)':'#F1F3F7'};color:${cob.ok?'var(--azul)':'var(--suave)'};font-size:.66rem;font-weight:800;padding:3px 10px;border-radius:100px;white-space:nowrap;"><span style="width:7px;height:7px;border-radius:50%;background:${cob.ok?'var(--azul)':'var(--tenue)'};"></span>${esc(cob.chip)}</span>`;
   const head = `<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
       <div style="min-width:0;"><div style="font-weight:800;font-size:1rem;">${esc(m.nombre||'—')}</div><div style="font-size:.75rem;color:var(--suave);">${esc(tituloCaso(m.raza||''))}</div></div>
       ${chipEstado}
