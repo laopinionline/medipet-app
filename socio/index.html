@@ -9,8 +9,9 @@
 <meta name="apple-mobile-web-app-title" content="MEDIPaw">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon.svg">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
 <title>MEDIPaw — Mi mascota</title>
-<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -18,16 +19,27 @@
 <script src="/lib/medipaw-core.js?v=20260729a"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{--azul:#1A5FB4;--azul-medio:#2272D9;--azul-claro:#5BA3E8;--azul-pale:#EBF3FC;--noche:#0D1B3E;--fondo:#F5F7FA;--texto:#1a2340;--suave:#5a6a8a;--rojo:#e11d48;--verde:#166534}
-body{font-family:'Nunito',sans-serif;background:var(--fondo);color:var(--texto);min-height:100vh;-webkit-tap-highlight-color:transparent}
+:root{
+  /* Identidad MEDIPaw v1 (sellada 01/08). Azul institucional + ámbar acento + rojo SOLO emergencia. */
+  --navy:#0D1B3E; --azul:#1A5FB4; --azul-medio:#2272D9; --azul-claro:#5BA3E8; --azul-pale:#EBF3FC;
+  --noche:#0D1B3E; /* alias legacy → navy */
+  --ambar:#F2B84D; --ambar-suave:#FBE7C7; --rojo:#e11d48; --rojo-hondo:#9f1239; --verde:#166534;
+  --fondo:#F5F7FA; --blanco:#fff; --texto:#1a2340; --suave:#5a6a8a; --tenue:#8a95ab; --linea:#E6EAF2;
+  /* Radios · espaciados · sombras · fuentes */
+  --r-sm:10px; --r-md:14px; --r-lg:18px; --r-xl:22px; --r-pill:100px;
+  --sp-1:6px; --sp-2:10px; --sp-3:14px; --sp-4:18px; --sp-5:24px;
+  --sombra-sm:0 2px 10px rgba(13,27,62,.05); --sombra-md:0 8px 24px rgba(13,27,62,.08); --sombra-lg:0 14px 44px rgba(13,27,62,.16);
+  --font-display:'Baloo 2',cursive; --font-body:'Nunito',sans-serif;
+}
+body{font-family:var(--font-body);background:var(--fondo);color:var(--texto);min-height:100vh;-webkit-tap-highlight-color:transparent}
 .screen{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px;background:linear-gradient(145deg,var(--noche),#1A3A7A,var(--azul))}
 .screen.active{display:flex}
 .auth-card{background:white;border-radius:24px;padding:36px 28px;width:100%;max-width:440px;box-shadow:0 24px 64px rgba(0,0,0,.3)}
 .auth-card.tall{max-height:92vh;overflow-y:auto}
-.auth-logo{display:flex;align-items:center;gap:10px;justify-content:center;margin-bottom:18px}
-.auth-logo .marca{font-weight:900;font-size:1.6rem;color:var(--azul);letter-spacing:-1px}
-.auth-logo .marca span{color:var(--azul-claro)}
-.auth-title{font-size:1.1rem;font-weight:800;margin-bottom:4px;color:var(--noche);text-align:center}
+.auth-logo{display:flex;align-items:center;gap:4px;justify-content:center;margin-bottom:18px}
+.auth-logo .marca{font-family:var(--font-display);font-weight:800;font-size:1.9rem;color:var(--navy);letter-spacing:-.5px;line-height:1}
+.auth-logo .marca span{color:var(--azul)}
+.auth-title{font-family:var(--font-display);font-size:1.25rem;font-weight:700;margin-bottom:4px;color:var(--navy);text-align:center}
 .auth-sub{font-size:.8rem;color:var(--suave);margin-bottom:18px;text-align:center}
 .fstack{display:flex;flex-direction:column;gap:10px}
 .frow{display:flex;gap:10px}
@@ -43,13 +55,13 @@ body{font-family:'Nunito',sans-serif;background:var(--fondo);color:var(--texto);
 /* App */
 #appScreen{display:none}
 .app-nav{background:var(--noche);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;padding-top:calc(14px + env(safe-area-inset-top))}
-.app-nav .logo{display:flex;align-items:center;gap:8px}
-.app-nav .logo .marca{font-weight:900;font-size:1.1rem;color:white;letter-spacing:-.5px}
+.app-nav .logo{display:flex;align-items:center;gap:3px}
+.app-nav .logo .marca{font-family:var(--font-display);font-weight:800;font-size:1.3rem;color:white;letter-spacing:-.4px;line-height:1}
 .app-nav .logo .marca span{color:var(--azul-claro)}
 .btn-logout{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:white;font-family:'Nunito',sans-serif;font-size:.8rem;font-weight:700;padding:7px 16px;border-radius:100px;cursor:pointer}
 .app-body{max-width:560px;margin:0 auto;padding:18px 16px calc(40px + env(safe-area-inset-bottom))}
-.seccion{background:white;border-radius:18px;padding:18px;margin-bottom:14px;border:1px solid rgba(26,95,180,.08);box-shadow:0 2px 10px rgba(26,95,180,.05)}
-.stit{font-size:.72rem;font-weight:800;color:var(--noche);margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px}
+.seccion{background:var(--blanco);border-radius:var(--r-lg);padding:var(--sp-4);margin-bottom:var(--sp-3);border:1px solid var(--linea);box-shadow:var(--sombra-sm)}
+.stit{font-size:.72rem;font-weight:800;color:var(--suave);margin-bottom:12px;text-transform:uppercase;letter-spacing:.6px}
 /* Carnet de la mascota */
 .carnet{background:linear-gradient(135deg,var(--azul-medio),var(--noche));border-radius:20px;padding:20px;color:white;position:relative;overflow:hidden;box-shadow:0 12px 40px rgba(26,95,180,.3)}
 .carnet .iso{position:absolute;top:14px;right:14px;opacity:.9}
@@ -58,7 +70,7 @@ body{font-family:'Nunito',sans-serif;background:var(--fondo);color:var(--texto);
 .carnet .mrow{display:flex;align-items:center;gap:14px}
 .carnet .mfoto{width:52px;height:52px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,.4)}
 .carnet .mph{width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:1.5rem}
-.carnet .mname{font-size:1.35rem;font-weight:900;line-height:1}
+.carnet .mname{font-family:var(--font-display);font-size:1.5rem;font-weight:800;line-height:1}
 .carnet .mraza{font-size:.66rem;opacity:.65;text-transform:uppercase;letter-spacing:1px}
 .carnet .cfoot{margin-top:14px;border-top:1px solid rgba(255,255,255,.12);padding-top:10px;display:flex;justify-content:space-between;align-items:flex-end}
 .carnet .resp-lbl{font-size:.56rem;opacity:.6;font-weight:700;letter-spacing:.5px}
@@ -72,19 +84,23 @@ body{font-family:'Nunito',sans-serif;background:var(--fondo);color:var(--texto);
 .masc-tab img{width:26px;height:26px;border-radius:50%;object-fit:cover}
 .masc-tab .ph{width:26px;height:26px;border-radius:50%;background:var(--azul-pale);display:flex;align-items:center;justify-content:center;font-size:.9rem}
 /* Emergencia */
-.btn-emerg{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;background:linear-gradient(135deg,#e11d48,#9f1239);color:white;border-radius:18px;padding:18px;text-decoration:none;font-weight:900;box-shadow:0 10px 30px rgba(225,29,72,.35);margin-bottom:14px}
-.btn-emerg .em-top{font-size:1.05rem;letter-spacing:.5px}
+.btn-emerg{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;background:linear-gradient(135deg,var(--rojo),var(--rojo-hondo));color:white;border-radius:var(--r-lg);padding:18px;text-decoration:none;font-weight:900;box-shadow:0 10px 30px rgba(225,29,72,.32);margin-bottom:14px}
+.btn-emerg .em-top{font-family:var(--font-display);font-size:1.1rem;letter-spacing:.3px}
 .btn-emerg .em-sub{display:block;font-size:.72rem;font-weight:700;opacity:.9;letter-spacing:.3px}
-.btn-emerg .em-ico{font-size:1.7rem}
+.btn-emerg .em-ico{font-size:1.7rem;display:flex;align-items:center}
+.btn-emerg .em-ico svg{width:30px;height:30px;color:#fff;display:block}
+.ic{width:24px;height:24px;display:block}
 /* Tiles / placeholders */
-.tile{display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:white;border:1px solid rgba(26,95,180,.08);border-radius:16px;padding:15px 16px;margin-bottom:12px;cursor:pointer;font-family:'Nunito',sans-serif;box-shadow:0 2px 10px rgba(26,95,180,.05);position:relative}
-.tile:disabled{cursor:default}
-.tile .t-ico{width:44px;height:44px;border-radius:12px;background:var(--azul-pale);display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0}
-.tile .t-body{flex:1}
-.tile .t-title{font-size:.95rem;font-weight:800;color:var(--noche)}
+.tile{display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:var(--blanco);border:1px solid var(--linea);border-radius:var(--r-md);padding:14px 16px;margin-bottom:12px;cursor:pointer;font-family:var(--font-body);box-shadow:var(--sombra-sm);position:relative;transition:transform .15s,box-shadow .15s}
+.tile:disabled{cursor:default;opacity:.85}
+.tile:active:not(:disabled){transform:scale(.985)}
+.tile .t-ico{width:44px;height:44px;border-radius:12px;background:var(--azul-pale);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.tile .t-ico svg{width:24px;height:24px;color:var(--azul);display:block}
+.tile .t-body{flex:1;min-width:0}
+.tile .t-title{font-size:.95rem;font-weight:800;color:var(--navy)}
 .tile .t-sub{font-size:.76rem;color:var(--suave);margin-top:1px}
-.tile .t-soon{font-size:.6rem;font-weight:800;color:var(--suave);background:var(--fondo);border:1px solid rgba(26,95,180,.12);border-radius:100px;padding:2px 8px;text-transform:uppercase;letter-spacing:.5px}
-.tile .t-arrow{color:var(--azul-claro);font-size:1.1rem}
+.tile .t-soon{font-size:.6rem;font-weight:800;color:var(--tenue);background:var(--fondo);border:1px solid var(--linea);border-radius:var(--r-pill);padding:2px 8px;text-transform:uppercase;letter-spacing:.5px}
+.tile .t-arrow{color:var(--azul-claro);font-size:1.2rem;font-weight:700}
 /* Feed / instalar */
 .foot-note{font-size:.72rem;color:var(--suave);text-align:center;line-height:1.5;margin-top:8px}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(120px);background:var(--noche);color:white;padding:12px 20px;border-radius:100px;font-size:.85rem;font-weight:700;box-shadow:0 8px 30px rgba(0,0,0,.3);transition:transform .3s;z-index:100;max-width:90vw;text-align:center}
@@ -94,29 +110,29 @@ body{font-family:'Nunito',sans-serif;background:var(--fondo);color:var(--texto);
 </head>
 <body>
 
-<!-- Isotipo MEDIPaw (símbolos reutilizables) -->
+<!-- Símbolos MEDIPaw (identidad v1): cachorro monolínea + iconografía de tiles (mismo lenguaje: trazo uniforme, 24px). -->
 <svg width="0" height="0" style="position:absolute;overflow:hidden">
   <defs>
-    <symbol id="mp-iso" viewBox="0 0 80 80">
-      <rect width="80" height="80" rx="18" fill="#2272D9"/>
-      <circle cx="24" cy="28" r="10" fill="#5BA3E8"/><circle cx="56" cy="28" r="10" fill="#5BA3E8"/>
-      <circle cx="40" cy="44" r="22" fill="#5BA3E8"/>
-      <circle cx="33" cy="42" r="4" fill="white"/><circle cx="47" cy="42" r="4" fill="white"/>
-      <circle cx="34" cy="43" r="2" fill="#1A5FB4"/><circle cx="48" cy="43" r="2" fill="#1A5FB4"/>
-      <ellipse cx="40" cy="50" rx="2.5" ry="1.8" fill="#1A5FB4" opacity=".5"/>
-      <line x1="57" y1="11" x2="57" y2="19" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
-      <line x1="53" y1="15" x2="61" y2="15" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+    <!-- Cachorro (logo). fill none + stroke currentColor; sin stroke-width → se hereda para escalar el trazo. -->
+    <symbol id="paw" viewBox="0 0 100 100">
+      <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M50 84 C69 84 79 73 79 56 C79 44 72 38 63 37 C58 30 50 31 50 31 C50 31 42 30 37 37 C28 38 21 44 21 56 C21 73 31 84 50 84 Z"/>
+        <path d="M37 37 C30 23 41 19 46 26 C48 29 47 33 46 36"/>
+        <path d="M63 37 C70 23 59 19 54 26 C52 29 53 33 54 36"/>
+        <path d="M50 59 v4"/><path d="M41 66 C46 73 54 73 59 66"/>
+        <circle cx="40" cy="53" r="3.3" fill="currentColor" stroke="none"/><circle cx="60" cy="53" r="3.3" fill="currentColor" stroke="none"/>
+      </g>
     </symbol>
-    <symbol id="mp-iso-w" viewBox="0 0 80 80">
-      <rect width="80" height="80" rx="18" fill="rgba(255,255,255,.15)"/>
-      <circle cx="24" cy="28" r="10" fill="rgba(255,255,255,.7)"/><circle cx="56" cy="28" r="10" fill="rgba(255,255,255,.7)"/>
-      <circle cx="40" cy="44" r="22" fill="white"/>
-      <circle cx="33" cy="42" r="4" fill="white"/><circle cx="47" cy="42" r="4" fill="white"/>
-      <circle cx="34" cy="43" r="2" fill="#2272D9"/><circle cx="48" cy="43" r="2" fill="#2272D9"/>
-      <ellipse cx="40" cy="50" rx="2.5" ry="1.8" fill="#2272D9" opacity=".4"/>
-      <line x1="57" y1="11" x2="57" y2="19" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
-      <line x1="53" y1="15" x2="61" y2="15" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
-    </symbol>
+    <!-- Íconos de tile — monolínea, trazo 2, esquinas redondeadas, grid 24. currentColor. -->
+    <symbol id="ic-emerg" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8.2v7.6M8.2 12h7.6"/></g></symbol>
+    <symbol id="ic-vetia" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6.5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-5l-4 3v-3H7a2 2 0 0 1-2-2z"/><circle cx="9" cy="10.5" r=".2"/><circle cx="12" cy="10.5" r=".2"/><circle cx="15" cy="10.5" r=".2"/></g></symbol>
+    <symbol id="ic-nobien" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.5S5 16 5 10.8A3.6 3.5 0 0 1 12 8a3.6 3.5 0 0 1 7 2.8"/><path d="M5.5 13h3l1.4-2.6 2.1 4.6 1.4-3H19"/></g></symbol>
+    <symbol id="ic-turnos" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="15" rx="2.5"/><path d="M4 9.5h16M8.5 3.5v3M15.5 3.5v3"/><circle cx="12" cy="14.5" r="1.1" fill="currentColor" stroke="none"/></g></symbol>
+    <symbol id="ic-chequeo" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16"/><path d="M5 16l4-4 3 2 6.5-7.5"/></g></symbol>
+    <symbol id="ic-historia" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.2"/><path d="M12 7.6v4.7l3 1.8"/></g></symbol>
+    <symbol id="ic-cuota" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h10v17l-2.5-1.8-2.5 1.8-2.5-1.8L7 20.5z"/><path d="M10 8.5h4M10 12.5h4"/></g></symbol>
+    <symbol id="ic-mascotas" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="16" rx="4.2" ry="3.4"/><circle cx="6.6" cy="11.2" r="1.7"/><circle cx="10" cy="8" r="1.7"/><circle cx="14" cy="8" r="1.7"/><circle cx="17.4" cy="11.2" r="1.7"/></g></symbol>
+    <symbol id="ic-cartilla" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s6-5.5 6-10a6 6 0 0 0-12 0c0 4.5 6 10 6 10z"/><circle cx="12" cy="11" r="2.4"/></g></symbol>
   </defs>
 </svg>
 
@@ -125,7 +141,7 @@ body{font-family:'Nunito',sans-serif;background:var(--fondo);color:var(--texto);
 <!-- LOGIN -->
 <div id="loginScreen" class="screen">
   <div class="auth-card">
-    <div class="auth-logo"><svg width="44" height="44"><use href="#mp-iso"/></svg><div class="marca">MEDI<span>Paw</span></div></div>
+    <div class="auth-logo"><svg width="40" height="40" style="color:var(--azul);stroke-width:5"><use href="#paw"/></svg><div class="marca">MEDI<span>Paw</span></div></div>
     <div class="auth-title">Entrá a tu cuenta</div>
     <div class="auth-sub">El plan de salud de tu mascota</div>
     <div class="fstack">
@@ -144,7 +160,7 @@ body{font-family:'Nunito',sans-serif;background:var(--fondo);color:var(--texto);
 <!-- REGISTRO -->
 <div id="registerScreen" class="screen">
   <div class="auth-card tall" style="max-width:480px;">
-    <div class="auth-logo"><svg width="40" height="40"><use href="#mp-iso"/></svg><div class="marca">MEDI<span>Paw</span></div></div>
+    <div class="auth-logo"><svg width="40" height="40" style="color:var(--azul);stroke-width:5"><use href="#paw"/></svg><div class="marca">MEDI<span>Paw</span></div></div>
     <div class="auth-title">Creá tu cuenta MEDIPaw</div>
     <div class="auth-sub">Después damos de alta a tu mascota</div>
     <div class="fstack">
@@ -167,7 +183,7 @@ body{font-family:'Nunito',sans-serif;background:var(--fondo);color:var(--texto);
 <!-- APP (home del titular) -->
 <div id="appScreen">
   <nav class="app-nav">
-    <div class="logo"><svg width="30" height="30"><use href="#mp-iso-w"/></svg><div class="marca">MEDI<span>Paw</span></div></div>
+    <div class="logo"><svg width="30" height="30" style="color:#fff;stroke-width:6"><use href="#paw"/></svg><div class="marca">MEDI<span>Paw</span></div></div>
     <button onclick="doLogout()" class="btn-logout">Salir</button>
   </nav>
   <div class="app-body"><div id="home"></div></div>
@@ -220,6 +236,8 @@ async function mascGetByTitular(uid){
 
 // ── Utilidades ──
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+// Iconografía propia (identidad): un ícono monolínea por nombre (id fijo del set, no dato de usuario → sin esc).
+function icon(name){ return `<svg class="ic" aria-hidden="true"><use href="#ic-${name}"/></svg>`; }
 function v(id){ const el=document.getElementById(id); return el?el.value.trim():''; }
 function showScreen(id){ ['bootScreen','loginScreen','registerScreen'].forEach(s=>{const e=document.getElementById(s);if(e){e.classList.remove('active');e.style.display=s==='bootScreen'?'none':'';}}); document.getElementById('appScreen').style.display='none'; if(id==='appScreen'){document.getElementById('appScreen').style.display='block';} else {const e=document.getElementById(id); if(e){e.style.display='';e.classList.add('active');}} }
 function toast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),2600); }
@@ -293,7 +311,7 @@ function renderSinAcceso(u){
       <div style="font-size:2.2rem;margin-bottom:8px;">🐾</div>
       <div class="stit" style="text-transform:none;font-size:1rem;">Todavía no tenés una mascota afiliada</div>
       <p style="font-size:.85rem;color:var(--suave);line-height:1.5;margin-top:6px;">Escribinos para afiliar a tu mascota y activar tu plan MEDIPaw.</p>
-      <a class="btn-emerg" href="tel:${TEL_EMERG}" style="margin-top:14px;"><span class="em-ico">📞</span><span><span class="em-top">EMERGENCIA 24hs</span><span class="em-sub">Llamar a la guardia veterinaria</span></span></a>
+      <a class="btn-emerg" href="tel:${TEL_EMERG}" style="margin-top:14px;"><span class="em-ico">${icon('emerg')}</span><span><span class="em-top">EMERGENCIA 24hs</span><span class="em-sub">Llamar a la guardia veterinaria</span></span></a>
     </div>`;
   showScreen('appScreen');
 }
@@ -448,7 +466,7 @@ function bloqueMascotaCarnet(c, m){
   const cob=MC.coberturaMascota(m); const cuota=MC.planCuota(m.plan);
   return selector + `
   <div class="carnet" style="margin-bottom:14px;">
-    <div class="iso"><svg width="30" height="30"><use href="#mp-iso-w"/></svg></div>
+    <div class="iso"><svg width="34" height="34" style="color:rgba(255,255,255,.92);stroke-width:5"><use href="#paw"/></svg></div>
     <div class="cplan-lbl">PLAN</div>
     <div class="cplan">${esc(m.plan||'Sin definir')}</div>
     <div class="mrow">
@@ -474,7 +492,7 @@ function bloqueMascotaCarnet(c, m){
 // 2) EMERGENCIA · guardia veterinaria 24hs — botón grande, tel:, constante única TEL_EMERG.
 function bloqueEmergencia(){
   return `<a class="btn-emerg" href="tel:${TEL_EMERG}">
-    <span class="em-ico">🚑</span>
+    <span class="em-ico">${icon('emerg')}</span>
     <span><span class="em-top">EMERGENCIA 24hs</span><span class="em-sub">Guardia veterinaria — llamar al ${esc(TEL_EMERG)}</span></span>
   </a>`;
 }
@@ -489,9 +507,9 @@ function tilePlaceholder(ico, titulo, sub){
 }
 // VETIA — en el DEMO es un tile vivo (abre el chat); en PROD sigue placeholder "Pronto" (gate por hostname).
 function bloqueIA(m){
-  if(!VETIA_ON) return tilePlaceholder('💬','VETIA','Consultá sobre tu plan, tus mascotas o cómo cuidarlas');
+  if(!VETIA_ON) return tilePlaceholder(icon('vetia'),'VETIA','Consultá sobre tu plan, tus mascotas o cómo cuidarlas');
   return `<button class="tile" onclick="abrirVetia()">
-    <div class="t-ico">💬</div>
+    <div class="t-ico">${icon('vetia')}</div>
     <div class="t-body"><div class="t-title">VETIA</div><div class="t-sub">Consultá sobre tu plan, tus mascotas o cómo cuidarlas</div></div>
     <span class="t-arrow">›</span>
   </button>`;
@@ -508,7 +526,7 @@ function vetiaView(){
     if(msg.rojo){
       // URGENCIA: banner destacado + derivación a "no está bien". NO se ofrece seguir como si nada.
       return `<div style="align-self:stretch;">
-        <a class="btn-emerg" href="tel:${TEL_EMERG}"><span class="em-ico">🚑</span><span><span class="em-top">ES UNA URGENCIA — llamá ahora</span><span class="em-sub">Guardia veterinaria 24hs — ${esc(TEL_EMERG)}</span></span></a>
+        <a class="btn-emerg" href="tel:${TEL_EMERG}"><span class="em-ico">${icon('emerg')}</span><span><span class="em-top">ES UNA URGENCIA — llamá ahora</span><span class="em-sub">Guardia veterinaria 24hs — ${esc(TEL_EMERG)}</span></span></a>
         <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:10px 12px;margin-top:8px;font-size:.85rem;color:var(--texto);white-space:pre-wrap;">${esc(msg.texto)}</div>
         <button class="btn-primary" style="margin-top:8px;" onclick="abrirCaso()">Contarle a un veterinario qué le pasa</button>
       </div>`;
@@ -573,7 +591,7 @@ function bloqueNoEstaBien(m){
     </div>`;
   }
   return `<button class="tile" onclick="abrirCaso()">
-    <div class="t-ico" style="background:#fee2e2;">🩹</div>
+    <div class="t-ico">${icon('nobien')}</div>
     <div class="t-body"><div class="t-title">${esc(nombreMasc(m))} no está bien</div><div class="t-sub">Contanos qué le pasa — un veterinario lo revisa</div></div>
     <span class="t-arrow">›</span>
   </button>` + estado;
@@ -589,7 +607,7 @@ function casoView(){
       <div style="font-size:2rem;">✅</div>
       <div class="stit" style="text-transform:none;font-size:1rem;margin-top:6px;">Recibimos lo de ${esc(nombre)}</div>
       <p style="font-size:.85rem;color:var(--suave);line-height:1.5;margin-top:6px;">Un veterinario lo va a revisar y te contactamos. Si mientras tanto se pone urgente, no esperes acá:</p>
-      <a class="btn-emerg" href="tel:${TEL_EMERG}" style="margin-top:12px;"><span class="em-ico">🚑</span><span><span class="em-top">EMERGENCIA 24hs</span><span class="em-sub">Guardia veterinaria — ${esc(TEL_EMERG)}</span></span></a>
+      <a class="btn-emerg" href="tel:${TEL_EMERG}" style="margin-top:12px;"><span class="em-ico">${icon('emerg')}</span><span><span class="em-top">EMERGENCIA 24hs</span><span class="em-sub">Guardia veterinaria — ${esc(TEL_EMERG)}</span></span></a>
       <button class="btn-primary" style="margin-top:10px;" onclick="volverHome()">Volver al inicio</button>
     </div>`;
   } else {
@@ -606,7 +624,7 @@ function casoView(){
         <p id="casoMsg" class="errmsg"></p>
       </div>
       <p style="font-size:.8rem;font-weight:800;color:var(--noche);margin:6px 0 8px;">¿Puede esperar o es urgente?</p>
-      <a class="btn-emerg" href="tel:${TEL_EMERG}"><span class="em-ico">🚑</span><span><span class="em-top">ES URGENTE — llamar ahora</span><span class="em-sub">No esperes respuesta acá. Guardia 24hs: ${esc(TEL_EMERG)}</span></span></a>
+      <a class="btn-emerg" href="tel:${TEL_EMERG}"><span class="em-ico">${icon('emerg')}</span><span><span class="em-top">ES URGENTE — llamar ahora</span><span class="em-sub">No esperes respuesta acá. Guardia 24hs: ${esc(TEL_EMERG)}</span></span></a>
       <button class="btn-primary" style="margin-top:10px;" onclick="enviarCaso()">Puedo esperar — enviar a un veterinario</button>
     </div>`;
   }
@@ -629,9 +647,9 @@ async function enviarCaso(){
 }
 // TURNOS — en el DEMO es un tile vivo (agenda del vet de guardia); en PROD sigue "Pronto" (mismo gate que VETIA).
 function bloqueTurnos(m){
-  if(!VETIA_ON) return tilePlaceholder('📅','Turnos','Pedí un turno para tu mascota');
+  if(!VETIA_ON) return tilePlaceholder(icon('turnos'),'Turnos','Pedí un turno para tu mascota');
   return `<button class="tile" onclick="abrirTurnos()">
-    <div class="t-ico">📅</div>
+    <div class="t-ico">${icon('turnos')}</div>
     <div class="t-body"><div class="t-title">Turnos</div><div class="t-sub">Pedí un turno con el veterinario de guardia</div></div>
     <span class="t-arrow">›</span>
   </button>`;
@@ -778,7 +796,7 @@ function turnosView(){
 // Chequeo y peso — tile REAL (abre la serie de peso). Append-only, sin juicio de si el peso está bien o mal.
 function bloqueChequeo(m){
   return `<button class="tile" onclick="abrirChequeo(mascotaActiva())">
-    <div class="t-ico">⚖️</div>
+    <div class="t-ico">${icon('chequeo')}</div>
     <div class="t-body"><div class="t-title">Chequeo y peso de ${esc(nombreMasc(m))}</div><div class="t-sub">Seguimiento de peso</div></div>
     <span class="t-arrow">›</span>
   </button>`;
@@ -786,7 +804,7 @@ function bloqueChequeo(m){
 // Historia — tile REAL (abre las atenciones del titular). Solo lectura; el titular no carga, escribe el vet.
 function bloqueHistoria(m){
   return `<button class="tile" onclick="abrirHistoria(mascotaActiva())">
-    <div class="t-ico">📋</div>
+    <div class="t-ico">${icon('historia')}</div>
     <div class="t-body"><div class="t-title">Historia de ${esc(nombreMasc(m))}</div><div class="t-sub">Atenciones, vacunas y estudios</div></div>
     <span class="t-arrow">›</span>
   </button>`;
@@ -973,7 +991,7 @@ function bloqueCuota(c){
   const cuota=MC.cuotaTitular(c.mascotas||[]);
   const pend=(c.comprobantes||[]).filter(x=>x.estado!=='pagada').length;
   return `<button class="tile" onclick="abrirCuenta()">
-    <div class="t-ico">🧾</div>
+    <div class="t-ico">${icon('cuota')}</div>
     <div class="t-body"><div class="t-title">Cuota y comprobantes</div><div class="t-sub">${cuota?('$'+cuota.toLocaleString('es-AR')+'/mes'):'Sin cuota activa'}${pend?` · ${pend} pendiente${pend>1?'s':''}`:''}</div></div>
     <span class="t-arrow">›</span>
   </button>`;
@@ -1026,7 +1044,7 @@ function bloqueMisMascotas(c){
   const n=(c.mascotas||[]).length;
   const sub = n ? `${n} mascota${n>1?'s':''} · planes y servicios` : 'Tus mascotas, planes y servicios';
   return `<button class="tile" onclick="abrirMisMascotas()">
-    <div class="t-ico">🐾</div>
+    <div class="t-ico">${icon('mascotas')}</div>
     <div class="t-body"><div class="t-title">Mis mascotas y servicios</div><div class="t-sub">${esc(sub)}</div></div>
     <span class="t-arrow">›</span>
   </button>`;
@@ -1142,7 +1160,7 @@ function misMascotasView(){
 // agrupa por localidad en el cliente. tel: link para discar. NO vinculada a mascotas.
 function bloqueCartilla(){
   return `<button class="tile" onclick="abrirCartilla()">
-    <div class="t-ico">🏥</div>
+    <div class="t-ico">${icon('cartilla')}</div>
     <div class="t-body"><div class="t-title">Cartilla de prestadores</div><div class="t-sub">Veterinarias y especialistas cerca tuyo</div></div>
     <span class="t-arrow">›</span>
   </button>`;
