@@ -118,6 +118,30 @@ body{font-family:var(--font-body);background:var(--fondo);color:var(--texto);min
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(120px);background:var(--noche);color:white;padding:12px 20px;border-radius:100px;font-size:.85rem;font-weight:700;box-shadow:0 8px 30px rgba(0,0,0,.3);transition:transform .3s;z-index:100;max-width:90vw;text-align:center}
 .toast.show{transform:translateX(-50%) translateY(0)}
 .boot{display:flex;align-items:center;justify-content:center;min-height:100vh;color:var(--suave);font-weight:700}
+/* ── FASE 3 · Movimiento (sobrio, 200-250ms; prefers-reduced-motion lo apaga) ── */
+#home.view-anim{animation:viewIn .24s var(--ease,cubic-bezier(.22,.61,.36,1))}
+@keyframes viewIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+/* Tap states físicos — NUNCA en emergencia ni en "no está bien" (.no-motion) */
+.tile:not(.no-motion):active:not(:disabled),.btn-primary:active:not(:disabled),.masc-tab:active,.p-cta:active{transform:scale(.98)}
+.btn-primary,.masc-tab{transition:transform .12s var(--ease,ease),background .2s}
+/* Patitas-loader (huellitas que "caminan") */
+.paws{display:inline-flex;gap:7px;align-items:center}
+.paws svg{width:16px;height:16px;color:var(--azul-claro);opacity:.25}
+.paws svg:nth-child(odd){transform:rotate(-12deg)}.paws svg:nth-child(even){transform:rotate(12deg)}
+.paws.go svg{animation:pawWalk 1.1s infinite}
+.paws.go svg:nth-child(2){animation-delay:.16s}.paws.go svg:nth-child(3){animation-delay:.32s}.paws.go svg:nth-child(4){animation-delay:.48s}
+@keyframes pawWalk{0%,55%,100%{opacity:.22}28%{opacity:1}}
+/* Cachorro que sonríe en un logro (1 vez, sutil) */
+.celebra{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:200}
+.celebra svg{width:118px;height:118px;color:var(--azul);stroke-width:5;filter:drop-shadow(0 10px 24px rgba(26,95,180,.35));animation:cachorroJoy 1.3s var(--ease,ease) forwards}
+@keyframes cachorroJoy{0%{opacity:0;transform:scale(.3) rotate(-8deg)}22%{opacity:1;transform:scale(1.12) rotate(3deg)}38%{transform:scale(1) rotate(0)}78%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.06) translateY(-6px)}}
+@media(prefers-reduced-motion:reduce){
+  #home.view-anim{animation:none}
+  .tile,.btn-primary,.masc-tab,.p-cta{transition:none}
+  .tile:active,.btn-primary:active,.masc-tab:active,.p-cta:active{transform:none}
+  .paws.go svg{animation:none;opacity:.5}
+  .celebra{display:none}
+}
 </style>
 </head>
 <body>
@@ -251,7 +275,9 @@ function getRoles(u){
 // ── Estado único ──
 const S = { view:'boot', sub:'home', cred:null, mascotaSel:0, deferredPrompt:null, caso:null, chequeo:null, historia:null, mismascotas:null, cartilla:null, vetia:null, turnos:null };
 // Dispatcher del sub-view: home | caso | cuenta | alta (embudo) | chequeo (peso) | historia (atenciones) | mismascotas (planes+servicios) | vetia (chat IA, demo) | turnos (agenda, demo)
-function render(){ if(S.sub==='caso') casoView(); else if(S.sub==='cuenta') cuentaView(); else if(S.sub==='alta') altaView(); else if(S.sub==='chequeo') chequeoView(); else if(S.sub==='historia') historiaView(); else if(S.sub==='mismascotas') misMascotasView(); else if(S.sub==='cartilla') cartillaView(); else if(S.sub==='vetia') vetiaView(); else if(S.sub==='turnos') turnosView(); else homeView(); }
+function render(){ if(S.sub==='caso') casoView(); else if(S.sub==='cuenta') cuentaView(); else if(S.sub==='alta') altaView(); else if(S.sub==='chequeo') chequeoView(); else if(S.sub==='historia') historiaView(); else if(S.sub==='mismascotas') misMascotasView(); else if(S.sub==='cartilla') cartillaView(); else if(S.sub==='vetia') vetiaView(); else if(S.sub==='turnos') turnosView(); else homeView(); animarVista(); }
+// Fade+slide sutil del contenedor al navegar entre vistas. CERO animación en "no está bien" (caso).
+function animarVista(){ if(S.sub==='caso') return; const h=document.getElementById('home'); if(!h) return; h.classList.remove('view-anim'); void h.offsetWidth; h.classList.add('view-anim'); }
 function volverHome(){ S.sub='home'; S.caso=null; S.alta=null; S.chequeo=null; S.historia=null; S.mismascotas=null; S.cartilla=null; S.vetia=null; S.turnos=null; render(); }
 
 // ── Colección mascotas (fuente de verdad; reusa el núcleo) ──
@@ -271,6 +297,12 @@ function iconEspecie(especie){ const e={perro:'perro',gato:'gato',ave:'ave'}[esp
 function etiquetaPrestacion(tipo){ try{ return (MC && MC.ETIQUETAS_PRESTACION && MC.ETIQUETAS_PRESTACION[tipo]) || tipo; }catch(e){ return tipo; } }
 const CHIP_CORTA={consultaGuardia:'Guardia',consultaExterna:'Consulta ext.',vetOnline:'Vet online',medicamentos:'Medicamentos',vacunas:'Vacunas',desparasitacion:'Desparasitación',traslado:'Traslado',analisis:'Análisis',imagen:'Imagen',resonancia:'Resonancia',periodontal:'Periodontal',cirugia:'Cirugía',internacion:'Internación',nutricionista:'Nutrición',etologo:'Etología',especialidades:'Especialidad',higiene:'Higiene',bano:'Baño',descuentos:'Descuentos',legal:'Legal',cremacion:'Cremación',consulta:'Consulta'};
 function chipPrestacion(tipo){ return CHIP_CORTA[tipo] || etiquetaPrestacion(tipo); }
+// ── Movimiento (Fase 3) ──
+function reduceMotion(){ return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches); }
+// Patitas-loader: 4 huellitas que "caminan" (skeleton/carga). txt opcional al lado.
+function patitas(txt){ const paws=[0,0,0,0].map(()=>icon('mascotas')).join(''); return `<span class="paws go" role="status" aria-label="Cargando">${paws}</span>${txt?`<span style="margin-left:8px;color:var(--suave);font-size:.82rem;">${esc(txt)}</span>`:''}`; }
+// Cachorro que sonríe: micro-celebración de un logro (1 vez, sutil; respeta reduced-motion).
+function celebrar(){ if(reduceMotion()) return; const el=document.createElement('div'); el.className='celebra'; el.innerHTML='<svg viewBox="0 0 100 100"><use href="#paw"/></svg>'; document.body.appendChild(el); setTimeout(function(){ el.remove(); }, 1400); }
 function v(id){ const el=document.getElementById(id); return el?el.value.trim():''; }
 function showScreen(id){ ['bootScreen','loginScreen','registerScreen'].forEach(s=>{const e=document.getElementById(s);if(e){e.classList.remove('active');e.style.display=s==='bootScreen'?'none':'';}}); document.getElementById('appScreen').style.display='none'; if(id==='appScreen'){document.getElementById('appScreen').style.display='block';} else {const e=document.getElementById(id); if(e){e.style.display='';e.classList.add('active');}} }
 function toast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),2600); }
@@ -469,7 +501,7 @@ async function finalizarAlta(){
     S.cred.mascotas=await mascGetByTitular(uid);
     S.mascotaSel=Math.max(0,S.cred.mascotas.findIndex(m=>m.mascotaId===mascotaId));
     S.sub='home'; S.alta=null; render();
-    toast(a.nombre+' quedó con cobertura activa.');
+    toast(a.nombre+' quedó con cobertura activa.'); celebrar(); // alta completada
   }catch(e){ a.busy=false; a.err='No se pudo dar de alta: '+e.message; altaView(); }
 }
 
@@ -566,7 +598,7 @@ function vetiaView(){
     }
     return `<div style="align-self:flex-start;max-width:82%;background:#f1f5f9;color:var(--texto);padding:9px 12px;border-radius:14px 14px 14px 4px;font-size:.85rem;white-space:pre-wrap;">${esc(msg.texto)}</div>`;
   }).join('');
-  const cargando = st.busy ? `<div style="align-self:flex-start;font-size:.8rem;color:var(--suave);padding:6px 4px;">VETIA está escribiendo…</div>` : '';
+  const cargando = st.busy ? `<div style="align-self:flex-start;padding:6px 4px;">${patitas('VETIA está pensando…')}</div>` : '';
   const errBox = st.err ? `<div style="align-self:stretch;background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:10px 12px;font-size:.83rem;color:#b91c1c;">${esc(st.err)}</div>` : '';
   const vacio = (!st.mensajes.length && !st.busy) ? `<div style="text-align:center;color:var(--suave);font-size:.85rem;padding:16px 8px;line-height:1.5;">Preguntame sobre tu plan, tu cobertura o cómo cuidar a ${esc(nombreMasc(m))}.<br><span style="opacity:.8;">Ej: “¿qué me cubre?”, “¿cuándo lo vacuno?”</span></div>` : '';
   const back=`<button class="link-btn" style="margin-bottom:10px;display:inline-block;" onclick="volverHome()">‹ Volver</button>`;
@@ -623,7 +655,7 @@ function bloqueNoEstaBien(m){
       ${c.respuestaTitular?`<div style="font-size:.78rem;color:var(--texto);margin-top:4px;">${esc(c.respuestaTitular)}</div>`:''}
     </div>`;
   }
-  return `<button class="tile" onclick="abrirCaso()">
+  return `<button class="tile no-motion" onclick="abrirCaso()">
     <div class="t-ico">${icon('nobien')}</div>
     <div class="t-body"><div class="t-title">${esc(nombreMasc(m))} no está bien</div><div class="t-sub">Contanos qué le pasa — un veterinario lo revisa</div></div>
     <span class="t-arrow">›</span>
@@ -742,7 +774,7 @@ async function confirmarReservaTurno(){
     const data=await res.json().catch(()=>({}));
     if(!res.ok){ S.turnos.busy=false; S.turnos.err=msgErrorTurno(res.status,data&&data.error); turnosView(); return; }
     S.turnos.info=(data&&data.info)||''; S.turnos.confirm=null; S.turnos.busy=false;
-    await cargarTurnos(); // recarga → muestra la card del turno
+    await cargarTurnos(); celebrar(); // turno reservado
   }catch(e){ S.turnos.busy=false; S.turnos.err='Turnos no está disponible ahora. Probá de nuevo en un rato.'; turnosView(); }
 }
 
@@ -767,7 +799,7 @@ function turnosView(){
   const errBox = st.err ? `<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:10px 12px;font-size:.83rem;color:#b91c1c;margin-bottom:10px;">${esc(st.err)}</div>` : '';
   let body;
   if(st.loading){
-    body=`<div class="seccion"><p style="font-size:.85rem;color:var(--suave);">Cargando turnos…</p></div>`;
+    body=`<div class="seccion">${patitas('Cargando turnos…')}</div>`;
   } else if(st.miTurno){
     // CON turno futuro: card + cancelar (confirmación inline, sin diálogo nativo).
     const t=st.miTurno;
@@ -874,7 +906,7 @@ function chequeoView(){
   const back=`<button class="link-btn" style="margin-bottom:10px;display:inline-block;" onclick="volverHome()">‹ Volver</button>`;
   const m=mascotaActiva();
   if(!S.chequeo){ // aún sin cargar → mostrar cargando y disparar la lectura
-    document.getElementById('home').innerHTML = back + `<div class="seccion"><p style="font-size:.85rem;color:var(--suave);">Cargando…</p></div>`;
+    document.getElementById('home').innerHTML = back + `<div class="seccion">${patitas('Cargando…')}</div>`;
     cargarPesosChequeo(); return;
   }
   const titulo=`<div class="stit" style="text-transform:none;font-size:1rem;">Chequeo y peso de ${esc(nombreMasc(m))}</div>`;
@@ -942,7 +974,7 @@ async function guardarPeso(){
   const btn=document.querySelector('#home .btn-primary'); if(btn){ btn.disabled=true; btn.textContent='Guardando…'; }
   try{
     await db.collection('pesos').add({ mascotaId:m.mascotaId, titularUid:uid, peso:nkg, fecha:TS(), origen:'titular' });
-    S.chequeo=null; chequeoView(); // re-lee la serie y re-renderiza
+    S.chequeo=null; chequeoView(); celebrar(); // medición guardada
   }catch(e){
     if(btn){ btn.disabled=false; btn.textContent='Guardar'; }
     if(msg) msg.textContent='Error al guardar: '+e.message;
@@ -1005,7 +1037,7 @@ function itemAtencion(a){
 function historiaView(){
   const back=`<button class="link-btn" style="margin-bottom:10px;display:inline-block;" onclick="volverHome()">‹ Volver</button>`;
   const m=mascotaActiva();
-  if(!S.historia){ document.getElementById('home').innerHTML = back + `<div class="seccion"><p style="font-size:.85rem;color:var(--suave);">Cargando…</p></div>`; cargarAtencionesHistoria(); return; }
+  if(!S.historia){ document.getElementById('home').innerHTML = back + `<div class="seccion">${patitas('Cargando…')}</div>`; cargarAtencionesHistoria(); return; }
   const titulo=`<div class="stit" style="text-transform:none;font-size:1rem;">Historia de ${esc(nombreMasc(m))}</div>`;
   if(!m){ document.getElementById('home').innerHTML = back + `<div class="seccion">${titulo}<p style="font-size:.85rem;color:var(--suave);margin-top:8px;">Primero agregá una mascota.</p></div>`; return; }
   const err=S.historia.err?`<p class="errmsg">${esc(S.historia.err)}</p>`:'';
@@ -1181,7 +1213,7 @@ function misMascotasView(){
   const back=`<button class="link-btn" style="margin-bottom:10px;display:inline-block;" onclick="volverHome()">‹ Volver</button>`;
   const titulo=`<div class="stit" style="margin:4px 2px 8px;text-transform:none;font-size:1rem;">Mis mascotas y servicios</div>`;
   // Las atenciones (para Cobertura) se cargan una vez y quedan en S.mismascotas.atByMasc. Mientras, loading.
-  if(!S.mismascotas){ document.getElementById('home').innerHTML = back + titulo + `<div class="seccion"><p style="font-size:.85rem;color:var(--suave);">Cargando…</p></div>`; cargarCoberturaMisMascotas(); return; }
+  if(!S.mismascotas){ document.getElementById('home').innerHTML = back + titulo + `<div class="seccion">${patitas('Cargando…')}</div>`; cargarCoberturaMisMascotas(); return; }
   const ms=(S.cred&&S.cred.mascotas)||[];
   const atByMasc=S.mismascotas.atByMasc||{};
   const err=S.mismascotas.err?`<p class="errmsg">${esc(S.mismascotas.err)}</p>`:'';
@@ -1220,7 +1252,7 @@ function itemCartilla(p){
 function cartillaView(){
   const back=`<button class="link-btn" style="margin-bottom:10px;display:inline-block;" onclick="volverHome()">‹ Volver</button>`;
   const titulo=`<div class="stit" style="margin:4px 2px 8px;text-transform:none;font-size:1rem;">Cartilla de prestadores</div>`;
-  if(!S.cartilla){ document.getElementById('home').innerHTML = back + titulo + `<div class="seccion"><p style="font-size:.85rem;color:var(--suave);">Cargando…</p></div>`; cargarCartilla(); return; }
+  if(!S.cartilla){ document.getElementById('home').innerHTML = back + titulo + `<div class="seccion">${patitas('Cargando…')}</div>`; cargarCartilla(); return; }
   const err=S.cartilla.err?`<p class="errmsg">${esc(S.cartilla.err)}</p>`:'';
   const lista=S.cartilla.lista||[];
   if(!lista.length){ document.getElementById('home').innerHTML = back + titulo + err + `<div class="seccion"><p style="font-size:.85rem;color:var(--suave);">Estamos sumando prestadores.</p></div>`; return; }
