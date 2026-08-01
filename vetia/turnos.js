@@ -3,7 +3,7 @@
  * VETIA / TURNOS — reserva y cancelación de turnos del vet de guardia MEDIPaw. Server-side (VPS, Admin SDK).
  * Patrón MEDICAR adaptado a AGENDA ÚNICA (un solo vet → sin medicoId). La atomicidad del slot (evitar doble-booking)
  * va en una TRANSACCIÓN de Firestore; el cliente NO crea turnos (reglas: create=false) → la reserva es la única vía.
- * Acople al motor = INFORMATIVO: se devuelve el cupo de 'consulta' (núcleo), sin bloquear ni descontar. El consumo
+ * Acople al motor = INFORMATIVO: se devuelve el cupo de 'consultaGuardia' (núcleo), sin bloquear ni descontar. El consumo
  * real lo registra la atención del vet.
  *
  * Este módulo NO requiere firebase-admin: recibe `db` (admin.firestore()) y `FV` (FieldValue.serverTimestamp) del
@@ -38,15 +38,15 @@ function validarReserva(agenda, hora, nowMs, yaTieneTurnoFuturo) {
   return { ok: true };
 }
 
-// Veredicto INFORMATIVO del cupo de 'consulta' para la mascota (núcleo). Nunca bloquea; si falla, devuelve ''.
+// Veredicto INFORMATIVO del cupo de 'consultaGuardia' para la mascota (núcleo). Nunca bloquea; si falla, devuelve ''.
 function infoConsulta(MC, m, atsMasc, nowMs) {
   try {
-    const r = MC.reglaCobertura('consulta', m.plan);
+    const r = MC.reglaCobertura('consultaGuardia', m.plan);
     if (!r) return 'Tu plan no incluye consultas cubiertas.';
-    const car = MC.carenciaCumplida(m, 'consulta', nowMs);
+    const car = MC.carenciaCumplida(m, 'consultaGuardia', nowMs);
     if (!car.cumplida) return car.sinAlta ? '' : ('Las consultas están en carencia hasta el ' + fechaStrBA(car.desdeMs) + '.');
     if (r.cupoAnual == null) return 'Tu plan cubre consultas sin límite este año.';
-    const c = MC.cobertura(m, 'consulta', 0, { fechaMs: nowMs, atenciones: atsMasc || [] });
+    const c = MC.cobertura(m, 'consultaGuardia', 0, { fechaMs: nowMs, atenciones: atsMasc || [] });
     if (c.restantes <= 0) return 'Ya usaste tus ' + r.cupoAnual + ' consultas cubiertas del año; la próxima tiene 25% de descuento. (El turno no descuenta: se cuenta cuando el vet registra la atención.)';
     return 'Consultas cubiertas: te ' + (c.restantes === 1 ? 'queda' : 'quedan') + ' ' + c.restantes + ' de ' + r.cupoAnual + ' este año. (El turno no descuenta: se cuenta cuando el vet registra la atención.)';
   } catch (_) { return ''; }
@@ -90,7 +90,7 @@ async function reservar(deps, args, nowMs) {
     return { fecha: agenda.fecha, hora };
   });
 
-  // Info del motor (fuera de la TX; no bloquea). Lee las atenciones de la mascota para el cupo de 'consulta'.
+  // Info del motor (fuera de la TX; no bloquea). Lee las atenciones de la mascota para el cupo de 'consultaGuardia'.
   let info = '';
   try {
     const aSnap = await db.collection('atenciones').where('titularUid', '==', uid).where('mascotaId', '==', mascotaId).get();

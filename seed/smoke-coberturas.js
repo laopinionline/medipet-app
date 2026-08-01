@@ -37,16 +37,35 @@ console.log('1) Carencia en el día límite (análisis, 60 días):');
   eq(MC.carenciaCumplida(mu, 'analisis', alta).cumplida, true, 'Urgencias análisis carencia 0 → cumplida al alta');
 }
 
-// ── 2) Cupo al límite y agotado (consulta, cupo 2) ──
-console.log('2) Cupo al límite y agotado (consulta, cupo 2):');
+// ── 2) Cupo al límite y agotado (consultaExterna, cupo 2) ──
+console.log('2) Cupo al límite y agotado (consultaExterna, cupo 2):');
 {
   const at = (n) => Array.from({ length: n }, () => ({}));
   const m = masc('MEDIPaw Adulto', U(2026, 1, 1));
-  eq(MC.cupoDisponible(m, 'consulta', at(1)).agotado, false, '1 usado de 2 → NO agotado');
-  eq(MC.cupoDisponible(m, 'consulta', at(1)).restantes, 1, '1 usado → resta 1');
-  eq(MC.cupoDisponible(m, 'consulta', at(2)).agotado, true, '2 usados de 2 → agotado');
+  eq(MC.cupoDisponible(m, 'consultaExterna', at(1)).agotado, false, '1 usado de 2 → NO agotado');
+  eq(MC.cupoDisponible(m, 'consultaExterna', at(1)).restantes, 1, '1 usado → resta 1');
+  eq(MC.cupoDisponible(m, 'consultaExterna', at(2)).agotado, true, '2 usados de 2 → agotado');
   // Ilimitado (veterinario online) nunca se agota
   eq(MC.cupoDisponible(m, 'vetOnline', at(99)).agotado, false, 'vetOnline ilimitado → nunca agotado');
+}
+
+// ── 2b) Desdoble de consulta (Lucas 01/08): guardia propia ilimitada vs consulta externa con cupo ──
+console.log('2b) Desdoble consulta: consultaGuardia (sin límite en los 5 planes) vs consultaExterna (cupo 2, tope 35k):');
+{
+  const PLANES = ['MEDIPaw Urgencias', 'MEDIPaw Básico', 'MEDIPaw Joven', 'MEDIPaw Adulto', 'MEDIPaw Senior'];
+  for (const plan of PLANES) {
+    const rg = MC.reglaCobertura('consultaGuardia', plan);
+    ok(rg && rg.cupoAnual === null && rg.tope === null, 'consultaGuardia SIN límite ni tope en ' + plan, JSON.stringify(rg));
+    const m = masc(plan, U(2024, 1, 1));
+    eq(MC.cupoDisponible(m, 'consultaGuardia', Array.from({ length: 50 }, () => ({}))).agotado, false, 'consultaGuardia nunca se agota en ' + plan);
+  }
+  // consultaExterna conserva los números viejos de 'consulta' (cupo 2, tope 35000, 100% pleno, carencia 0)
+  const re = MC.reglaCobertura('consultaExterna', 'MEDIPaw Adulto');
+  eq(re.cupoAnual, 2, 'consultaExterna cupo 2');
+  eq(re.tope, 35000, 'consultaExterna tope 35.000');
+  eq(re.carenciaDias, 0, 'consultaExterna carencia 0');
+  // 'consulta' legacy ya NO existe en el catálogo
+  eq(MC.reglaCobertura('consulta', 'MEDIPaw Adulto'), null, "'consulta' legacy fuera del catálogo (desdoblada)");
 }
 
 // ── 3) Senior con tope distinto (periodontal: Adulto $60.000 vs Senior $80.000) ──
@@ -80,25 +99,25 @@ console.log('4) Plan que no incluye la prestación:');
 // ── 5) Mascota legacy plan 'Sin definir' (sin cobertura) ──
 console.log('5) Legacy "Sin definir" (sin cobertura vigente):');
 {
-  const r = MC.cobertura(masc('Sin definir', U(2020, 1, 1)), 'consulta', 35000, { fechaMs: U(2026, 6, 1), atenciones: [] });
+  const r = MC.cobertura(masc('Sin definir', U(2020, 1, 1)), 'consultaExterna', 35000, { fechaMs: U(2026, 6, 1), atenciones: [] });
   eq(r.cubre, false, 'plan fuera de catálogo → NO cubre');
   ok(/no tiene cobertura vigente/i.test(r.motivo), 'motivo dice "no tiene cobertura vigente"', r.motivo);
   // suspendida con plan del catálogo tampoco cubre
-  eq(MC.cobertura(masc('MEDIPaw Adulto', U(2020, 1, 1), 'suspendido'), 'consulta', 1000, { fechaMs: U(2026, 6, 1) }).cubre, false, 'suspendida → NO cubre');
+  eq(MC.cobertura(masc('MEDIPaw Adulto', U(2020, 1, 1), 'suspendido'), 'consultaExterna', 1000, { fechaMs: U(2026, 6, 1) }).cubre, false, 'suspendida → NO cubre');
 }
 
-// ── 6) Aniversario que resetea cupos (alta 2024-01-15; cupo consulta 2) ──
+// ── 6) Aniversario que resetea cupos (alta 2024-01-15; cupo consultaExterna 2) ──
 console.log('6) Aniversario resetea cupos:');
 {
   const alta = U(2024, 1, 15);
   const m = masc('MEDIPaw Adulto', alta);
-  const dosDelAnio0 = [{ tipo: 'consulta', fecha: U(2024, 3, 1) }, { tipo: 'consulta', fecha: U(2024, 9, 1) }]; // ambas en el año 0 (con tipo, shape real)
+  const dosDelAnio0 = [{ tipo: 'consultaExterna', fecha: U(2024, 3, 1) }, { tipo: 'consultaExterna', fecha: U(2024, 9, 1) }]; // ambas en el año 0 (con tipo, shape real)
   // Evento en el año 0 con 2 usados → agotado → precio socio
-  const enAnio0 = MC.cobertura(m, 'consulta', 40000, { fechaMs: U(2024, 12, 1), atenciones: dosDelAnio0 });
+  const enAnio0 = MC.cobertura(m, 'consultaExterna', 40000, { fechaMs: U(2024, 12, 1), atenciones: dosDelAnio0 });
   ok(/cupo anual agotado/i.test(enAnio0.motivo), 'año 0 con 2 previas → cupo agotado (precio socio)', enAnio0.motivo);
   eq(enAnio0.reintegro, 10000, 'precio socio = 25% de 40k');
   // Mismo par de atenciones, evento en el año 1 (2025) → esas 2 quedan fuera de la ventana → cupo fresco
-  const enAnio1 = MC.cobertura(m, 'consulta', 40000, { fechaMs: U(2025, 2, 1), atenciones: dosDelAnio0 });
+  const enAnio1 = MC.cobertura(m, 'consultaExterna', 40000, { fechaMs: U(2025, 2, 1), atenciones: dosDelAnio0 });
   eq(enAnio1.cubre, true, 'año 1: las 2 del año 0 NO cuentan → cupo fresco → cubre');
   eq(enAnio1.reintegro, 35000, 'cubierto pleno capado a tope 35k');
   // ventana del año 1 arranca en el aniversario 2025-01-15
@@ -134,11 +153,11 @@ console.log('9) Plan Básico (acceso):');
 {
   const alta = U(2020, 1, 1), fecha = U(2026, 6, 1);
   const m = masc('MEDIPaw Básico', alta);
-  // consulta CUBIERTA (tope $35.000, 100%)
-  const c1 = MC.cobertura(m, 'consulta', 20000, { fechaMs: fecha, atenciones: [] });
-  eq(c1.cubre, true, 'Básico: consulta cubierta');
-  eq(c1.reintegro, 20000, 'consulta $20k < tope → reintegro pleno 20k');
-  eq(MC.cobertura(m, 'consulta', 50000, { fechaMs: fecha, atenciones: [] }).reintegro, 35000, 'consulta $50k → capado a tope 35k');
+  // consultaExterna CUBIERTA (tope $35.000, 100%)
+  const c1 = MC.cobertura(m, 'consultaExterna', 20000, { fechaMs: fecha, atenciones: [] });
+  eq(c1.cubre, true, 'Básico: consultaExterna cubierta');
+  eq(c1.reintegro, 20000, 'consultaExterna $20k < tope → reintegro pleno 20k');
+  eq(MC.cobertura(m, 'consultaExterna', 50000, { fechaMs: fecha, atenciones: [] }).reintegro, 35000, 'consultaExterna $50k → capado a tope 35k');
   // medicamentos 25%, traslado/vetOnline/descuentos/legal incluidos
   eq(MC.cobertura(m, 'medicamentos', 8000, { fechaMs: fecha, atenciones: [] }).reintegro, 2000, 'Básico: medicamentos 25% de 8k');
   eq(MC.reglaCobertura('vetOnline', 'MEDIPaw Básico') !== null, true, 'Básico incluye veterinario online');
@@ -149,10 +168,10 @@ console.log('9) Plan Básico (acceso):');
   ok(/no incluye/i.test(cir.motivo), 'motivo cirugía dice "no incluye"', cir.motivo);
   eq(MC.reglaCobertura('internacion', 'MEDIPaw Básico'), null, 'Básico no incluye internación');
   eq(MC.reglaCobertura('vacunas', 'MEDIPaw Básico'), null, 'Básico no incluye vacunas');
-  // post-cupo de consulta (2 usadas este año) → precio socio 25%
-  const dos = [{ tipo: 'consulta', fecha: U(2026, 2, 1) }, { tipo: 'consulta', fecha: U(2026, 4, 1) }];
-  const post = MC.cobertura(m, 'consulta', 40000, { fechaMs: fecha, atenciones: dos });
-  ok(/cupo anual agotado/i.test(post.motivo), 'Básico consulta post-cupo → precio socio', post.motivo);
+  // post-cupo de consultaExterna (2 usadas este año) → precio socio 25%
+  const dos = [{ tipo: 'consultaExterna', fecha: U(2026, 2, 1) }, { tipo: 'consultaExterna', fecha: U(2026, 4, 1) }];
+  const post = MC.cobertura(m, 'consultaExterna', 40000, { fechaMs: fecha, atenciones: dos });
+  ok(/cupo anual agotado/i.test(post.motivo), 'Básico consultaExterna post-cupo → precio socio', post.motivo);
   eq(post.reintegro, 10000, 'post-cupo = 25% de 40k = 10k');
 }
 
@@ -164,24 +183,24 @@ console.log('10) Cupo con fecha Timestamp-like (regresión Fase 2):');
   const TSlike = (ms) => ({ toMillis: () => ms });                 // Firestore Timestamp (instancia)
   const secLike = (ms) => ({ seconds: Math.floor(ms / 1000), nanoseconds: 0 }); // Timestamp plano (de d.data() sin instancia)
   const alta = U(2026, 6, 1), hoy = U(2026, 6, 10);
-  const m = masc('MEDIPaw Adulto', alta); // consulta cupo 2
-  // Firulais exacto: 1 consulta previa el 5/6 dentro de la ventana 1/6→1/6 (Timestamp)
-  const r = MC.cobertura(m, 'consulta', 40000, { fechaMs: hoy, atenciones: [{ tipo: 'consulta', fecha: TSlike(U(2026, 6, 5)) }] });
-  eq(r.restantes, 1, 'consulta previa (Timestamp) SÍ descuenta → quedan 1 de 2 (no 2)');
+  const m = masc('MEDIPaw Adulto', alta); // consultaExterna cupo 2
+  // Firulais exacto: 1 consultaExterna previa el 5/6 dentro de la ventana 1/6→1/6 (Timestamp)
+  const r = MC.cobertura(m, 'consultaExterna', 40000, { fechaMs: hoy, atenciones: [{ tipo: 'consultaExterna', fecha: TSlike(U(2026, 6, 5)) }] });
+  eq(r.restantes, 1, 'consultaExterna previa (Timestamp) SÍ descuenta → quedan 1 de 2 (no 2)');
   eq(r.reintegro, 35000, 'reintegro capado al tope 35k');
   eq(r.aCargoSocio, 5000, 'a cargo del socio = 40k - 35k');
   ok(/quedan 1 de 2/.test(r.motivo), 'motivo dice "quedan 1 de 2"', r.motivo);
   // los 3 shapes de fecha cuentan igual
-  eq(MC.cupoDisponible(m, 'consulta', [{ tipo: 'consulta', fecha: TSlike(U(2026, 6, 5)) }].filter(a => a.tipo === 'consulta')).usados, 1, 'cupoDisponible cuenta 1 (Timestamp toMillis)');
-  const enVentana = (fecha) => MC.cobertura(m, 'consulta', 40000, { fechaMs: hoy, atenciones: [{ tipo: 'consulta', fecha }] }).restantes;
+  eq(MC.cupoDisponible(m, 'consultaExterna', [{ tipo: 'consultaExterna', fecha: TSlike(U(2026, 6, 5)) }].filter(a => a.tipo === 'consultaExterna')).usados, 1, 'cupoDisponible cuenta 1 (Timestamp toMillis)');
+  const enVentana = (fecha) => MC.cobertura(m, 'consultaExterna', 40000, { fechaMs: hoy, atenciones: [{ tipo: 'consultaExterna', fecha }] }).restantes;
   eq(enVentana(secLike(U(2026, 6, 5))), 1, '{seconds,nanoseconds} plano → descuenta');
   eq(enVentana(new Date(U(2026, 6, 5))), 1, 'Date → descuenta');
   eq(enVentana(U(2026, 6, 5)), 1, 'number (ms) → descuenta (no regresiona el caso viejo)');
   // fecha del año ANTERIOR (Timestamp) NO cuenta
-  eq(enVentana(TSlike(U(2025, 6, 5))), 2, 'consulta del año anterior (fuera de ventana) → no descuenta → quedan 2');
+  eq(enVentana(TSlike(U(2025, 6, 5))), 2, 'consultaExterna del año anterior (fuera de ventana) → no descuenta → quedan 2');
   // alta como creadoEn Timestamp (doc crudo, sin altaMs) → ventana igual computada
   const mCreado = { plan: 'MEDIPaw Adulto', estado: 'activo', creadoEn: TSlike(alta) };
-  eq(MC.cobertura(mCreado, 'consulta', 40000, { fechaMs: hoy, atenciones: [{ tipo: 'consulta', fecha: TSlike(U(2026, 6, 5)) }] }).restantes, 1, 'mascota con creadoEn Timestamp (sin altaMs) → cupo cuenta bien');
+  eq(MC.cobertura(mCreado, 'consultaExterna', 40000, { fechaMs: hoy, atenciones: [{ tipo: 'consultaExterna', fecha: TSlike(U(2026, 6, 5)) }] }).restantes, 1, 'mascota con creadoEn Timestamp (sin altaMs) → cupo cuenta bien');
 }
 
 // ── 11) BUGS Fase 2 (verificación en vivo 28/07): filtro por prestación + carencia fail-safe ──
@@ -195,14 +214,14 @@ console.log('11) Filtro por prestación + carencia fail-safe (shapes reales):');
 
   // (a) LISTA MIXTA cruda: cada prestación cuenta SOLO lo suyo (bug 1). Sin el fix, las 3 contaban contra cualquiera.
   const mixta = [
-    { tipo: 'consulta', fecha: TS(U(2026, 6, 5)) },
+    { tipo: 'consultaExterna', fecha: TS(U(2026, 6, 5)) },
     { tipo: 'vacunas',  fecha: TS(U(2026, 6, 20)) },
     { tipo: 'cirugia',  fecha: TS(U(2026, 8, 1)) },
   ];
-  eq(MC.cobertura(mDoc, 'consulta', 10000, { fechaMs: hoy, atenciones: mixta }).restantes, 1, '(a) consulta cuenta 1 (no 3) → quedan 1 de 2');
+  eq(MC.cobertura(mDoc, 'consultaExterna', 10000, { fechaMs: hoy, atenciones: mixta }).restantes, 1, '(a) consultaExterna cuenta 1 (no 3) → quedan 1 de 2');
   eq(MC.cobertura(mDoc, 'vacunas', 5000, { fechaMs: hoy, atenciones: mixta }).restantes, 1, '(a) vacunas cuenta 1 de 2 → quedan 1');
   const cir = MC.cobertura(mDoc, 'cirugia', 100000, { fechaMs: hoy, atenciones: mixta });
-  ok(/cupo anual agotado/i.test(cir.motivo), '(a) cirugia (cupo 1, 1 previa) → agotado, sin mezclar con consulta/vacuna', cir.motivo);
+  ok(/cupo anual agotado/i.test(cir.motivo), '(a) cirugia (cupo 1, 1 previa) → agotado, sin mezclar con consultaExterna/vacuna', cir.motivo);
 
   // (b) creadoEn Timestamp, prestación 90d, alta hace 30d → EN CARENCIA (bug 2: antes fail-open → cubierta)
   const mCar = { plan: 'MEDIPaw Adulto', estado: 'activo', creadoEn: TS(U(2026, 6, 1)) };
@@ -219,7 +238,7 @@ console.log('11) Filtro por prestación + carencia fail-safe (shapes reales):');
   eq(rSF.cubre, false, '(c) sin fecha de alta + carencia 90 → NO cubre (fail-safe)');
   ok(/sin fecha de alta/i.test(rSF.motivo), '(c) motivo "sin fecha de alta verificable"', rSF.motivo);
   eq(MC.carenciaCumplida(mSF, 'cirugia', hoy).sinAlta, true, '(c) flag sinAlta=true');
-  eq(MC.carenciaCumplida(mSF, 'consulta', hoy).cumplida, true, '(c) consulta (carencia 0) sin alta → cumplida (nada que esperar)');
+  eq(MC.carenciaCumplida(mSF, 'consultaExterna', hoy).cumplida, true, '(c) consultaExterna (carencia 0) sin alta → cumplida (nada que esperar)');
 }
 
 console.log('\n=== ' + (fail ? 'FALLÓ (' + fail + ')' : 'TODO VERDE') + ' · ' + pass + ' asserts OK, ' + fail + ' fallidos ===\n');

@@ -938,7 +938,7 @@ async function cargarDashboardVet() {
         ? '<p style="color:#9ca3af;font-size:.85rem;">Sin atenciones registradas aun.</p>'
         : recientes.map(a => {
             const fecha = a.fecha?.toDate?.()?.toLocaleDateString('es-AR')||'';
-            const tipo = a.tipo || 'consulta';
+            const tipo = a.tipo || 'consultaGuardia';
             return `<div class="hc-entry" onclick="vetVerHistoria('${a.mascotaId||''}')">
               <div style="display:flex;justify-content:space-between;align-items:flex-start;">
                 <div>
@@ -1117,7 +1117,7 @@ async function vetVerHistoria(mascotaId) {
         : atenciones.map(a => {
             const fecha = a.fecha?.toDate?.();
             const fechaStr = fecha ? fecha.toLocaleDateString('es-AR') : '';
-            const tipo = a.tipo || 'consulta';
+            const tipo = a.tipo || 'consultaGuardia';
             return `<div class="hc-entry" style="cursor:default;">
               <div style="display:flex;justify-content:space-between;align-items:flex-start;">
                 <div style="flex:1;">
