@@ -4,7 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MEDIPaw — Portal</title>
-<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="icon" href="/socio/favicon.svg" type="image/svg+xml">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -12,16 +13,27 @@
 <script src="/lib/medipaw-core.js?v=20260728a"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{--azul:#1A5FB4;--azul-medio:#2272D9;--azul-claro:#5BA3E8;--azul-pale:#EBF3FC;--noche:#0D1B3E;--fondo:#F5F7FA;--texto:#1a2340;--suave:#5a6a8a}
-body{font-family:'Nunito',sans-serif;background:var(--fondo);color:var(--texto);min-height:100vh}
+:root{
+  --navy:#0D1B3E; --azul:#1A5FB4; --azul-medio:#2272D9; --azul-claro:#5BA3E8; --azul-pale:#EBF3FC;
+  --noche:#0D1B3E; --ambar:#F2B84D; --ambar-suave:#FBE7C7; --rojo:#e11d48; --verde:#166534;
+  --fondo:#F5F7FA; --blanco:#fff; --texto:#1a2340; --suave:#5a6a8a; --tenue:#8a95ab; --linea:#E6EAF2;
+  --r-sm:10px; --r-md:14px; --r-lg:18px; --r-pill:100px;
+  --sombra-sm:0 2px 10px rgba(13,27,62,.05); --sombra-md:0 8px 24px rgba(13,27,62,.08);
+  --font-display:'Baloo 2',cursive; --font-body:'Nunito',sans-serif;
+}
+body{font-family:var(--font-body);background:var(--fondo);color:var(--texto);min-height:100vh}
+.ic-pet{width:58%;height:58%;color:var(--azul);display:block}
+.ic{width:1em;height:1em;display:inline-block;vertical-align:-.15em}
+.va-icon .ic{width:1.6rem;height:1.6rem;color:var(--azul)}
 .screen{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px;background:linear-gradient(145deg,var(--noche),#1A3A7A,var(--azul))}
 .screen.active{display:flex}
 .auth-card{background:white;border-radius:24px;padding:36px 28px;width:100%;max-width:440px;box-shadow:0 24px 64px rgba(0,0,0,.3)}
 .auth-card.tall{max-height:90vh;overflow-y:auto}
 .auth-logo{display:flex;align-items:center;gap:10px;margin-bottom:22px}
-.auth-logo .marca{font-weight:900;font-size:1.6rem;color:var(--azul);letter-spacing:-1px}
-.auth-logo .marca span{color:var(--azul-claro)}
-.auth-title{font-size:1.1rem;font-weight:800;margin-bottom:4px;color:var(--noche)}
+.auth-logo{gap:4px}
+.auth-logo .marca{font-family:var(--font-display);font-weight:800;font-size:1.9rem;color:var(--navy);letter-spacing:-.5px;line-height:1}
+.auth-logo .marca span{color:var(--azul)}
+.auth-title{font-family:var(--font-display);font-size:1.25rem;font-weight:700;margin-bottom:4px;color:var(--navy)}
 .auth-sub{font-size:.8rem;color:var(--suave);margin-bottom:18px}
 .fstack{display:flex;flex-direction:column;gap:10px}
 .frow{display:grid;grid-template-columns:1fr 1fr;gap:8px}
@@ -39,7 +51,7 @@ body{font-family:'Nunito',sans-serif;background:var(--fondo);color:var(--texto);
 #appScreen{display:none;min-height:100vh}
 .app-nav{background:var(--noche);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
 .app-nav .logo{display:flex;align-items:center;gap:8px}
-.app-nav .logo .marca{font-weight:900;font-size:1.2rem;color:white}
+.app-nav .logo .marca{font-family:var(--font-display);font-weight:800;font-size:1.4rem;color:white;letter-spacing:-.4px;line-height:1}
 .app-nav .logo .marca span{color:var(--azul-claro)}
 .nav-right{display:flex;align-items:center;gap:10px}
 .btn-logout{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:white;font-family:'Nunito',sans-serif;font-size:.8rem;font-weight:700;padding:7px 16px;border-radius:100px;cursor:pointer}
@@ -116,41 +128,39 @@ body{font-family:'Nunito',sans-serif;background:var(--fondo);color:var(--texto);
 .tipo-estudio{background:#fef3c7;color:#92400e}
 .tipo-cirugia{background:#fce7f3;color:#9d174d}
 .tipo-urgencia{background:#fee2e2;color:#991b1b}
-.cobertura-ok{background:#dcfce7;border:1px solid #86efac;border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:10px}
-.cobertura-no{background:#fee2e2;border:1px solid #fca5a5;border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:10px}
+.cobertura-ok{background:var(--azul-pale);border:1px solid #bcd6f2;border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:10px}
+.cobertura-no{background:#F1F3F7;border:1px solid var(--linea);border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:10px}
+.cobertura-ok svg,.cobertura-no svg{width:22px;height:22px;flex-shrink:0}
+.cobertura-ok svg{color:var(--azul)}.cobertura-no svg{color:var(--tenue)}
 @media(max-width:500px){.frow{grid-template-columns:1fr}.auth-card{padding:28px 18px}.vet-actions{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
+<!-- Símbolos MEDIPaw (identidad v1): cachorro + iconografía monolínea del staff (mismo lenguaje del socio). -->
 <svg width="0" height="0" style="position:absolute;overflow:hidden">
   <defs>
-    <symbol id="mp-iso" viewBox="0 0 80 80">
-      <rect width="80" height="80" rx="18" fill="#2272D9"/>
-      <circle cx="24" cy="28" r="10" fill="#5BA3E8"/><circle cx="56" cy="28" r="10" fill="#5BA3E8"/>
-      <circle cx="40" cy="44" r="22" fill="#5BA3E8"/>
-      <circle cx="33" cy="42" r="4" fill="white"/><circle cx="47" cy="42" r="4" fill="white"/>
-      <circle cx="34" cy="43" r="2" fill="#1A5FB4"/><circle cx="48" cy="43" r="2" fill="#1A5FB4"/>
-      <ellipse cx="40" cy="50" rx="2.5" ry="1.8" fill="#1A5FB4" opacity=".5"/>
-      <line x1="57" y1="11" x2="57" y2="19" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
-      <line x1="53" y1="15" x2="61" y2="15" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
-    </symbol>
-    <symbol id="mp-iso-w" viewBox="0 0 80 80">
-      <rect width="80" height="80" rx="18" fill="rgba(255,255,255,.15)"/>
-      <circle cx="24" cy="28" r="10" fill="rgba(255,255,255,.7)"/><circle cx="56" cy="28" r="10" fill="rgba(255,255,255,.7)"/>
-      <circle cx="40" cy="44" r="22" fill="white"/>
-      <circle cx="33" cy="42" r="4" fill="white"/><circle cx="47" cy="42" r="4" fill="white"/>
-      <circle cx="34" cy="43" r="2" fill="#2272D9"/><circle cx="48" cy="43" r="2" fill="#2272D9"/>
-      <ellipse cx="40" cy="50" rx="2.5" ry="1.8" fill="#2272D9" opacity=".4"/>
-      <line x1="57" y1="11" x2="57" y2="19" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
-      <line x1="53" y1="15" x2="61" y2="15" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
-    </symbol>
+    <symbol id="paw" viewBox="0 0 100 100"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M50 84 C69 84 79 73 79 56 C79 44 72 38 63 37 C58 30 50 31 50 31 C50 31 42 30 37 37 C28 38 21 44 21 56 C21 73 31 84 50 84 Z"/>
+      <path d="M37 37 C30 23 41 19 46 26 C48 29 47 33 46 36"/><path d="M63 37 C70 23 59 19 54 26 C52 29 53 33 54 36"/>
+      <path d="M50 59 v4"/><path d="M41 66 C46 73 54 73 59 66"/>
+      <circle cx="40" cy="53" r="3.3" fill="currentColor" stroke="none"/><circle cx="60" cy="53" r="3.3" fill="currentColor" stroke="none"/>
+    </g></symbol>
+    <symbol id="ic-mascotas" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="16" rx="4.2" ry="3.4"/><circle cx="6.6" cy="11.2" r="1.7"/><circle cx="10" cy="8" r="1.7"/><circle cx="14" cy="8" r="1.7"/><circle cx="17.4" cy="11.2" r="1.7"/></g></symbol>
+    <symbol id="ic-vet" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.4-3 8-7 9.5C8 19 5 15.4 5 11V6z"/><path d="M12 9v5M9.5 11.5h5"/></g></symbol>
+    <symbol id="ic-config" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 3v2.2M12 18.8V21M4.2 7.5l1.9 1.1M17.9 15.4l1.9 1.1M4.2 16.5l1.9-1.1M17.9 8.6l1.9-1.1"/></g></symbol>
+    <symbol id="ic-buscar" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></g></symbol>
+    <symbol id="ic-plus" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></g></symbol>
+    <symbol id="ic-check" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4 4 10-10"/></g></symbol>
+    <symbol id="ic-dash" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 12h12"/></g></symbol>
+    <symbol id="ic-warn" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l9 16H3z"/><path d="M12 10v4"/><circle cx="12" cy="17" r=".4"/></g></symbol>
+    <symbol id="ic-adjunto" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11l-8 8a5 5 0 0 1-7-7l8-8a3.2 3.2 0 0 1 4.6 4.6l-8 8a1.4 1.4 0 0 1-2-2l7.5-7.5"/></g></symbol>
   </defs>
 </svg>
 
 <!-- LOGIN -->
 <div id="loginScreen" class="screen active">
   <div class="auth-card">
-    <div class="auth-logo"><svg width="44" height="44"><use href="#mp-iso"/></svg><div class="marca">MEDI<span>Paw</span></div></div>
+    <div class="auth-logo"><svg width="40" height="40" style="color:var(--azul);stroke-width:5"><use href="#paw"/></svg><div class="marca">MEDI<span>Paw</span></div></div>
     <div class="auth-title">Ingresa a tu cuenta</div>
     <div class="auth-sub">Afiliados · Veterinarios · Administradores</div>
     <div class="fstack">
@@ -169,7 +179,7 @@ body{font-family:'Nunito',sans-serif;background:var(--fondo);color:var(--texto);
 <!-- REGISTRO -->
 <div id="registerScreen" class="screen">
   <div class="auth-card tall" style="max-width:480px;">
-    <div class="auth-logo"><svg width="40" height="40"><use href="#mp-iso"/></svg><div class="marca">MEDI<span>Paw</span></div></div>
+    <div class="auth-logo"><svg width="40" height="40" style="color:var(--azul);stroke-width:5"><use href="#paw"/></svg><div class="marca">MEDI<span>Paw</span></div></div>
     <div class="auth-title">Afiliate a MEDIPaw</div>
     <div class="auth-sub">Completa tus datos y los de tu mascota</div>
     <div class="fstack">
@@ -225,7 +235,7 @@ body{font-family:'Nunito',sans-serif;background:var(--fondo);color:var(--texto);
 <!-- APP -->
 <div id="appScreen">
   <nav class="app-nav">
-    <div class="logo"><svg width="32" height="32"><use href="#mp-iso-w"/></svg><div class="marca">MEDI<span>Paw</span></div></div>
+    <div class="logo"><svg width="30" height="30" style="color:#fff;stroke-width:6"><use href="#paw"/></svg><div class="marca">MEDI<span>Paw</span></div></div>
     <div class="nav-right">
       <div class="role-switcher" id="roleSwitcher" style="display:none;">
         <button class="role-switcher-btn" id="roleSwitcherBtn" onclick="toggleRoleMenu()">
@@ -260,6 +270,8 @@ const TURNOS_ON = /^medipaw-demo\./.test(location.hostname) || location.hostname
 // (titular/vet) o público (solicitudes del /m/) antes de interpolarlo en innerHTML. Sin esto = XSS almacenado,
 // y en el panel corre en sesión admin (que puede escribir roles[]). Para atributos on* usar data-* + listener.
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+// Iconografía propia (identidad, mismo lenguaje del socio): id fijo del set → sin esc.
+function icon(name){ return `<svg class="ic" aria-hidden="true"><use href="#ic-${name}"/></svg>`; }
 
 // Delegación de clicks para botones con datos de usuario. Reemplaza el patrón viejo de un handler inline con el
 // dato interpolado como string JS DENTRO de un atributo HTML (doble contexto, se escapa mal siempre). Los valores
@@ -445,7 +457,7 @@ function setupRoleSwitcher(roles) {
   label.textContent = 'Viendo como: ' + ROLE_LABELS[activeRole];
   menu.innerHTML = roles.map(r =>
     `<div class="role-menu-item ${r===activeRole?'active':''}" onclick="switchRole('${r}')">
-      ${r==='admin'?'&#9881;&#65039;':r==='veterinario'?'&#127973;':'&#128062;'} ${ROLE_LABELS[r]}
+      ${r==='admin'?icon('config'):r==='veterinario'?icon('vet'):icon('mascotas')} ${ROLE_LABELS[r]}
     </div>`
   ).join('');
 }
@@ -1029,16 +1041,16 @@ async function vetEjecutarBusqueda() {
                 <div style="display:flex;align-items:center;gap:10px;">
                   ${m.foto
                     ? `<img src="${esc(m.foto)}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid #5BA3E8;">`
-                    : `<div style="width:36px;height:36px;border-radius:50%;background:${mMatch?'white':'#EBF3FC'};display:flex;align-items:center;justify-content:center;font-size:.9rem;">&#128062;</div>`}
+                    : `<div style="width:36px;height:36px;border-radius:50%;background:${mMatch?'white':'#EBF3FC'};display:flex;align-items:center;justify-content:center;font-size:.9rem;"><svg class="ic-pet"><use href="#ic-mascotas"/></svg></div>`}
                   <div style="flex:1;">
-                    <div style="font-size:.85rem;font-weight:700;">${esc(m.nombre||'—')}${mMatch?' &#11088;':''}</div>
+                    <div style="font-size:.85rem;font-weight:700;">${esc(m.nombre||'—')}${mMatch?' <span style="color:var(--azul)">'+icon('check')+'</span>':''}</div>
                     <div style="font-size:.72rem;color:var(--suave);">${esc(m.raza||'')} ${m.mascotaId?'· '+esc(m.mascotaId):''}</div>
                   </div>
                   <div style="font-size:.72rem;font-weight:700;color:var(--azul);">${esc(m.plan||'Sin plan')}</div>
-                  <span style="font-size:.8rem;color:var(--suave);">&#10145;</span>
+                  <span style="font-size:.8rem;color:var(--suave);">&rarr;</span>
                 </div>
                 <div class="${c.ok?'cobertura-ok':'cobertura-no'}" style="margin-top:8px;">
-                  <span style="font-size:1.1rem;">${c.ok?'&#9989;':'&#10060;'}</span>
+                  <span style="font-size:1.1rem;">${c.ok?'<span style="color:var(--azul)">'+icon('check')+'</span>':'<span style="color:var(--tenue)">'+icon('dash')+'</span>'}</span>
                   <div>
                     <div style="font-size:.8rem;font-weight:800;">${c.label}</div>
                     <div style="font-size:.7rem;color:${c.color};">Estado de ${esc(m.nombre||'la mascota')}: ${esc(c.estado)}</div>
@@ -1103,7 +1115,7 @@ async function vetVerHistoria(mascotaId) {
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
         ${mascotaFoto
           ? `<img src="${esc(mascotaFoto)}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid #5BA3E8;">`
-          : `<div style="width:48px;height:48px;border-radius:50%;background:#EBF3FC;display:flex;align-items:center;justify-content:center;font-size:1.4rem;">&#128062;</div>`}
+          : `<div style="width:48px;height:48px;border-radius:50%;background:#EBF3FC;display:flex;align-items:center;justify-content:center;font-size:1.4rem;"><svg class="ic-pet"><use href="#ic-mascotas"/></svg></div>`}
         <div style="flex:1;">
           <div style="font-size:1.1rem;font-weight:900;color:var(--noche);">${esc(mascotaNombre)}</div>
           <div style="font-size:.78rem;color:var(--suave);">${esc(mascotaRaza)} · ${esc(mascotaPlan)} · ${esc(mascotaId)}</div>
@@ -1129,7 +1141,7 @@ async function vetVerHistoria(mascotaId) {
                   ${a.tratamiento?`<div style="font-size:.82rem;color:var(--suave);margin-top:2px;">Tratamiento: ${esc(a.tratamiento)}</div>`:''}
                   ${a.descripcion && !a.diagnostico?`<div style="font-size:.82rem;color:var(--suave);margin-top:4px;">${esc(a.descripcion)}</div>`:''}
                   <div style="font-size:.72rem;color:#9ca3af;margin-top:4px;">Atendido por: ${esc(a.prestadorNombre||'—')}</div>
-                  ${a.adjuntos && a.adjuntos.length > 0 ? `<div style="font-size:.72rem;color:var(--azul);margin-top:4px;">&#128206; ${a.adjuntos.length} adjunto${a.adjuntos.length>1?'s':''}</div>` : ''}
+                  ${a.adjuntos && a.adjuntos.length > 0 ? `<div style="font-size:.72rem;color:var(--azul);margin-top:4px;">${icon('adjunto')} ${a.adjuntos.length} adjunto${a.adjuntos.length>1?'s':''}</div>` : ''}
                 </div>
               </div>
             </div>`;
@@ -1165,8 +1177,15 @@ function parseMontoAten(raw) {
 // (daba altaMs null → la carencia caía en fail-open → cirugía figuraba cubierta en vez de EN CARENCIA).
 // Panel de veredicto: INFORMA, no bloquea. Colores por estado. Todo texto por esc().
 function _panelVeredicto(cob, monto) {
-  const socio = /precio socio/i.test(cob.motivo || '');
-  const col = cob.cubre ? ['#f0fdf4', '#166534', '#4ade80'] : (socio ? ['#fffbeb', '#92400e', '#f59e0b'] : ['#fef2f2', '#991b1b', '#f87171']);
+  // Semántica de marca: cubierto → azul/positivo · carencia y post-cupo → ámbar · sin cobertura → gris · rojo SOLO error.
+  const m = cob.motivo || '';
+  const socio = /precio socio/i.test(m);
+  const esError = /inválid|invalid/i.test(m);
+  const esCarencia = /carencia/i.test(m);
+  const col = cob.cubre ? ['#EBF3FC', '#0d3d75', '#1A5FB4']
+    : esError ? ['#fef2f2', '#991b1b', '#e11d48']
+    : (socio || esCarencia) ? ['#FFF7E6', '#8a5a00', '#F2B84D']
+    : ['#F1F3F7', '#4b5563', '#9aa6bd'];
   let linea2 = '';
   if (cob.cubre || socio) {
     linea2 = `<div style="font-size:.8rem;margin-top:4px;">Reintegro: <strong>$${(Number(cob.reintegro) || 0).toLocaleString('es-AR')}</strong> · A cargo del socio: <strong>$${(Number(cob.aCargoSocio) || 0).toLocaleString('es-AR')}</strong></div>`;
@@ -1378,7 +1397,7 @@ async function cargarMisPacientes() {
       <div style="display:flex;align-items:center;gap:10px;padding:14px;background:var(--fondo);border-radius:12px;margin-bottom:8px;cursor:pointer;border:1px solid rgba(26,95,180,.06);" onclick="vetVerHistoria('${p.mascotaId}')">
         ${p.foto
           ? `<img src="${esc(p.foto)}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:2px solid #5BA3E8;">`
-          : `<div style="width:40px;height:40px;border-radius:50%;background:#EBF3FC;display:flex;align-items:center;justify-content:center;font-size:1rem;">&#128062;</div>`}
+          : `<div style="width:40px;height:40px;border-radius:50%;background:#EBF3FC;display:flex;align-items:center;justify-content:center;font-size:1rem;"><svg class="ic-pet"><use href="#ic-mascotas"/></svg></div>`}
         <div style="flex:1;">
           <div style="font-size:.85rem;font-weight:700;">${esc(p.nombre||'—')} <span style="font-size:.72rem;color:#9ca3af;font-weight:400;">${esc(p.mascotaId)}</span></div>
           <div style="font-size:.72rem;color:var(--suave);">${esc(p.raza||'')} · Titular: ${esc(p.titularNombre)} ${p.nroSocio?'('+esc(p.nroSocio)+')':''}</div>
@@ -1438,7 +1457,7 @@ function casoCard(c, cl, u, tomadoPorNombre){
     <div style="font-size:.76rem;color:#5a6a8a;margin-top:2px;">Titular: ${esc(u.nombre||'')} ${esc(u.apellido||'')}${u.nroSocio?(' · '+esc(u.nroSocio)):''}${u.telefono?(' · '+esc(u.telefono)):''}</div>
     <div style="font-size:.85rem;color:#1a2340;margin-top:6px;background:#fff7f7;border-left:3px solid #fecaca;padding:8px 10px;border-radius:6px;">&ldquo;${esc(c.relato||'')}&rdquo;${c.desdeCuando?`<div style="font-size:.72rem;color:#9ca3af;margin-top:3px;">Desde: ${esc(desdeTexto(c.desdeCuando))}</div>`:''}</div>
 
-    ${(!nuevo && tomadoPorNombre)?`<div style="font-size:.74rem;font-weight:700;color:#92400e;margin-top:6px;">&#129466; Tomado por ${esc(tomadoPorNombre)}${cuandoTom?' · '+cuandoTom:''}</div>`:''}
+    ${(!nuevo && tomadoPorNombre)?`<div style="font-size:.74rem;font-weight:700;color:#92400e;margin-top:6px;">Tomado por ${esc(tomadoPorNombre)}${cuandoTom?' · '+cuandoTom:''}</div>`:''}
 
     <div style="background:#f8faff;border:1px solid rgba(26,95,180,.1);border-radius:10px;padding:10px;margin-top:8px;">
       <div style="font-size:.66rem;font-weight:800;color:var(--suave);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Interno &middot; NO lo ve el titular</div>
@@ -1654,7 +1673,7 @@ async function cargarVeterinariosAdmin(){
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
           <div style="flex:1;">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;">
-              <strong style="font-size:1rem;">&#127973; ${esc(u.nombre||'')} ${esc(u.apellido||'')}</strong>
+              <strong style="font-size:1rem;"><span style="color:var(--azul)">${icon('vet')}</span> ${esc(u.nombre||'')} ${esc(u.apellido||'')}</strong>
             </div>
             ${u.clinica?`<div style="font-size:.82rem;color:var(--azul);font-weight:700;">${esc(u.clinica)}</div>`:''}
             <div style="font-size:.8rem;color:#5a6a8a;">${esc(u.email||'')}${u.telefono?' · '+esc(u.telefono):''}</div>
@@ -1710,7 +1729,7 @@ function cardUsuario(u, masMap){
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
             ${m.foto
               ? `<img src="${esc(m.foto)}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid #5BA3E8;">`
-              : `<div style="width:40px;height:40px;border-radius:50%;background:#EBF3FC;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;">&#128062;</div>`}
+              : `<div style="width:40px;height:40px;border-radius:50%;background:#EBF3FC;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;"><svg class="ic-pet"><use href="#ic-mascotas"/></svg></div>`}
             <div style="flex:1;">
               <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
                 <strong style="font-size:.85rem;">${esc(m.nombre||'—')}</strong>
@@ -2204,7 +2223,7 @@ async function cargarDashboard(){
       </div>
 
       ${pendientes.length > 0 ? `<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:12px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;">
-        <span style="font-size:1.2rem;">&#9888;&#65039;</span>
+        <span style="color:var(--ambar);font-size:1.2rem;">${icon('warn')}</span>
         <div>
           <div style="font-size:.82rem;font-weight:800;color:#92400e;">${pendientes.length} afiliado${pendientes.length>1?'s':''} pendiente${pendientes.length>1?'s':''} de activacion</div>
           <div style="font-size:.72rem;color:#92400e;opacity:.7;">Requieren revision en la tab Afiliados</div>
@@ -2421,7 +2440,7 @@ function renderPanel(data){
         <div class="panel-nombre">${esc(nombre)} ${esc(apellido||'')}</div>
         ${data.nroSocio?`<div style="font-size:.8rem;color:#1A5FB4;font-weight:700;margin-top:2px;">${esc(data.nroSocio)}</div>`:''}
       </div>
-      ${fotoHeader?`<img src="${esc(fotoHeader)}" class="mascota-foto" alt="${esc(nombre)}">`:`<div class="mascota-ph">&#128062;</div>`}
+      ${fotoHeader?`<img src="${esc(fotoHeader)}" class="mascota-foto" alt="${esc(nombre)}">`:`<div class="mascota-ph"><svg class="ic-pet"><use href="#ic-mascotas"/></svg></div>`}
     </div>
 
     <div class="seccion">
@@ -2459,11 +2478,11 @@ function renderPanel(data){
       ${listaMascotas.map((m,i)=>`
         <div style="margin-bottom:16px;">
           <div id="carnet-${i}" style="background:linear-gradient(135deg,#2272D9,#0D1B3E);border-radius:16px;padding:18px 20px;color:white;position:relative;overflow:hidden;">
-            <div style="position:absolute;top:12px;right:12px;"><svg width="30" height="30"><use href="#mp-iso-w"/></svg></div>
+            <div style="position:absolute;top:12px;right:12px;"><svg width="34" height="34" style="color:rgba(255,255,255,.92);stroke-width:5"><use href="#paw"/></svg></div>
             <div style="font-size:.6rem;font-weight:700;letter-spacing:2px;opacity:.6;text-transform:uppercase;margin-bottom:2px;">PLAN</div>
             <div style="font-size:.85rem;font-weight:800;color:#5BA3E8;margin-bottom:10px;">${m.plan||'Sin definir'}</div>
             <div style="display:flex;align-items:center;gap:12px;">
-              ${m.foto?`<img src="${esc(m.foto)}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,.4);">`:`<div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:1.3rem;">&#128062;</div>`}
+              ${m.foto?`<img src="${esc(m.foto)}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,.4);">`:`<div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:1.3rem;"><svg class="ic-pet"><use href="#ic-mascotas"/></svg></div>`}
               <div>
                 <div style="font-size:1.2rem;font-weight:900;line-height:1;">${esc(m.nombre||'—')}</div>
                 <div style="font-size:.65rem;opacity:.65;text-transform:uppercase;letter-spacing:1px;">${esc(m.raza||'')}</div>
@@ -2527,7 +2546,7 @@ function renderPanel(data){
         <div class="panel-nombre">${esc(nombre)} ${esc(apellido||'')}</div>
         ${clinica?`<div style="font-size:.85rem;color:#5a6a8a;">${esc(clinica)}</div>`:''}
       </div>
-      <div style="font-size:3rem;">&#127973;</div>
+      <div style="font-size:3rem;color:var(--azul)">${icon('vet')}</div>
     </div>
 
     <div class="tabs">
@@ -2543,11 +2562,11 @@ function renderPanel(data){
     <div id="vet-tab-inicio" class="vet-tab-content">
       <div class="vet-actions">
         <div class="vet-action-btn" onclick="vetSwitchTab('buscar',document.querySelector('[data-tab=buscar]'))">
-          <div class="va-icon">&#128269;</div>
+          <div class="va-icon">${icon('buscar')}</div>
           <div class="va-text">Buscar paciente</div>
         </div>
         <div class="vet-action-btn" onclick="vetSwitchTab('buscar',document.querySelector('[data-tab=buscar]'))">
-          <div class="va-icon">&#10133;</div>
+          <div class="va-icon">${icon('plus')}</div>
           <div class="va-text">Nueva atencion</div>
         </div>
       </div>
@@ -2616,7 +2635,7 @@ function renderPanel(data){
 
   // ── VISTA ADMIN ──
   }else if(activeRole==='admin'){
-    html=`<div class="panel-header"><div><div class="panel-rol admin">Administrador</div><div class="panel-nombre">Panel MEDIPaw</div></div><div style="font-size:2.5rem;">&#9881;&#65039;</div></div>
+    html=`<div class="panel-header"><div><div class="panel-rol admin">Administrador</div><div class="panel-nombre">Panel MEDIPaw</div></div><div style="font-size:2.5rem;color:var(--azul)">${icon('config')}</div></div>
     <div class="tabs">
       <button class="tab active" onclick="switchTab('dashboard',this)">Dashboard</button>
       <button class="tab" onclick="switchTab('afiliados',this)">Afiliados</button>
