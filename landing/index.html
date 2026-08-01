@@ -120,6 +120,24 @@
   .pcard .big{font-family:var(--font-display);font-weight:800;color:var(--azul);font-size:1.2rem}
   .pcard p{font-size:.82rem;color:var(--suave)}
 
+  /* Comparativa completa (grid; scroll horizontal en mobile, 1ª col sticky) */
+  .comp-wrap{overflow-x:auto;border:1px solid var(--linea);border-radius:var(--r-lg);-webkit-overflow-scrolling:touch}
+  .comp{display:grid;grid-template-columns:minmax(190px,1.5fr) repeat(5,minmax(118px,1fr));min-width:800px;background:var(--blanco)}
+  .comp-hint{display:none}
+  @media(max-width:820px){.comp-hint{display:inline;color:var(--azul);font-weight:800}}
+  .comp .ch{background:var(--navy);color:#fff;padding:12px 10px;text-align:center;font-family:var(--font-display);font-weight:700;font-size:.86rem}
+  .comp .ch.hot{background:var(--azul)}
+  .comp .ch .pr{display:block;font-family:var(--font-body);font-weight:800;font-size:.78rem;color:#aecbf0;margin-top:2px}
+  .comp .rowlbl{position:sticky;left:0;background:var(--fondo);padding:11px 12px;border-top:1px solid var(--linea);z-index:1}
+  .comp .rowlbl strong{font-size:.82rem;color:var(--navy);font-weight:800;display:block;line-height:1.2}
+  .comp .rowlbl small{font-size:.68rem;color:var(--tenue)}
+  .comp .cell{padding:11px 8px;border-top:1px solid var(--linea);text-align:center;font-size:.74rem;color:var(--suave);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+  .comp .cell.on{color:var(--texto)}
+  .comp .cell .tick{width:16px;height:16px;color:var(--azul)}
+  .comp .cell .no{color:#c3cbdb;font-weight:800}
+  .comp .cell.hotcol{background:rgba(26,95,180,.04)}
+  .comp .ch.rowlblh{position:sticky;left:0;background:var(--navy);z-index:3;text-align:left;padding-left:12px}
+
   /* Tienda teaser */
   .tienda{background:linear-gradient(120deg,var(--ambar-suave),#fff);border:1px solid var(--ambar);border-radius:var(--r-xl);padding:34px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px}
   .tienda .pico{width:56px;height:56px;border-radius:16px;background:var(--ambar);display:flex;align-items:center;justify-content:center}
@@ -141,8 +159,8 @@
   footer small{width:100%;color:#6b7aa0;font-size:.78rem;border-top:1px solid rgba(255,255,255,.08);padding-top:16px;margin-top:6px}
 
   /* Reveal on scroll */
-  .rev{opacity:0;transform:translateY(18px);transition:opacity .5s var(--ease),transform .5s var(--ease)}
-  .rev.in{opacity:1;transform:none}
+  .reveal{opacity:0;transform:translateY(18px);transition:opacity .5s var(--ease),transform .5s var(--ease)}
+  .reveal.in{opacity:1;transform:none}
 
   /* Hero cachorro draw */
   .draw path{stroke-dasharray:var(--len,240);stroke-dashoffset:var(--len,240);animation:draw .9s var(--ease) forwards}
@@ -156,7 +174,7 @@
     html{scroll-behavior:auto}
     .draw path{stroke-dashoffset:0;animation:none}
     .draw .eye{opacity:1;animation:none}
-    .rev{opacity:1;transform:none;transition:none}
+    .reveal{opacity:1;transform:none;transition:none}
     .huellas svg{opacity:.45!important;animation:none!important}
     .btn,.plan{transition:none}
   }
@@ -207,7 +225,7 @@
     <div class="trust">
       <span><svg><use href="#ic-guardia"/></svg>Guardia 24hs</span>
       <span><svg><use href="#ic-vetia"/></svg>VETIA incluido</span>
-      <span><svg><use href="#ic-shield"/></svg>Sin pagar en la app</span>
+      <span id="chipDesde"><svg><use href="#ic-check"/></svg>En Pergamino</span>
     </div>
   </div>
   <div class="hero-art"><svg id="heroPaw" viewBox="0 0 100 100" style="color:#fff;stroke-width:3.5" aria-label="MEDIPaw"></svg></div>
@@ -215,17 +233,17 @@
 
 <!-- CÓMO FUNCIONA -->
 <section class="sec" id="como"><div class="wrap">
-  <div class="sec-head rev"><div class="lbl">Cómo funciona</div><h2>De gratis a cubierto, en 3 pasos</h2><p>Empezás sin costo y activás la cobertura cuando quieras.</p></div>
+  <div class="sec-head reveal"><div class="lbl">Cómo funciona</div><h2>De gratis a cubierto, en 3 pasos</h2><p>Empezás sin costo y activás la cobertura cuando quieras.</p></div>
   <div class="pasos">
     <div class="huellas" id="huellas" aria-hidden="true"></div>
-    <div class="paso rev"><div class="num">Paso 1</div><div class="pico"><svg><use href="#ic-cargar"/></svg></div><h3>Cargá a tu mascota — gratis</h3><p>Creá tu cuenta y sumá a tu mascota. Sin costo, sin tarjeta.</p></div>
-    <div class="paso rev"><div class="num">Paso 2</div><div class="pico"><svg><use href="#ic-carnet"/></svg></div><h3>Probá VETIA y mirá su carnet</h3><p>Consultá al asistente y conocé su plan y su carnet digital.</p></div>
-    <div class="paso rev"><div class="num">Paso 3</div><div class="pico"><svg><use href="#ic-activar"/></svg></div><h3>Activá su plan y se enciende todo</h3><p>Con la cobertura activa: guardia, estudios, cirugías y reintegros.</p></div>
+    <div class="paso reveal"><div class="num">Paso 1</div><div class="pico"><svg><use href="#ic-cargar"/></svg></div><h3>Cargá a tu mascota — gratis</h3><p>Creá tu cuenta y sumá a tu mascota. Sin costo, sin tarjeta.</p></div>
+    <div class="paso reveal"><div class="num">Paso 2</div><div class="pico"><svg><use href="#ic-carnet"/></svg></div><h3>Probá VETIA y mirá su carnet</h3><p>Consultá al asistente y conocé su plan y su carnet digital.</p></div>
+    <div class="paso reveal"><div class="num">Paso 3</div><div class="pico"><svg><use href="#ic-activar"/></svg></div><h3>Activá su plan y se enciende todo</h3><p>Con la cobertura activa: guardia, estudios, cirugías y reintegros.</p></div>
   </div>
 </div></section>
 
 <!-- VETIA -->
-<section class="sec" style="padding-top:0"><div class="wrap"><div class="vetia rev">
+<section class="sec" style="padding-top:0"><div class="wrap"><div class="vetia reveal">
   <div>
     <div class="lbl" style="color:var(--azul-claro)">Incluido · gratis para registrados</div>
     <h2 style="margin-top:8px">Conocé a VETIA</h2>
@@ -234,25 +252,31 @@
   </div>
   <div class="bubble">
     <div class="chat"><div class="av"><svg><use href="#ic-vetia"/></svg></div><div class="msg">¿Cuántas vacunas le quedan a Michi este año?</div></div>
-    <div class="chat"><div class="av" style="background:var(--azul-claro)"><svg><use href="#paw"/></svg></div><div class="msg">A Michi le quedan 4 de 5 este año en su plan. La guardia con veterinario MEDIPaw es sin límite. 🐾</div></div>
+    <div class="chat"><div class="av" style="background:var(--azul-claro)"><svg><use href="#paw"/></svg></div><div class="msg">A Michi le quedan 4 de 5 este año en su plan. La guardia con veterinario MEDIPaw es sin límite.</div></div>
   </div>
 </div></div></section>
 
 <!-- PLANES -->
 <section class="sec" id="planes" style="background:var(--blanco);border-top:1px solid var(--linea);border-bottom:1px solid var(--linea)"><div class="wrap">
-  <div class="sec-head rev"><div class="lbl">Planes</div><h2>Una cobertura para cada mascota</h2><p>Cuotas por mascota. Precios reales del sistema.</p></div>
+  <div class="sec-head reveal"><div class="lbl">Planes</div><h2>Una cobertura para cada mascota</h2><p>Cuotas por mascota. Precios reales del sistema.</p></div>
   <div class="planes" id="planesGrid"></div>
-  <div class="nota-wrap"><div class="nota-plan rev"><svg><use href="#ic-info"/></svg><span><b>MEDIPaw le asigna el plan por especie y edad.</b> No elegís vos — el sistema lo define y vos activás su cobertura.</span></div></div>
+  <div class="nota-wrap"><div class="nota-plan reveal"><svg><use href="#ic-info"/></svg><span><b>MEDIPaw le asigna el plan por especie y edad.</b> No elegís vos — el sistema lo define y vos activás su cobertura.</span></div></div>
+
+  <div class="comp-block reveal" style="margin-top:44px">
+    <h3 style="text-align:center;font-size:1.3rem;margin-bottom:4px">Comparativa completa</h3>
+    <p style="text-align:center;color:var(--suave);font-size:.9rem;margin-bottom:18px">Todas las prestaciones × plan, con cupos y topes reales. <span class="comp-hint">Deslizá para ver todos los planes →</span></p>
+    <div class="comp-wrap"><div class="comp" id="compTabla"></div></div>
+  </div>
 </div></section>
 
 <!-- PRESTACIONES -->
 <section class="sec"><div class="wrap">
-  <div class="sec-head rev"><div class="lbl">Qué cubre</div><h2>Prestaciones que importan</h2><p>Con números reales de la matriz de coberturas.</p></div>
+  <div class="sec-head reveal"><div class="lbl">Qué cubre</div><h2>Prestaciones que importan</h2><p>Con números reales de la matriz de coberturas.</p></div>
   <div class="prest" id="prestGrid"></div>
 </div></section>
 
 <!-- TIENDA -->
-<section class="sec" style="padding-top:0"><div class="wrap"><div class="tienda rev">
+<section class="sec" style="padding-top:0"><div class="wrap"><div class="tienda reveal">
   <div class="pico"><svg><use href="#ic-tienda"/></svg></div>
   <div class="soon">Muy pronto</div>
   <h2 style="font-size:1.5rem">Tienda MEDIPaw</h2>
@@ -260,7 +284,7 @@
 </div></div></section>
 
 <!-- CTA FINAL -->
-<section class="sec" style="padding-top:0"><div class="wrap"><div class="cta-final rev">
+<section class="sec" style="padding-top:0"><div class="wrap"><div class="cta-final reveal">
   <h2>Empezá gratis hoy</h2>
   <p>Cargá a tu mascota en un minuto. Activás la cobertura cuando quieras.</p>
   <a class="btn btn-ghost dark" href="/socio/" style="font-size:1.05rem"><svg style="color:var(--azul)"><use href="#ic-cargar"/></svg>Cargá a tu mascota gratis</a>
@@ -270,7 +294,7 @@
 <footer><div class="wrap">
   <div class="lockup"><svg width="26" height="26" style="color:#fff;stroke-width:6"><use href="#paw"/></svg><span class="wm">MEDI<span class="paw">Paw</span></span></div>
   <div class="cols"><a href="#como">Cómo funciona</a><a href="#planes">Planes</a><a href="/socio/">Ingresar</a></div>
-  <small>MEDIPaw · Plan de salud para mascotas · Pergamino. Comprobantes internos; el titular ve qué debe, no paga en la app. © 2026</small>
+  <small>MEDIPaw · Plan de salud para mascotas · Pergamino · © 2026</small>
 </div></footer>
 
 <script src="/lib/medipaw-core.js"></script>
@@ -294,53 +318,70 @@
   var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches;
   if(!reduce) heroPaw.classList.add('draw');
 
-  // ── Planes desde el núcleo (fuente única) ──
-  var PLANES = [
-    {k:'MEDIPaw Urgencias', para:'Cobertura esencial de urgencias'},
-    {k:'MEDIPaw Básico', para:'Aves y otras mascotas · acceso'},
-    {k:'MEDIPaw Joven', para:'Cachorros y gatitos', hot:true},
-    {k:'MEDIPaw Adulto', para:'Perros y gatos adultos'},
-    {k:'MEDIPaw Senior', para:'Mascotas mayores'}
+  // ── Helpers de matriz (fuente única) ──
+  function reg(k,plan){ try{ return MC&&MC.reglaCobertura?MC.reglaCobertura(k,plan):null; }catch(e){ return null; } }
+  function etq(k){ try{ return (MC&&MC.ETIQUETAS_PRESTACION&&MC.ETIQUETAS_PRESTACION[k])||k; }catch(e){ return k; } }
+  function fmtNum(r){ if(!r) return '—'; if(r.cupoAnual==null) return 'sin límite'; var s=r.cupoAnual+'/año'; if(r.tope) s+=' · hasta '+money(r.tope); else if(r.pct!=null&&r.pct<1) s+=' · '+Math.round(r.pct*100)+'%'; return s; }
+
+  // ── Tarjetas de planes: prestaciones DISTINTIVAS reales por plan (números del núcleo) ──
+  var PLANES=[
+    {k:'MEDIPaw Urgencias', para:'Esencial de urgencias', keys:['consultaGuardia','vetOnline','analisis','imagen'], nota:'Urgencias y estudios, sin carencias.'},
+    {k:'MEDIPaw Básico', para:'Aves y otras mascotas', keys:['consultaGuardia','vetOnline','medicamentos','descuentos'], nota:'Plan de acceso.'},
+    {k:'MEDIPaw Joven', para:'Cachorros y gatitos', hot:true, keys:['vacunas','cirugia','etologo','consultaGuardia'], nota:'La franja con más vacunas al año.'},
+    {k:'MEDIPaw Adulto', para:'Perros y gatos adultos', keys:['periodontal','especialidades','cirugia','vacunas'], nota:'Suma odontología y especialidades.'},
+    {k:'MEDIPaw Senior', para:'Mascotas mayores', keys:['resonancia','cirugia','especialidades','internacion'], nota:'Todo, con los topes más altos.'}
   ];
-  function highlightsPlan(plan){
-    var out=[]; out.push('Guardia veterinaria sin límite');
-    try{
-      if(MC&&MC.COBERTURAS&&MC.reglaCobertura){
-        var incl=Object.keys(MC.COBERTURAS).filter(function(k){return MC.reglaCobertura(k,plan);}).length;
-        out.push(incl+' prestaciones cubiertas');
-        if(MC.reglaCobertura('vacunas',plan)) out.push('Vacunas y desparasitación');
-        if(MC.reglaCobertura('cirugia',plan)) out.push('Cirugías con reintegro');
-      }
-    }catch(e){}
-    return out.slice(0,4);
-  }
+  var PLKEYS=PLANES.map(function(p){return p.k;});
   document.getElementById('planesGrid').innerHTML = PLANES.map(function(p){
-    var hl = highlightsPlan(p.k).map(function(h){return '<li><svg><use href="#ic-check"/></svg>'+esc(h)+'</li>';}).join('');
-    var nombre = p.k.replace('MEDIPaw ','');
-    return '<div class="plan'+(p.hot?' hot':'')+' rev">'+
+    var items=[]; p.keys.forEach(function(k){ var r=reg(k,p.k); if(r) items.push(etq(k)+': '+fmtNum(r)); });
+    var li = items.slice(0,4).map(function(t){return '<li><svg><use href="#ic-check"/></svg>'+esc(t)+'</li>';}).join('');
+    var incl=0; try{ incl=Object.keys(MC.COBERTURAS).filter(function(k){return reg(k,p.k);}).length; }catch(e){}
+    var nombre=p.k.replace('MEDIPaw ','');
+    return '<div class="plan'+(p.hot?' hot':'')+' reveal">'+
       '<div class="pn">'+esc(nombre)+'</div><div class="para">'+esc(p.para)+'</div>'+
       '<div class="precio">'+money(cuota(p.k))+'<small>por mes · por mascota</small></div>'+
-      '<ul>'+hl+'</ul>'+
+      '<ul>'+li+'</ul>'+
+      (incl?'<div style="font-size:.7rem;color:var(--tenue);margin-bottom:8px">'+incl+' prestaciones en total</div>':'')+
       '<a class="p-cta" href="/socio/">Activá su cobertura ›</a></div>';
   }).join('');
 
-  // ── Prestaciones destacadas (matriz real, plan Adulto como referencia amplia) ──
-  var REF='MEDIPaw Adulto';
-  function regla(k){ try{ return MC&&MC.reglaCobertura?MC.reglaCobertura(k,REF):null; }catch(e){ return null; } }
+  // ── Prestaciones destacadas (números reales; vacunas = máximo entre planes: "hasta N/año") ──
+  function maxCupo(k){ var m=0; PLKEYS.forEach(function(pl){var r=reg(k,pl); if(r&&r.cupoAnual!=null&&r.cupoAnual>m)m=r.cupoAnual;}); return m; }
+  function maxTope(k){ var m=0; PLKEYS.forEach(function(pl){var r=reg(k,pl); if(r&&r.tope&&r.tope>m)m=r.tope;}); return m; }
   var PREST=[
-    {ic:'ic-guardia', k:'consultaGuardia', h:'Guardia veterinaria', big:'Sin límite', p:'Consultas con el veterinario MEDIPaw, las que necesites.'},
-    {ic:'ic-vacuna', k:'vacunas', h:'Vacunas', calc:function(r){return r?r.cupoAnual+' al año':'Cubiertas';}, p:'Con reintegro sobre el valor.'},
-    {ic:'ic-cirugia', k:'cirugia', h:'Cirugías', calc:function(r){return r&&r.tope?'hasta '+money(r.tope):'Cubiertas';}, p:'Intervenciones quirúrgicas con reintegro.'},
-    {ic:'ic-estudio', k:'imagen', h:'Estudios', calc:function(r){return r&&r.tope?'hasta '+money(r.tope):'Cubiertos';}, p:'Diagnóstico por imagen, análisis y cardiología.'}
+    {ic:'ic-guardia', h:'Guardia veterinaria', big:'Sin límite', p:'Consultas con el veterinario MEDIPaw, las que necesites.'},
+    {ic:'ic-vacuna', h:'Vacunas', big:'hasta '+maxCupo('vacunas')+'/año', p:'Según el plan de tu mascota, con reintegro.'},
+    {ic:'ic-cirugia', h:'Cirugías', big:'hasta '+money(maxTope('cirugia')), p:'Intervenciones quirúrgicas con reintegro.'},
+    {ic:'ic-estudio', h:'Estudios', big:'Imagen y análisis', p:'Diagnóstico por imagen, análisis y cardiología con tope.'}
   ];
   document.getElementById('prestGrid').innerHTML = PREST.map(function(x){
-    var big = x.big || (x.calc?x.calc(regla(x.k)):'');
-    return '<div class="pcard rev"><div class="pico"><svg><use href="#'+x.ic+'"/></svg></div>'+
-      '<div class="big">'+esc(big)+'</div><h3>'+esc(x.h)+'</h3><p>'+esc(x.p)+'</p></div>';
+    return '<div class="pcard reveal"><div class="pico"><svg><use href="#'+x.ic+'"/></svg></div>'+
+      '<div class="big">'+esc(x.big)+'</div><h3>'+esc(x.h)+'</h3><p>'+esc(x.p)+'</p></div>';
   }).join('');
 
+  // ── Tabla comparativa completa (21 prestaciones × 5 planes, desde COBERTURAS) ──
+  (function(){
+    var cont=document.getElementById('compTabla'); if(!cont) return;
+    if(!MC||!MC.COBERTURAS){ var b=document.querySelector('.comp-block'); if(b) b.style.display='none'; return; }
+    var tick='<svg class="tick"><use href="#ic-check"/></svg>';
+    var html='<div class="ch rowlblh">Prestación</div>';
+    PLKEYS.forEach(function(pl){ var hot=(pl==='MEDIPaw Joven'); html+='<div class="ch'+(hot?' hot':'')+'">'+esc(pl.replace('MEDIPaw ',''))+'<span class="pr">'+money(cuota(pl))+'</span></div>'; });
+    Object.keys(MC.COBERTURAS).forEach(function(k){
+      var base=MC.COBERTURAS[k];
+      html+='<div class="rowlbl"><strong>'+esc(etq(k))+'</strong>'+(base&&base.categoria?'<small>'+esc(base.categoria)+'</small>':'')+'</div>';
+      PLKEYS.forEach(function(pl){
+        var r=reg(k,pl); var hot=(pl==='MEDIPaw Joven')?' hotcol':'';
+        if(!r){ html+='<div class="cell'+hot+'"><span class="no">—</span></div>'; return; }
+        var det = (r.cupoAnual==null)?'sin límite':(r.cupoAnual+'/año'+(r.tope?' · '+money(r.tope):(r.pct!=null&&r.pct<1?' · '+Math.round(r.pct*100)+'%':'')));
+        if(r.carenciaDias>0) det+=' · '+r.carenciaDias+'d';
+        html+='<div class="cell on'+hot+'">'+tick+'<span>'+esc(det)+'</span></div>';
+      });
+    });
+    cont.innerHTML=html;
+  })();
+
   // ── Reveal on scroll (una vez) ──
-  var revs=[].slice.call(document.querySelectorAll('.rev'));
+  var revs=[].slice.call(document.querySelectorAll('.reveal'));
   if(reduce || !('IntersectionObserver' in window)){ revs.forEach(function(e){e.classList.add('in');}); }
   else{
     var io=new IntersectionObserver(function(es){es.forEach(function(en){ if(en.isIntersecting){ en.target.classList.add('in'); io.unobserve(en.target);} });},{threshold:.12});
