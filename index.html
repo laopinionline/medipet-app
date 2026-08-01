@@ -122,7 +122,7 @@ body{font-family:var(--font-body);background:var(--fondo);color:var(--texto);min
 .search-box input:focus{border-color:var(--azul-medio)}
 .hc-entry{padding:14px;border-radius:12px;background:var(--fondo);margin-bottom:10px;border:1px solid rgba(26,95,180,.06);cursor:pointer;transition:border-color .2s}
 .hc-entry:hover{border-color:var(--azul-claro)}
-.hc-tipo{display:inline-block;font-size:.65rem;font-weight:800;padding:2px 8px;border-radius:100px;text-transform:uppercase;letter-spacing:.5px}
+.hc-tipo{display:inline-block;font-size:.66rem;font-weight:800;padding:2px 9px;border-radius:100px;letter-spacing:.2px;background:var(--azul-pale);color:var(--azul)}
 .tipo-consulta{background:#dbeafe;color:#1d4ed8}
 .tipo-vacuna{background:#dcfce7;color:#166534}
 .tipo-estudio{background:#fef3c7;color:#92400e}
@@ -272,6 +272,10 @@ const TURNOS_ON = /^medipaw-demo\./.test(location.hostname) || location.hostname
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 // Iconografía propia (identidad, mismo lenguaje del socio): id fijo del set → sin esc.
 function icon(name){ return `<svg class="ic" aria-hidden="true"><use href="#ic-${name}"/></svg>`; }
+// Etiqueta de prestación (full, del núcleo — como el socio) + forma CORTA para chips angostos.
+function etiquetaPrestacion(tipo){ try{ return (MC && MC.ETIQUETAS_PRESTACION && MC.ETIQUETAS_PRESTACION[tipo]) || tipo; }catch(e){ return tipo; } }
+const CHIP_CORTA={consultaGuardia:'Guardia',consultaExterna:'Consulta ext.',vetOnline:'Vet online',medicamentos:'Medicamentos',vacunas:'Vacunas',desparasitacion:'Desparasitación',traslado:'Traslado',analisis:'Análisis',imagen:'Imagen',resonancia:'Resonancia',periodontal:'Periodontal',cirugia:'Cirugía',internacion:'Internación',nutricionista:'Nutrición',etologo:'Etología',especialidades:'Especialidad',higiene:'Higiene',bano:'Baño',descuentos:'Descuentos',legal:'Legal',cremacion:'Cremación',consulta:'Consulta'};
+function chipPrestacion(tipo){ return CHIP_CORTA[tipo] || etiquetaPrestacion(tipo); }
 
 // Delegación de clicks para botones con datos de usuario. Reemplaza el patrón viejo de un handler inline con el
 // dato interpolado como string JS DENTRO de un atributo HTML (doble contexto, se escapa mal siempre). Los valores
@@ -954,7 +958,7 @@ async function cargarDashboardVet() {
             return `<div class="hc-entry" onclick="vetVerHistoria('${a.mascotaId||''}')">
               <div style="display:flex;justify-content:space-between;align-items:flex-start;">
                 <div>
-                  <span class="hc-tipo tipo-${esc(tipo)}">${esc(tipo)}</span>
+                  <span class="hc-tipo" title="${esc(etiquetaPrestacion(tipo))}">${esc(chipPrestacion(tipo))}</span>
                   <div style="font-size:.85rem;font-weight:700;margin-top:4px;">${esc(a.mascotaNombre||a.mascota||'—')}</div>
                   <div style="font-size:.78rem;color:var(--suave);">${esc(a.diagnostico||a.descripcion||'')}</div>
                 </div>
@@ -1134,7 +1138,7 @@ async function vetVerHistoria(mascotaId) {
               <div style="display:flex;justify-content:space-between;align-items:flex-start;">
                 <div style="flex:1;">
                   <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-                    <span class="hc-tipo tipo-${esc(tipo)}">${esc(tipo)}</span>
+                    <span class="hc-tipo" title="${esc(etiquetaPrestacion(tipo))}">${esc(chipPrestacion(tipo))}</span>
                     <span style="font-size:.72rem;color:#9ca3af;">${fechaStr}</span>
                   </div>
                   ${a.diagnostico?`<div style="font-size:.85rem;font-weight:700;margin-top:6px;color:var(--noche);">Diagnostico: ${esc(a.diagnostico)}</div>`:''}
@@ -2014,7 +2018,7 @@ async function cargarAtencionesAdmin(){
         <div style="display:flex;justify-content:space-between;align-items:flex-start;">
           <div>
             <strong>${esc(a.prestadorNombre)}</strong>
-            ${tipo?`<span class="hc-tipo tipo-${esc(tipo)}" style="margin-left:6px;">${esc(tipo)}</span>`:''}
+            ${tipo?`<span class="hc-tipo" style="margin-left:6px;" title="${esc(etiquetaPrestacion(tipo))}">${esc(chipPrestacion(tipo))}</span>`:''}
             <div style="font-size:.8rem;color:#5a6a8a;">${esc(a.diagnostico||a.descripcion||'')}</div>
             <div style="font-size:.75rem;color:#9ca3af;">${fecha} · ${esc(a.mascotaNombre||a.mascota||'')} ${a.mascotaId?'('+esc(a.mascotaId)+')':''}</div>
           </div>
