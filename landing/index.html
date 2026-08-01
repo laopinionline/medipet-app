@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0D1B3E">
+<meta name="description" content="MEDIPaw — el plan de salud para tu mascota. Guardia veterinaria 24hs, estudios, cirugías y VETIA. Cargá a tu mascota gratis y activá su cobertura.">
+<title>MEDIPaw — El plan de salud de tu mascota</title>
+<link rel="icon" href="/socio/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0D1B3E; --azul:#1A5FB4; --azul-medio:#2272D9; --azul-claro:#5BA3E8; --azul-pale:#EBF3FC;
+    --ambar:#F2B84D; --ambar-suave:#FBE7C7; --fondo:#F5F7FA; --blanco:#fff; --texto:#1a2340; --suave:#5a6a8a;
+    --tenue:#8a95ab; --linea:#E6EAF2;
+    --r-md:14px; --r-lg:18px; --r-xl:24px; --r-pill:100px;
+    --sombra-sm:0 2px 10px rgba(13,27,62,.05); --sombra-md:0 10px 30px rgba(13,27,62,.09); --sombra-lg:0 20px 60px rgba(13,27,62,.16);
+    --font-display:'Baloo 2',cursive; --font-body:'Nunito',sans-serif;
+    --ease:cubic-bezier(.22,.61,.36,1);
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:var(--font-body);background:var(--fondo);color:var(--texto);line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  .wrap{max-width:1060px;margin:0 auto;padding:0 20px}
+  h1,h2,h3{font-family:var(--font-display);font-weight:800;letter-spacing:-.02em;color:var(--navy);line-height:1.08}
+  a{color:inherit;text-decoration:none}
+  .lbl{font-size:.7rem;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--azul)}
+
+  /* Nav */
+  .nav{position:sticky;top:0;z-index:20;background:rgba(13,27,62,.92);backdrop-filter:blur(8px);color:#fff}
+  .nav .wrap{display:flex;align-items:center;justify-content:space-between;padding-top:12px;padding-bottom:12px}
+  .lockup{display:flex;align-items:center;gap:3px}
+  .lockup .wm{font-family:var(--font-display);font-weight:800;font-size:1.35rem;letter-spacing:-.4px;color:#fff}
+  .lockup .wm .paw{color:var(--azul-claro)}
+  .nav .cta-sm{background:var(--azul);color:#fff;font-weight:800;font-size:.82rem;padding:9px 16px;border-radius:var(--r-pill)}
+
+  /* Botones */
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;font-family:var(--font-body);font-weight:800;font-size:1rem;padding:14px 24px;border-radius:var(--r-pill);border:none;cursor:pointer;transition:transform .2s var(--ease),box-shadow .2s var(--ease),background .2s}
+  .btn svg{width:20px;height:20px}
+  .btn-primary{background:var(--azul);color:#fff;box-shadow:0 8px 24px rgba(26,95,180,.32)}
+  .btn-primary:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(26,95,180,.4)}
+  .btn-ghost{background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,.3)}
+  .btn-ghost.dark{color:var(--navy);border-color:var(--linea);background:var(--blanco)}
+  .btn-ghost:hover{border-color:rgba(255,255,255,.6)}
+
+  /* Hero */
+  .hero{background:radial-gradient(120% 120% at 80% 0%,#1A3A7A 0%,var(--navy) 55%);color:#fff;padding:36px 0 64px;position:relative;overflow:hidden}
+  .hero .grid{display:grid;grid-template-columns:1.15fr .85fr;gap:36px;align-items:center}
+  @media(max-width:820px){.hero .grid{grid-template-columns:1fr;text-align:center;gap:8px}}
+  .hero h1{color:#fff;font-size:clamp(2.2rem,6vw,3.6rem)}
+  .hero h1 .hl{color:var(--azul-claro)}
+  .hero p{color:#c3cee4;font-size:1.1rem;margin:16px 0 26px;max-width:520px}
+  @media(max-width:820px){.hero p{margin-left:auto;margin-right:auto}}
+  .hero .ctas{display:flex;gap:12px;flex-wrap:wrap}
+  @media(max-width:820px){.hero .ctas{justify-content:center}.hero-art{order:-1;margin:0 auto 6px}}
+  .hero-art{width:min(320px,72vw);aspect-ratio:1;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:32px;display:flex;align-items:center;justify-content:center;box-shadow:var(--sombra-lg)}
+  .hero-art svg{width:64%;color:#fff}
+  .trust{display:flex;gap:22px;flex-wrap:wrap;margin-top:26px;color:#9fb0d4;font-size:.86rem;font-weight:700}
+  @media(max-width:820px){.trust{justify-content:center}}
+  .trust span{display:inline-flex;align-items:center;gap:7px}
+  .trust svg{width:17px;height:17px;color:var(--azul-claro)}
+
+  /* Secciones */
+  section.sec{padding:64px 0}
+  .sec-head{text-align:center;max-width:640px;margin:0 auto 40px}
+  .sec-head h2{font-size:clamp(1.7rem,4vw,2.4rem)}
+  .sec-head p{color:var(--suave);margin-top:10px;font-size:1.05rem}
+
+  /* Cómo funciona */
+  .pasos{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;position:relative}
+  @media(max-width:760px){.pasos{grid-template-columns:1fr;gap:26px}}
+  .paso{background:var(--blanco);border:1px solid var(--linea);border-radius:var(--r-xl);padding:28px 22px;text-align:center;box-shadow:var(--sombra-sm);position:relative;z-index:1}
+  .paso .num{font-family:var(--font-display);font-weight:800;color:var(--azul-claro);font-size:.9rem}
+  .paso .pico{width:60px;height:60px;border-radius:18px;background:var(--azul-pale);display:flex;align-items:center;justify-content:center;margin:8px auto 14px}
+  .paso .pico svg{width:30px;height:30px;color:var(--azul)}
+  .paso h3{font-size:1.15rem;margin-bottom:6px}
+  .paso p{color:var(--suave);font-size:.92rem}
+  .huellas{position:absolute;inset:0;pointer-events:none;z-index:0}
+  .huellas svg{position:absolute;width:22px;height:22px;color:var(--ambar);opacity:0}
+
+  /* VETIA */
+  .vetia{background:linear-gradient(135deg,var(--navy),#14275a);color:#fff;border-radius:var(--r-xl);padding:44px;display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:center}
+  @media(max-width:760px){.vetia{grid-template-columns:1fr;padding:30px;text-align:center}}
+  .vetia h2{color:#fff}
+  .vetia p{color:#c3cee4;margin:12px 0 18px}
+  .vetia .bubble{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);border-radius:20px;padding:20px}
+  .vetia .chat{display:flex;gap:10px;align-items:flex-start;margin-bottom:12px}
+  .vetia .chat .av{width:34px;height:34px;border-radius:50%;background:var(--azul);flex:0 0 auto;display:flex;align-items:center;justify-content:center}
+  .vetia .chat .av svg{width:20px;height:20px;color:#fff}
+  .vetia .chat .msg{background:rgba(255,255,255,.1);border-radius:12px 12px 12px 4px;padding:9px 13px;font-size:.9rem}
+
+  /* Planes */
+  .planes{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}
+  @media(max-width:920px){.planes{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:520px){.planes{grid-template-columns:1fr}}
+  .plan{background:var(--blanco);border:1px solid var(--linea);border-radius:var(--r-lg);padding:22px 18px;display:flex;flex-direction:column;transition:transform .2s var(--ease),box-shadow .2s var(--ease)}
+  .plan:hover{transform:translateY(-4px);box-shadow:var(--sombra-md)}
+  .plan .pn{font-family:var(--font-display);font-weight:800;font-size:1.1rem;color:var(--navy)}
+  .plan .para{font-size:.78rem;color:var(--suave);min-height:2.4em;margin:2px 0 10px}
+  .plan .precio{font-family:var(--font-display);font-weight:800;font-size:1.7rem;color:var(--azul);line-height:1}
+  .plan .precio small{display:block;font-family:var(--font-body);font-weight:700;font-size:.72rem;color:var(--tenue)}
+  .plan ul{list-style:none;margin:14px 0;display:flex;flex-direction:column;gap:7px;flex:1}
+  .plan li{font-size:.82rem;color:var(--texto);display:flex;gap:7px;align-items:flex-start}
+  .plan li svg{width:16px;height:16px;color:var(--azul);flex:0 0 auto;margin-top:2px}
+  .plan .p-cta{margin-top:6px;background:var(--azul-pale);color:var(--azul);text-align:center;font-weight:800;font-size:.82rem;padding:10px;border-radius:var(--r-md)}
+  .plan.hot{border-color:var(--azul);box-shadow:0 0 0 2px var(--azul-pale)}
+  .nota-plan{text-align:center;color:var(--suave);font-size:.9rem;margin-top:22px;background:var(--ambar-suave);border-radius:var(--r-md);padding:12px 18px;display:inline-flex;gap:9px;align-items:center;justify-content:center;max-width:640px}
+  .nota-plan svg{width:20px;height:20px;color:#b5822a;flex:0 0 auto}
+  .nota-wrap{text-align:center}
+
+  /* Prestaciones */
+  .prest{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+  @media(max-width:820px){.prest{grid-template-columns:repeat(2,1fr)}}
+  .pcard{background:var(--blanco);border:1px solid var(--linea);border-radius:var(--r-lg);padding:22px;box-shadow:var(--sombra-sm)}
+  .pcard .pico{width:48px;height:48px;border-radius:14px;background:var(--azul-pale);display:flex;align-items:center;justify-content:center;margin-bottom:12px}
+  .pcard .pico svg{width:26px;height:26px;color:var(--azul)}
+  .pcard h3{font-size:1rem;margin-bottom:3px}
+  .pcard .big{font-family:var(--font-display);font-weight:800;color:var(--azul);font-size:1.2rem}
+  .pcard p{font-size:.82rem;color:var(--suave)}
+
+  /* Tienda teaser */
+  .tienda{background:linear-gradient(120deg,var(--ambar-suave),#fff);border:1px solid var(--ambar);border-radius:var(--r-xl);padding:34px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px}
+  .tienda .pico{width:56px;height:56px;border-radius:16px;background:var(--ambar);display:flex;align-items:center;justify-content:center}
+  .tienda .pico svg{width:30px;height:30px;color:var(--navy)}
+  .tienda .soon{font-size:.72rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#b5822a}
+
+  /* CTA final */
+  .cta-final{background:var(--navy);color:#fff;border-radius:var(--r-xl);padding:48px 30px;text-align:center}
+  .cta-final h2{color:#fff;font-size:clamp(1.7rem,4vw,2.3rem)}
+  .cta-final p{color:#c3cee4;margin:10px 0 22px}
+
+  /* Footer */
+  footer{background:var(--navy);color:#8ea0c8;padding:40px 0 34px;margin-top:56px}
+  footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:20px;align-items:center}
+  footer .wm{font-family:var(--font-display);font-weight:800;color:#fff;font-size:1.2rem}
+  footer .wm .paw{color:var(--azul-claro)}
+  footer a{color:#a9b6d6;font-size:.86rem;font-weight:700}
+  footer .cols{display:flex;gap:22px;flex-wrap:wrap}
+  footer small{width:100%;color:#6b7aa0;font-size:.78rem;border-top:1px solid rgba(255,255,255,.08);padding-top:16px;margin-top:6px}
+
+  /* Reveal on scroll */
+  .rev{opacity:0;transform:translateY(18px);transition:opacity .5s var(--ease),transform .5s var(--ease)}
+  .rev.in{opacity:1;transform:none}
+
+  /* Hero cachorro draw */
+  .draw path{stroke-dasharray:var(--len,240);stroke-dashoffset:var(--len,240);animation:draw .9s var(--ease) forwards}
+  .draw .eye{opacity:0;animation:pop .3s var(--ease) .85s forwards}
+  .draw .smile{animation-delay:.55s}
+  @keyframes draw{to{stroke-dashoffset:0}}
+  @keyframes pop{from{opacity:0;transform:scale(.4)}to{opacity:1;transform:none}}
+  .huella-on{animation:huellaIn .4s var(--ease) forwards}
+  @keyframes huellaIn{to{opacity:.55}}
+  @media(prefers-reduced-motion:reduce){
+    html{scroll-behavior:auto}
+    .draw path{stroke-dashoffset:0;animation:none}
+    .draw .eye{opacity:1;animation:none}
+    .rev{opacity:1;transform:none;transition:none}
+    .huellas svg{opacity:.45!important;animation:none!important}
+    .btn,.plan{transition:none}
+  }
+</style>
+</head>
+<body>
+
+<!-- Símbolos: cachorro + iconografía monolínea (mismo lenguaje del re-skin) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="paw" viewBox="0 0 100 100"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M50 84 C69 84 79 73 79 56 C79 44 72 38 63 37 C58 30 50 31 50 31 C50 31 42 30 37 37 C28 38 21 44 21 56 C21 73 31 84 50 84 Z"/>
+    <path d="M37 37 C30 23 41 19 46 26 C48 29 47 33 46 36"/><path d="M63 37 C70 23 59 19 54 26 C52 29 53 33 54 36"/>
+    <path d="M50 59 v4"/><path d="M41 66 C46 73 54 73 59 66"/>
+    <circle cx="40" cy="53" r="3.3" fill="currentColor" stroke="none"/><circle cx="60" cy="53" r="3.3" fill="currentColor" stroke="none"/>
+  </g></symbol>
+  <g id="ic-defs" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></g>
+  <symbol id="ic-cargar" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="11" cy="15.5" rx="4" ry="3.3"/><circle cx="5.8" cy="11" r="1.6"/><circle cx="9" cy="8" r="1.6"/><circle cx="13" cy="8" r="1.6"/><circle cx="16.2" cy="11" r="1.6"/><path d="M19 3.5v5M16.5 6h5"/></g></symbol>
+  <symbol id="ic-carnet" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="8" cy="11" r="2.2"/><path d="M14 9.5h4M14 13h3M5 16c.6-1.6 2-2.4 3-2.4s2.4.8 3 2.4"/></g></symbol>
+  <symbol id="ic-activar" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.4-3 8-7 9.5C8 19 5 15.4 5 11V6z"/><path d="M9 11.5l2 2 4-4.5"/></g></symbol>
+  <symbol id="ic-vetia" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6.5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-5l-4 3v-3H7a2 2 0 0 1-2-2z"/></g></symbol>
+  <symbol id="ic-guardia" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8.2v7.6M8.2 12h7.6"/></g></symbol>
+  <symbol id="ic-vacuna" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 4l3 3M18.5 5.5l-9.5 9.5-3.5 1 1-3.5 9.5-9.5z"/><path d="M13 8l2 2M10 11l2 2"/></g></symbol>
+  <symbol id="ic-cirugia" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.5-7-9.5A3.5 3.4 0 0 1 12 8a3.5 3.4 0 0 1 7 3.5c0 5-7 9.5-7 9.5z"/><path d="M12 11v4M10 13h4"/></g></symbol>
+  <symbol id="ic-estudio" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M6 12h3l1.5-3 2 5 1.5-2H18M9 21h6M12 17v4"/></g></symbol>
+  <symbol id="ic-check" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4 4 10-10"/></g></symbol>
+  <symbol id="ic-info" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.8" r=".3"/></g></symbol>
+  <symbol id="ic-tienda" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14l-1 12H6z"/><path d="M9 8a3 3 0 0 1 6 0"/></g></symbol>
+  <symbol id="ic-shield" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.4-3 8-7 9.5C8 19 5 15.4 5 11V6z"/></g></symbol>
+  <symbol id="ic-pawprint" viewBox="0 0 24 24"><g fill="currentColor" stroke="none"><ellipse cx="12" cy="16" rx="4.2" ry="3.4"/><circle cx="6.6" cy="11.2" r="1.7"/><circle cx="10" cy="8" r="1.7"/><circle cx="14" cy="8" r="1.7"/><circle cx="17.4" cy="11.2" r="1.7"/></g></symbol>
+</defs></svg>
+
+<!-- NAV -->
+<nav class="nav"><div class="wrap">
+  <a class="lockup" href="#top"><svg width="30" height="30" style="color:#fff;stroke-width:6"><use href="#paw"/></svg><span class="wm">MEDI<span class="paw">Paw</span></span></a>
+  <a class="cta-sm" href="/socio/">Ingresar</a>
+</div></nav>
+
+<!-- HERO -->
+<header class="hero" id="top"><div class="wrap"><div class="grid">
+  <div>
+    <div class="lbl" style="color:var(--azul-claro)">Plan de salud para mascotas · Pergamino</div>
+    <h1 style="margin-top:10px">La salud de tu mascota, <span class="hl">resuelta</span>.</h1>
+    <p>Guardia veterinaria las 24 horas, estudios, cirugías y <b style="color:#fff">VETIA</b> —tu asistente— en un solo plan. Cargá a tu mascota gratis y activá su cobertura cuando quieras.</p>
+    <div class="ctas">
+      <a class="btn btn-primary" href="/socio/"><svg><use href="#ic-cargar"/></svg>Cargá a tu mascota gratis</a>
+      <a class="btn btn-ghost" href="#planes">Ver planes</a>
+    </div>
+    <div class="trust">
+      <span><svg><use href="#ic-guardia"/></svg>Guardia 24hs</span>
+      <span><svg><use href="#ic-vetia"/></svg>VETIA incluido</span>
+      <span><svg><use href="#ic-shield"/></svg>Sin pagar en la app</span>
+    </div>
+  </div>
+  <div class="hero-art"><svg id="heroPaw" viewBox="0 0 100 100" style="color:#fff;stroke-width:3.5" aria-label="MEDIPaw"></svg></div>
+</div></div></header>
+
+<!-- CÓMO FUNCIONA -->
+<section class="sec" id="como"><div class="wrap">
+  <div class="sec-head rev"><div class="lbl">Cómo funciona</div><h2>De gratis a cubierto, en 3 pasos</h2><p>Empezás sin costo y activás la cobertura cuando quieras.</p></div>
+  <div class="pasos">
+    <div class="huellas" id="huellas" aria-hidden="true"></div>
+    <div class="paso rev"><div class="num">Paso 1</div><div class="pico"><svg><use href="#ic-cargar"/></svg></div><h3>Cargá a tu mascota — gratis</h3><p>Creá tu cuenta y sumá a tu mascota. Sin costo, sin tarjeta.</p></div>
+    <div class="paso rev"><div class="num">Paso 2</div><div class="pico"><svg><use href="#ic-carnet"/></svg></div><h3>Probá VETIA y mirá su carnet</h3><p>Consultá al asistente y conocé su plan y su carnet digital.</p></div>
+    <div class="paso rev"><div class="num">Paso 3</div><div class="pico"><svg><use href="#ic-activar"/></svg></div><h3>Activá su plan y se enciende todo</h3><p>Con la cobertura activa: guardia, estudios, cirugías y reintegros.</p></div>
+  </div>
+</div></section>
+
+<!-- VETIA -->
+<section class="sec" style="padding-top:0"><div class="wrap"><div class="vetia rev">
+  <div>
+    <div class="lbl" style="color:var(--azul-claro)">Incluido · gratis para registrados</div>
+    <h2 style="margin-top:8px">Conocé a VETIA</h2>
+    <p>Tu asistente de MEDIPaw. Te explica el plan, la cobertura y cómo cuidar a tu mascota — y si algo no está bien, te deriva a la guardia al toque. No diagnostica: orienta.</p>
+    <a class="btn btn-primary" href="/socio/"><svg><use href="#ic-vetia"/></svg>Probá VETIA gratis</a>
+  </div>
+  <div class="bubble">
+    <div class="chat"><div class="av"><svg><use href="#ic-vetia"/></svg></div><div class="msg">¿Cuántas vacunas le quedan a Michi este año?</div></div>
+    <div class="chat"><div class="av" style="background:var(--azul-claro)"><svg><use href="#paw"/></svg></div><div class="msg">A Michi le quedan 4 de 5 este año en su plan. La guardia con veterinario MEDIPaw es sin límite. 🐾</div></div>
+  </div>
+</div></div></section>
+
+<!-- PLANES -->
+<section class="sec" id="planes" style="background:var(--blanco);border-top:1px solid var(--linea);border-bottom:1px solid var(--linea)"><div class="wrap">
+  <div class="sec-head rev"><div class="lbl">Planes</div><h2>Una cobertura para cada mascota</h2><p>Cuotas por mascota. Precios reales del sistema.</p></div>
+  <div class="planes" id="planesGrid"></div>
+  <div class="nota-wrap"><div class="nota-plan rev"><svg><use href="#ic-info"/></svg><span><b>MEDIPaw le asigna el plan por especie y edad.</b> No elegís vos — el sistema lo define y vos activás su cobertura.</span></div></div>
+</div></section>
+
+<!-- PRESTACIONES -->
+<section class="sec"><div class="wrap">
+  <div class="sec-head rev"><div class="lbl">Qué cubre</div><h2>Prestaciones que importan</h2><p>Con números reales de la matriz de coberturas.</p></div>
+  <div class="prest" id="prestGrid"></div>
+</div></section>
+
+<!-- TIENDA -->
+<section class="sec" style="padding-top:0"><div class="wrap"><div class="tienda rev">
+  <div class="pico"><svg><use href="#ic-tienda"/></svg></div>
+  <div class="soon">Muy pronto</div>
+  <h2 style="font-size:1.5rem">Tienda MEDIPaw</h2>
+  <p style="color:var(--suave);max-width:440px">Alimentos, accesorios y más — con beneficios para socios. Estamos preparándola.</p>
+</div></div></section>
+
+<!-- CTA FINAL -->
+<section class="sec" style="padding-top:0"><div class="wrap"><div class="cta-final rev">
+  <h2>Empezá gratis hoy</h2>
+  <p>Cargá a tu mascota en un minuto. Activás la cobertura cuando quieras.</p>
+  <a class="btn btn-ghost dark" href="/socio/" style="font-size:1.05rem"><svg style="color:var(--azul)"><use href="#ic-cargar"/></svg>Cargá a tu mascota gratis</a>
+</div></div></section>
+
+<!-- FOOTER -->
+<footer><div class="wrap">
+  <div class="lockup"><svg width="26" height="26" style="color:#fff;stroke-width:6"><use href="#paw"/></svg><span class="wm">MEDI<span class="paw">Paw</span></span></div>
+  <div class="cols"><a href="#como">Cómo funciona</a><a href="#planes">Planes</a><a href="/socio/">Ingresar</a></div>
+  <small>MEDIPaw · Plan de salud para mascotas · Pergamino. Comprobantes internos; el titular ve qué debe, no paga en la app. © 2026</small>
+</div></footer>
+
+<script src="/lib/medipaw-core.js"></script>
+<script>
+(function(){
+  var MC = window.MEDIPAW;
+  var PRECIOS_FB = {'MEDIPaw Urgencias':23988,'MEDIPaw Básico':40000,'MEDIPaw Joven':58788,'MEDIPaw Adulto':54388,'MEDIPaw Senior':70788};
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function money(n){return '$'+Number(n).toLocaleString('es-AR');}
+  function cuota(plan){ try{ if(MC&&MC.planCuota){var c=MC.planCuota(plan); if(c) return c;} }catch(e){} return PRECIOS_FB[plan]; }
+
+  // ── Hero cachorro (dibujado al cargar) ──
+  var heroPaw = document.getElementById('heroPaw');
+  heroPaw.innerHTML = '<g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">'+
+    '<path d="M50 84 C69 84 79 73 79 56 C79 44 72 38 63 37 C58 30 50 31 50 31 C50 31 42 30 37 37 C28 38 21 44 21 56 C21 73 31 84 50 84 Z" style="--len:260"/>'+
+    '<path d="M37 37 C30 23 41 19 46 26 C48 29 47 33 46 36" style="--len:60"/>'+
+    '<path d="M63 37 C70 23 59 19 54 26 C52 29 53 33 54 36" style="--len:60"/>'+
+    '<path class="smile" d="M41 66 C46 73 54 73 59 66" style="--len:30"/>'+
+    '<circle class="eye" cx="40" cy="53" r="3.3" fill="currentColor" stroke="none"/><circle class="eye" cx="60" cy="53" r="3.3" fill="currentColor" stroke="none"/>'+
+    '</g>';
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  if(!reduce) heroPaw.classList.add('draw');
+
+  // ── Planes desde el núcleo (fuente única) ──
+  var PLANES = [
+    {k:'MEDIPaw Urgencias', para:'Cobertura esencial de urgencias'},
+    {k:'MEDIPaw Básico', para:'Aves y otras mascotas · acceso'},
+    {k:'MEDIPaw Joven', para:'Cachorros y gatitos', hot:true},
+    {k:'MEDIPaw Adulto', para:'Perros y gatos adultos'},
+    {k:'MEDIPaw Senior', para:'Mascotas mayores'}
+  ];
+  function highlightsPlan(plan){
+    var out=[]; out.push('Guardia veterinaria sin límite');
+    try{
+      if(MC&&MC.COBERTURAS&&MC.reglaCobertura){
+        var incl=Object.keys(MC.COBERTURAS).filter(function(k){return MC.reglaCobertura(k,plan);}).length;
+        out.push(incl+' prestaciones cubiertas');
+        if(MC.reglaCobertura('vacunas',plan)) out.push('Vacunas y desparasitación');
+        if(MC.reglaCobertura('cirugia',plan)) out.push('Cirugías con reintegro');
+      }
+    }catch(e){}
+    return out.slice(0,4);
+  }
+  document.getElementById('planesGrid').innerHTML = PLANES.map(function(p){
+    var hl = highlightsPlan(p.k).map(function(h){return '<li><svg><use href="#ic-check"/></svg>'+esc(h)+'</li>';}).join('');
+    var nombre = p.k.replace('MEDIPaw ','');
+    return '<div class="plan'+(p.hot?' hot':'')+' rev">'+
+      '<div class="pn">'+esc(nombre)+'</div><div class="para">'+esc(p.para)+'</div>'+
+      '<div class="precio">'+money(cuota(p.k))+'<small>por mes · por mascota</small></div>'+
+      '<ul>'+hl+'</ul>'+
+      '<a class="p-cta" href="/socio/">Activá su cobertura ›</a></div>';
+  }).join('');
+
+  // ── Prestaciones destacadas (matriz real, plan Adulto como referencia amplia) ──
+  var REF='MEDIPaw Adulto';
+  function regla(k){ try{ return MC&&MC.reglaCobertura?MC.reglaCobertura(k,REF):null; }catch(e){ return null; } }
+  var PREST=[
+    {ic:'ic-guardia', k:'consultaGuardia', h:'Guardia veterinaria', big:'Sin límite', p:'Consultas con el veterinario MEDIPaw, las que necesites.'},
+    {ic:'ic-vacuna', k:'vacunas', h:'Vacunas', calc:function(r){return r?r.cupoAnual+' al año':'Cubiertas';}, p:'Con reintegro sobre el valor.'},
+    {ic:'ic-cirugia', k:'cirugia', h:'Cirugías', calc:function(r){return r&&r.tope?'hasta '+money(r.tope):'Cubiertas';}, p:'Intervenciones quirúrgicas con reintegro.'},
+    {ic:'ic-estudio', k:'imagen', h:'Estudios', calc:function(r){return r&&r.tope?'hasta '+money(r.tope):'Cubiertos';}, p:'Diagnóstico por imagen, análisis y cardiología.'}
+  ];
+  document.getElementById('prestGrid').innerHTML = PREST.map(function(x){
+    var big = x.big || (x.calc?x.calc(regla(x.k)):'');
+    return '<div class="pcard rev"><div class="pico"><svg><use href="#'+x.ic+'"/></svg></div>'+
+      '<div class="big">'+esc(big)+'</div><h3>'+esc(x.h)+'</h3><p>'+esc(x.p)+'</p></div>';
+  }).join('');
+
+  // ── Reveal on scroll (una vez) ──
+  var revs=[].slice.call(document.querySelectorAll('.rev'));
+  if(reduce || !('IntersectionObserver' in window)){ revs.forEach(function(e){e.classList.add('in');}); }
+  else{
+    var io=new IntersectionObserver(function(es){es.forEach(function(en){ if(en.isIntersecting){ en.target.classList.add('in'); io.unobserve(en.target);} });},{threshold:.12});
+    revs.forEach(function(e){io.observe(e);});
+  }
+
+  // ── Huellas que "pisan" entre los pasos (una vez, al entrar) ──
+  var huellas=document.getElementById('huellas');
+  if(huellas && !reduce){
+    var pts=[[33,60],[50,40],[66,58],[83,42]]; // % dentro del contenedor de pasos
+    huellas.innerHTML = pts.map(function(pt,i){ var rot=(i%2?18:-14); return '<svg style="left:'+pt[0]+'%;top:'+pt[1]+'%;transform:rotate('+rot+'deg)"><use href="#ic-pawprint"/></svg>'; }).join('');
+    var pasos=document.getElementById('como');
+    var io2=new IntersectionObserver(function(es){es.forEach(function(en){ if(en.isIntersecting){ [].slice.call(huellas.children).forEach(function(h,i){ setTimeout(function(){h.classList.add('huella-on');}, 250+i*180); }); io2.disconnect(); } });},{threshold:.3});
+    io2.observe(pasos);
+  } else if(huellas){ huellas.innerHTML=''; }
+})();
+</script>
+</body>
+</html>
