@@ -90,6 +90,18 @@ body{font-family:var(--font-body);background:var(--fondo);color:var(--texto);min
 .btn-emerg .em-ico{font-size:1.7rem;display:flex;align-items:center}
 .btn-emerg .em-ico svg{width:30px;height:30px;color:#fff;display:block}
 .ic{width:24px;height:24px;display:block}
+/* Íconos en avatares/estados (Fase 2) */
+.masc-tab .ph svg{width:17px;height:17px;color:var(--azul)}
+.masc-tab.active .ph svg{color:var(--azul)}
+.mph svg,.carnet .mph svg{width:28px;height:28px;color:rgba(255,255,255,.9)}
+.big-ic{display:flex;justify-content:center;margin-bottom:6px}
+.big-ic svg{width:2rem;height:2rem;color:var(--azul)}
+.big-ic.ok svg{color:var(--azul)}
+.srv-ic svg{width:20px;height:20px}
+.cart-ic{display:inline-flex;align-items:center;gap:5px}
+.cart-ic svg{width:15px;height:15px;color:var(--azul);flex-shrink:0}
+.vetia-head-ic{display:inline-flex}.vetia-head-ic svg{width:1.5rem;height:1.5rem;color:var(--azul)}
+.inline-ic{display:inline-flex;align-items:center;gap:6px}.inline-ic svg{width:16px;height:16px;flex-shrink:0}
 /* Tiles / placeholders */
 .tile{display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:var(--blanco);border:1px solid var(--linea);border-radius:var(--r-md);padding:14px 16px;margin-bottom:12px;cursor:pointer;font-family:var(--font-body);box-shadow:var(--sombra-sm);position:relative;transition:transform .15s,box-shadow .15s}
 .tile:disabled{cursor:default;opacity:.85}
@@ -133,6 +145,21 @@ body{font-family:var(--font-body);background:var(--fondo);color:var(--texto);min
     <symbol id="ic-cuota" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h10v17l-2.5-1.8-2.5 1.8-2.5-1.8L7 20.5z"/><path d="M10 8.5h4M10 12.5h4"/></g></symbol>
     <symbol id="ic-mascotas" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="16" rx="4.2" ry="3.4"/><circle cx="6.6" cy="11.2" r="1.7"/><circle cx="10" cy="8" r="1.7"/><circle cx="14" cy="8" r="1.7"/><circle cx="17.4" cy="11.2" r="1.7"/></g></symbol>
     <symbol id="ic-cartilla" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s6-5.5 6-10a6 6 0 0 0-12 0c0 4.5 6 10 6 10z"/><circle cx="12" cy="11" r="2.4"/></g></symbol>
+    <!-- Avatares por especie (monolínea, mismo lenguaje) -->
+    <symbol id="ic-perro" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 6C5.5 6 5 8.5 5 11c0 4 3 7.5 7 7.5s7-3.5 7-7.5c0-2.5-.5-5-2.5-5"/><path d="M7.5 6c-.3 2.5.2 4.3 1.3 5.4M16.5 6c.3 2.5-.2 4.3-1.3 5.4"/><path d="M10 13.5h4M12 13.5v2"/><circle cx="9.7" cy="11" r=".4"/><circle cx="14.3" cy="11" r=".4"/></g></symbol>
+    <symbol id="ic-gato" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9L5 4l4 2.5M18 9l1-5-4 2.5"/><path d="M6 9c-.6 1.2-1 2.4-1 3.8C5 16 8 18.5 12 18.5s7-2.5 7-5.7c0-1.4-.4-2.6-1-3.8"/><path d="M10.5 13h3M12 13v1.5"/><circle cx="9.6" cy="11" r=".4"/><circle cx="14.4" cy="11" r=".4"/><path d="M4.5 12.5h2M17.5 12.5h2"/></g></symbol>
+    <symbol id="ic-ave" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13a5.5 5.5 0 0 1 5.5-5.5c3 0 5.5 2.4 5.5 5.5l3-1-1.6 2.4 1.1 2.6-3-1.2A5.5 5.5 0 0 1 5 13z"/><path d="M10.5 12.5h.01M8 18l1.5-3M12 18l1-3"/></g></symbol>
+    <symbol id="ic-plus" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></g></symbol>
+    <symbol id="ic-check" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4 4 10-10"/></g></symbol>
+    <symbol id="ic-dash" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 12h12"/></g></symbol>
+    <symbol id="ic-adjunto" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11l-8 8a5 5 0 0 1-7-7l8-8a3.2 3.2 0 0 1 4.6 4.6l-8 8a1.4 1.4 0 0 1-2-2l7.5-7.5"/></g></symbol>
+    <symbol id="ic-reloj" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 7.5v5l3 1.8"/></g></symbol>
+    <symbol id="ic-tel" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h3l1.6 4-2 1.4a11 11 0 0 0 5 5l1.4-2 4 1.6v3a2 2 0 0 1-2.2 2A16 16 0 0 1 4 5.2 2 2 0 0 1 6 3z"/></g></symbol>
+    <symbol id="ic-salud" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.4-3 8-7 9.5C8 19 5 15.4 5 11V6z"/><path d="M12 9v5M9.5 11.5h5"/></g></symbol>
+    <symbol id="ic-tag" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5V5a1 1 0 0 1 1-1h7.5L20 11.5 12.5 19z"/><circle cx="8" cy="8" r="1.2"/></g></symbol>
+    <symbol id="ic-tienda" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14l-1 12H6z"/><path d="M9 8a3 3 0 0 1 6 0"/></g></symbol>
+    <symbol id="ic-vacuna" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 4l3 3M18.5 5.5l-9.5 9.5-3.5 1 1-3.5 9.5-9.5z"/><path d="M13 8l2 2M10 11l2 2"/></g></symbol>
+    <symbol id="ic-gps" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s6-5.5 6-10a6 6 0 0 0-12 0c0 4.5 6 10 6 10z"/><circle cx="12" cy="11" r="2.4"/></g></symbol>
   </defs>
 </svg>
 
@@ -238,6 +265,12 @@ async function mascGetByTitular(uid){
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 // Iconografía propia (identidad): un ícono monolínea por nombre (id fijo del set, no dato de usuario → sin esc).
 function icon(name){ return `<svg class="ic" aria-hidden="true"><use href="#ic-${name}"/></svg>`; }
+// Avatar por especie (perro/gato/ave/otros). Fallback a "otros" (huella).
+function iconEspecie(especie){ const e={perro:'perro',gato:'gato',ave:'ave'}[especie]||'mascotas'; return icon(e); }
+// Etiqueta de prestación (full, del núcleo) + forma CORTA para chips.
+function etiquetaPrestacion(tipo){ try{ return (MC && MC.ETIQUETAS_PRESTACION && MC.ETIQUETAS_PRESTACION[tipo]) || tipo; }catch(e){ return tipo; } }
+const CHIP_CORTA={consultaGuardia:'Guardia',consultaExterna:'Consulta ext.',vetOnline:'Vet online',medicamentos:'Medicamentos',vacunas:'Vacunas',desparasitacion:'Desparasitación',traslado:'Traslado',analisis:'Análisis',imagen:'Imagen',resonancia:'Resonancia',periodontal:'Periodontal',cirugia:'Cirugía',internacion:'Internación',nutricionista:'Nutrición',etologo:'Etología',especialidades:'Especialidad',higiene:'Higiene',bano:'Baño',descuentos:'Descuentos',legal:'Legal',cremacion:'Cremación',consulta:'Consulta'};
+function chipPrestacion(tipo){ return CHIP_CORTA[tipo] || etiquetaPrestacion(tipo); }
 function v(id){ const el=document.getElementById(id); return el?el.value.trim():''; }
 function showScreen(id){ ['bootScreen','loginScreen','registerScreen'].forEach(s=>{const e=document.getElementById(s);if(e){e.classList.remove('active');e.style.display=s==='bootScreen'?'none':'';}}); document.getElementById('appScreen').style.display='none'; if(id==='appScreen'){document.getElementById('appScreen').style.display='block';} else {const e=document.getElementById(id); if(e){e.style.display='';e.classList.add('active');}} }
 function toast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),2600); }
@@ -308,7 +341,7 @@ auth.onAuthStateChanged(async user=>{
 function renderSinAcceso(u){
   document.getElementById('home').innerHTML = `
     <div class="seccion" style="text-align:center;">
-      <div style="font-size:2.2rem;margin-bottom:8px;">🐾</div>
+      <div class="big-ic">${icon('mascotas')}</div>
       <div class="stit" style="text-transform:none;font-size:1rem;">Todavía no tenés una mascota afiliada</div>
       <p style="font-size:.85rem;color:var(--suave);line-height:1.5;margin-top:6px;">Escribinos para afiliar a tu mascota y activar tu plan MEDIPaw.</p>
       <a class="btn-emerg" href="tel:${TEL_EMERG}" style="margin-top:14px;"><span class="em-ico">${icon('emerg')}</span><span><span class="em-top">EMERGENCIA 24hs</span><span class="em-sub">Llamar a la guardia veterinaria</span></span></a>
@@ -338,7 +371,7 @@ function seleccionarMascota(i){ S.mascotaSel=i; homeView(); }
 // ══ EMBUDO DE ALTA (especie → edad → peso/raza/sexo → plan del SISTEMA → mascota ACTIVA) ══
 // El plan y la cuota los fija el sistema (MC.planPorEspecieEdad); el titular NO los elige. Las reglas los revalidan.
 function genCodigo(n){ const ch='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let t=''; const a=new Uint8Array(n); crypto.getRandomValues(a); for(let i=0;i<n;i++) t+=ch[a[i]%ch.length]; return t; }
-const ESPECIE_LABEL={perro:'🐶 Perro',gato:'🐱 Gato',ave:'🐦 Ave',otros:'🐾 Otros'};
+const ESPECIE_LABEL={perro:'Perro',gato:'Gato',ave:'Ave',otros:'Otros'};
 function abrirAlta(){ S.sub='alta'; S.alta={ paso:1, nombre:'', especie:'', edadAprox:'', fnac:'', peso:'', raza:'', sexo:'', busy:false, err:'' }; render(); }
 function altaEspecie(e){ S.alta.especie=e; S.alta.err=''; S.alta.paso=2; altaView(); }
 function altaEdad(x){ S.alta.edadAprox=x; S.alta.err=''; altaView(); }
@@ -448,16 +481,16 @@ function bloqueMascotaCarnet(c, m){
   if(ms.length>=1){
     selector = `<div class="masc-tabs">` + ms.map((x,i)=>`
       <div class="masc-tab ${i===S.mascotaSel?'active':''}" onclick="seleccionarMascota(${i})">
-        ${x.foto?`<img src="${esc(x.foto)}" alt="">`:`<span class="ph">🐾</span>`}
+        ${x.foto?`<img src="${esc(x.foto)}" alt="">`:`<span class="ph">${iconEspecie(x.especie)}</span>`}
         <span>${esc(x.nombre||'—')}</span>
       </div>`).join('') +
-      `<div class="masc-tab" style="border-style:dashed;" onclick="abrirAlta()"><span class="ph" style="background:transparent;">＋</span><span>Otra</span></div>` +
+      `<div class="masc-tab" style="border-style:dashed;" onclick="abrirAlta()"><span class="ph" style="background:transparent;">${icon('plus')}</span><span>Otra</span></div>` +
       `</div>`;
   }
   if(!m){
     // Estado vacío (0 mascotas): NUNCA pantalla vacía ni loop. El alta va por el EMBUDO (especie→edad→plan del sistema).
     return `<div class="seccion" style="text-align:center;">
-      <div style="font-size:2rem;">🐾</div>
+      <div class="big-ic">${icon('mascotas')}</div>
       <div class="stit" style="text-transform:none;font-size:1rem;margin-top:6px;">Sumá tu primera mascota</div>
       <p style="font-size:.83rem;color:var(--suave);margin-top:4px;line-height:1.5;">Te hacemos unas preguntas y le asignamos el plan que le corresponde por su especie y edad.</p>
       <button class="btn-primary" style="margin-top:14px;" onclick="abrirAlta()">Dar de alta una mascota</button>
@@ -470,7 +503,7 @@ function bloqueMascotaCarnet(c, m){
     <div class="cplan-lbl">PLAN</div>
     <div class="cplan">${esc(m.plan||'Sin definir')}</div>
     <div class="mrow">
-      ${m.foto?`<img class="mfoto" src="${esc(m.foto)}" alt="">`:`<div class="mph">🐾</div>`}
+      ${m.foto?`<img class="mfoto" src="${esc(m.foto)}" alt="">`:`<div class="mph">${iconEspecie(m.especie)}</div>`}
       <div><div class="mname">${esc(m.nombre||'—')}</div><div class="mraza">${esc(tituloCaso(m.raza||''))}</div></div>
     </div>
     <div class="cfoot">
@@ -484,8 +517,8 @@ function bloqueMascotaCarnet(c, m){
       </div>
     </div>
   </div>
-  <div class="seccion" style="display:flex;justify-content:space-between;align-items:center;gap:8px;background:${cob.ok?'#f0fdf4':'#fef2f2'};margin-bottom:14px;">
-    <div style="font-size:.8rem;font-weight:700;color:${cob.color};">${cob.emoji} ${esc(cob.label)}${cob.ok&&cuota?` · $${cuota.toLocaleString('es-AR')}/mes`:''}</div>
+  <div class="seccion" style="display:flex;justify-content:space-between;align-items:center;gap:8px;background:${cob.ok?'var(--azul-pale)':'#F1F3F7'};margin-bottom:14px;">
+    <div class="inline-ic" style="font-size:.8rem;font-weight:700;color:${cob.ok?'var(--azul)':'var(--suave)'};">${cob.ok?icon('check'):icon('dash')} <span>${esc(cob.label)}${cob.ok&&cuota?` · $${cuota.toLocaleString('es-AR')}/mes`:''}</span></div>
   </div>`;
 }
 
@@ -540,7 +573,7 @@ function vetiaView(){
   document.getElementById('home').innerHTML = back + `
     <div class="seccion" style="display:flex;flex-direction:column;gap:8px;min-height:300px;">
       <div style="display:flex;align-items:center;gap:9px;">
-        <span style="font-size:1.4rem;">💬</span>
+        <span class="vetia-head-ic"><svg style="color:var(--azul);stroke-width:6"><use href="#paw"/></svg></span>
         <div><div class="stit" style="text-transform:none;font-size:1rem;">VETIA</div>
         <div style="font-size:.72rem;color:var(--suave);">Orienta, no diagnostica</div></div>
       </div>
@@ -587,7 +620,7 @@ function bloqueNoEstaBien(m){
     const c=abiertos[0]; const st=MC.estadoCasoTitular(c.estado);
     estado = `<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:10px 12px;margin:-4px 0 12px;">
       <div style="font-size:.8rem;font-weight:800;color:var(--azul);">${esc(st.texto)}</div>
-      ${c.respuestaTitular?`<div style="font-size:.78rem;color:var(--texto);margin-top:4px;">💬 ${esc(c.respuestaTitular)}</div>`:''}
+      ${c.respuestaTitular?`<div style="font-size:.78rem;color:var(--texto);margin-top:4px;">${esc(c.respuestaTitular)}</div>`:''}
     </div>`;
   }
   return `<button class="tile" onclick="abrirCaso()">
@@ -604,7 +637,7 @@ function casoView(){
     body = `<div class="seccion"><p style="font-size:.85rem;color:var(--suave);">Primero agregá una mascota para poder contarnos cómo está.</p></div>`;
   } else if(S.caso&&S.caso.done){
     body = `<div class="seccion" style="text-align:center;">
-      <div style="font-size:2rem;">✅</div>
+      <div class="big-ic ok">${icon('check')}</div>
       <div class="stit" style="text-transform:none;font-size:1rem;margin-top:6px;">Recibimos lo de ${esc(nombre)}</div>
       <p style="font-size:.85rem;color:var(--suave);line-height:1.5;margin-top:6px;">Un veterinario lo va a revisar y te contactamos. Si mientras tanto se pone urgente, no esperes acá:</p>
       <a class="btn-emerg" href="tel:${TEL_EMERG}" style="margin-top:12px;"><span class="em-ico">${icon('emerg')}</span><span><span class="em-top">EMERGENCIA 24hs</span><span class="em-sub">Guardia veterinaria — ${esc(TEL_EMERG)}</span></span></a>
@@ -786,7 +819,7 @@ function turnosView(){
     </div>`;
   } else {
     body=`<div class="seccion" style="text-align:center;">
-      <div style="font-size:2rem;">📅</div>
+      <div class="big-ic">${icon('turnos')}</div>
       <div class="stit" style="text-transform:none;font-size:1rem;margin-top:6px;">Todavía no hay horarios</div>
       <p style="font-size:.85rem;color:var(--suave);line-height:1.5;margin-top:6px;">Pronto vamos a publicar horarios de guardia. Volvé a chequear más tarde.</p>
     </div>`;
@@ -956,7 +989,7 @@ function itemAtencion(a){
     reintegro = `<div style="font-size:.78rem;color:var(--suave);margin-top:6px;">Reintegro: $${monto.toLocaleString('es-AR')} — ${esc(estadoReintegro(a.estado))}</div>`;
   }
   const adj = (Array.isArray(a.adjuntos) && a.adjuntos.length)
-    ? `<div style="font-size:.74rem;color:var(--suave);margin-top:4px;">📎 ${a.adjuntos.length} adjunto${a.adjuntos.length>1?'s':''}</div>` : '';
+    ? `<div style="font-size:.74rem;color:var(--suave);margin-top:4px;">${icon('adjunto')} ${a.adjuntos.length} adjunto${a.adjuntos.length>1?'s':''}</div>` : '';
   return `<div style="background:white;border:1px solid rgba(26,95,180,.08);border-radius:14px;padding:12px 14px;margin-bottom:10px;box-shadow:0 2px 8px rgba(26,95,180,.04);">
     <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">
       <strong style="font-size:.9rem;color:var(--noche);">${esc(etiquetaPrestacion(a.tipo))}</strong>
@@ -1032,7 +1065,7 @@ function cuentaView(){
       <div style="display:flex;justify-content:space-between;align-items:center;border-top:2px solid var(--azul-pale);margin-top:6px;padding-top:8px;">
         <span style="font-weight:800;">Total por mes</span><span style="font-weight:900;font-size:1.15rem;color:var(--azul);">$${cuota.toLocaleString('es-AR')}</span>
       </div>
-      <div style="background:var(--azul-pale);border-radius:10px;padding:10px;margin-top:10px;font-size:.8rem;color:var(--noche);">💳 ${PAGO_INFO}</div>
+      <div class="cart-ic" style="background:var(--azul-pale);border-radius:10px;padding:10px;margin-top:10px;font-size:.8rem;color:var(--noche);align-items:flex-start;">${icon('cuota')} <span>${PAGO_INFO}</span></div>
     </div>
     <div class="stit" style="margin:4px 2px 8px;">Comprobantes</div>
     ${compsHtml}
@@ -1106,18 +1139,19 @@ function seccionCobertura(m, atsMasc){
   </details>`;
 }
 // Iconos por servicio (mismo mapeo que la ficha pública /m/). Fallback • si el key es desconocido.
-const SRV_ICONO = { salud:'🩺', descuento:'🏷️', gps:'📍', tienda:'🛒', vacuna:'💉' };
+const SRV_ICONO = { salud:'salud', descuento:'tag', gps:'gps', tienda:'tienda', vacuna:'vacuna' };
 // Un servicio como fila. mode: 'incluido' (cobertura real) | 'requiere' (activo pero sin plan de catálogo) | 'disponible'.
+// Semántica de marca: incluido = azul/positivo · requiere = ámbar/atención · disponible = gris neutro.
 function itemServicio(s, mode){
-  const ico = SRV_ICONO[s.key] || '•';
+  const ico = SRV_ICONO[s.key];
   const chip = mode==='incluido'
-      ? `background:rgba(74,222,128,.18);color:#166534;` // Incluido en tu plan
+      ? `background:var(--azul-pale);color:var(--azul);`   // Incluido en tu plan (positivo)
       : mode==='requiere'
-      ? `background:#fef3c7;color:#92400e;`               // Requiere plan activo
-      : `background:#eff6ff;color:var(--azul);`;          // Disponible
+      ? `background:var(--ambar-suave);color:#8a5a00;`     // Requiere plan activo (atención)
+      : `background:#F1F3F7;color:var(--suave);`;          // Disponible (neutro)
   const txt = mode==='incluido' ? 'Incluido en tu plan' : mode==='requiere' ? 'Requiere plan activo' : 'Disponible';
   return `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--azul-pale);">
-    <div style="min-width:0;"><div style="font-size:.83rem;font-weight:700;">${ico} ${esc(s.nombre||'')}</div>${s.detalle?`<div style="font-size:.72rem;color:var(--suave);">${esc(s.detalle)}</div>`:''}</div>
+    <div style="min-width:0;"><div style="font-size:.83rem;font-weight:700;display:flex;align-items:center;gap:6px;"><span class="srv-ic" style="color:var(--azul)">${ico?icon(ico):''}</span> ${esc(s.nombre||'')}</div>${s.detalle?`<div style="font-size:.72rem;color:var(--suave);">${esc(s.detalle)}</div>`:''}</div>
     <span style="${chip}font-size:.62rem;font-weight:800;padding:2px 9px;border-radius:100px;white-space:nowrap;">${txt}</span>
   </div>`;
 }
@@ -1178,9 +1212,9 @@ function itemCartilla(p){
   return `<div style="background:white;border:1px solid rgba(26,95,180,.08);border-radius:14px;padding:12px 14px;margin-bottom:10px;box-shadow:0 2px 8px rgba(26,95,180,.04);">
     <div style="font-size:.92rem;font-weight:800;color:var(--noche);">${esc(p.nombre||'—')}</div>
     ${p.especialidad?`<div style="font-size:.78rem;color:var(--azul);font-weight:700;margin-top:1px;">${esc(p.especialidad)}</div>`:''}
-    ${p.direccion?`<div style="font-size:.8rem;color:var(--texto);margin-top:6px;">📍 ${esc(p.direccion)}</div>`:''}
-    ${p.horarios?`<div style="font-size:.78rem;color:var(--suave);margin-top:2px;">🕑 ${esc(p.horarios)}</div>`:''}
-    ${tel?`<a href="tel:${esc(tel)}" style="display:inline-block;font-size:.82rem;color:var(--azul);font-weight:700;margin-top:6px;text-decoration:none;">📞 ${esc(p.telefono)}</a>`:''}
+    ${p.direccion?`<div class="cart-ic" style="font-size:.8rem;color:var(--texto);margin-top:6px;">${icon('gps')} <span>${esc(p.direccion)}</span></div>`:''}
+    ${p.horarios?`<div class="cart-ic" style="font-size:.78rem;color:var(--suave);margin-top:2px;">${icon('reloj')} <span>${esc(p.horarios)}</span></div>`:''}
+    ${tel?`<a href="tel:${esc(tel)}" style="display:inline-flex;align-items:center;gap:6px;font-size:.9rem;color:#fff;background:var(--azul);font-weight:800;margin-top:10px;padding:8px 14px;border-radius:100px;text-decoration:none;">${icon('tel')} ${esc(p.telefono)}</a>`:''}
   </div>`;
 }
 function cartillaView(){
