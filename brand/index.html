@@ -4,116 +4,85 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex">
-<title>MEDIPaw — Brand Board v2</title>
+<title>MEDIPaw — Guía de marca v1</title>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Poppins:wght@500;600;700;800&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 <style>
   :root{
-    /* AZUL institucional (base MEDIPaw actual) */
     --navy:#0D1B3E; --azul:#1A5FB4; --azul-medio:#2272D9; --azul-claro:#5BA3E8; --azul-pale:#EBF3FC;
-    /* Fondos / neutros */
     --fondo:#F5F7FA; --texto:#1a2340; --suave:#5a6a8a; --linea:#E4E9F2; --blanco:#fff;
-    /* Acento cálido SUTIL (propuesto) + emergencia */
     --ambar:#F2B84D; --ambar-suave:#FBE7C7; --rojo-emerg:#e11d48;
-    --radio:16px;
-    --sombra:0 1px 2px rgba(13,27,62,.05), 0 10px 28px rgba(13,27,62,.07);
+    --radio:16px; --sombra:0 1px 2px rgba(13,27,62,.05), 0 10px 28px rgba(13,27,62,.07);
   }
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:'Nunito',sans-serif;background:var(--fondo);color:var(--texto);line-height:1.5;-webkit-font-smoothing:antialiased}
   .wrap{max-width:1060px;margin:0 auto;padding:0 22px}
-  h1,h2,h3{font-weight:900;letter-spacing:-.02em}
+  h1,h2,h3{font-weight:900;letter-spacing:-.02em;color:var(--navy)}
   .lbl{font-size:.68rem;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:var(--suave)}
+  a{color:var(--azul)}
 
-  header{padding:54px 0 38px;text-align:center}
+  header{padding:52px 0 34px;text-align:center}
   header .kick{color:var(--azul)}
-  header h1{font-size:clamp(2.4rem,6vw,3.8rem);margin:8px 0;color:var(--navy)}
-  header p{color:var(--suave);max-width:660px;margin:6px auto 0}
+  header h1{font-size:clamp(2.2rem,6vw,3.4rem);margin:8px 0}
+  header p{color:var(--suave);max-width:640px;margin:6px auto 0}
 
-  section{padding:38px 0;border-top:1px solid var(--linea)}
+  section{padding:36px 0;border-top:1px solid var(--linea)}
   .sec-h{display:flex;align-items:baseline;gap:12px;margin-bottom:4px}
   .sec-h .n{font-size:.95rem;font-weight:900;color:var(--azul)}
-  section h2{font-size:1.6rem;color:var(--navy)}
-  .sec-sub{color:var(--suave);margin:4px 0 24px;max-width:720px;font-size:.95rem}
+  section h2{font-size:1.55rem}
+  .sec-sub{color:var(--suave);margin:4px 0 22px;max-width:740px;font-size:.95rem}
 
-  .card{background:var(--blanco);border:1px solid var(--linea);border-radius:var(--radio);box-shadow:var(--sombra);padding:22px;margin-bottom:18px}
-  .grid{display:grid;gap:18px}
-  .g3{grid-template-columns:repeat(3,1fr)} .g2{grid-template-columns:repeat(2,1fr)}
-  @media(max-width:820px){.g3,.g2{grid-template-columns:1fr}}
+  .card{background:var(--blanco);border:1px solid var(--linea);border-radius:var(--radio);box-shadow:var(--sombra);padding:22px;margin-bottom:16px}
+  .grid{display:grid;gap:16px}
+  .g2{grid-template-columns:repeat(2,1fr)} .g3{grid-template-columns:repeat(3,1fr)} .g4{grid-template-columns:repeat(4,1fr)}
+  @media(max-width:860px){.g2,.g3,.g4{grid-template-columns:1fr 1fr}}
+  @media(max-width:560px){.g2,.g3,.g4{grid-template-columns:1fr}}
 
-  /* Símbolo — pruebas */
-  .sym-tests{display:grid;grid-template-columns:1.3fr 1fr .55fr .55fr 1.1fr;gap:12px;align-items:stretch;margin-top:14px}
-  @media(max-width:900px){.sym-tests{grid-template-columns:1fr 1fr 1fr}}
-  .t{border:1px solid var(--linea);border-radius:12px;background:var(--fondo);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:14px;min-height:118px}
-  .t.blue{background:var(--navy);border-color:var(--navy)}
-  .t .cap{font-size:.6rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#9aa6bd}
-  .t.blue .cap{color:rgba(255,255,255,.6)}
-  .concept-h{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-  .badge{font-size:.66rem;font-weight:900;letter-spacing:.08em;background:var(--navy);color:#fff;padding:3px 10px;border-radius:999px}
-  .badge.warm{background:var(--ambar);color:var(--navy)}
-  .tag{font-size:.8rem;color:var(--suave)}
+  .box{border:1px solid var(--linea);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:20px;min-height:150px;background:var(--fondo)}
+  .box.navy{background:var(--navy);border-color:var(--navy)}
+  .box.mono{background:#fff}
+  .box .cap{font-size:.62rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#9aa6bd}
+  .box.navy .cap{color:rgba(255,255,255,.6)}
+
+  /* Wordmark */
+  .wm{font-family:'Baloo 2',cursive;line-height:1;color:var(--navy)}
+  .wm .paw{color:var(--azul)}
+  .lock{display:flex;align-items:center;gap:14px}
+  .lock.stack{flex-direction:column;gap:10px}
 
   /* Swatches */
-  .sw-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
-  .sw{width:104px}
-  .sw .chip{height:58px;border-radius:12px;border:1px solid rgba(13,27,62,.08)}
+  .sw-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}
+  .sw{width:118px}
+  .sw .chip{height:56px;border-radius:12px;border:1px solid rgba(13,27,62,.08)}
   .sw .nm{font-size:.72rem;font-weight:800;margin-top:6px;display:block}
   .sw .hex{font-size:.68rem;color:var(--suave);font-variant-numeric:tabular-nums}
+  .sw .use{font-size:.66rem;color:var(--suave);display:block;margin-top:1px}
 
-  /* Tile home mock */
-  .tile{display:flex;align-items:center;gap:14px;background:var(--blanco);border:1px solid var(--linea);border-radius:var(--radio);box-shadow:var(--sombra);padding:15px 17px}
-  .tile .t-ico{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex:0 0 auto;background:var(--azul-pale)}
-  .tile .t-title{font-weight:800;font-size:1rem;color:var(--navy)}
-  .tile .t-sub{font-size:.82rem;color:var(--suave)}
-  .tile .t-arrow{margin-left:auto;color:var(--azul-claro);font-size:1.3rem}
+  .dl{display:inline-flex;align-items:center;gap:6px;font-size:.74rem;font-weight:800;text-decoration:none;background:var(--azul-pale);color:var(--azul);padding:5px 11px;border-radius:999px;margin:4px 6px 0 0}
+  .no{position:relative;background:var(--fondo);border:1px solid var(--linea);border-radius:12px;padding:18px;min-height:120px;display:flex;align-items:center;justify-content:center}
+  .no::after{content:"✕";position:absolute;top:8px;right:10px;color:var(--rojo-emerg);font-weight:900;font-size:1rem}
+  .no .why{position:absolute;bottom:8px;left:0;right:0;text-align:center;font-size:.66rem;font-weight:800;color:var(--suave);text-transform:uppercase;letter-spacing:.06em}
 
-  /* Wordmarks */
-  .wm-lock{display:flex;align-items:center;gap:14px;min-height:64px}
-  .wm{line-height:1;color:var(--navy)}
-  .wm .paw{color:var(--azul)}
-  .f-baloo{font-family:'Baloo 2',cursive} .f-poppins{font-family:'Poppins',sans-serif} .f-bric{font-family:'Bricolage Grotesque',sans-serif}
-
-  .pick .opt{border:1.5px dashed var(--linea);border-radius:12px;padding:10px 14px;font-size:.85rem;font-weight:800;color:var(--texto);margin:8px 0}
-  .pick .opt b{color:var(--azul)}
-  .note{font-size:.82rem;color:var(--suave);background:var(--azul-pale);border-left:3px solid var(--azul);padding:10px 14px;border-radius:0 8px 8px 0;margin-top:12px}
-  .warnbox{font-size:.82rem;color:#8a5a00;background:#FFF6E5;border:1px solid #F2D48A;border-radius:10px;padding:10px 14px;margin-top:14px}
-  .foot{padding:38px 0 70px;color:#9aa6bd;font-size:.8rem;text-align:center}
+  .pesos b{display:inline-block;min-width:130px}
+  .warnbox{font-size:.84rem;color:#8a5a00;background:#FFF6E5;border:1px solid #F2D48A;border-radius:10px;padding:12px 16px;margin-top:14px}
+  .foot{padding:34px 0 70px;color:#9aa6bd;font-size:.8rem;text-align:center}
 </style>
 </head>
 <body>
 
-<!-- ══ SÍMBOLOS (monolínea entrelazada; sin stroke-width en paths → se hereda del <svg> para escalar el trazo) ══ -->
+<!-- SÍMBOLO FINAL (cachorro monolínea). Sin stroke-width en paths → se hereda para escalar el trazo. -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
-  <!-- 1 · FIEL a la referencia: geométrica, orejas puntiagudas, alerta -->
-  <symbol id="s1" viewBox="0 0 100 100">
+  <symbol id="paw" viewBox="0 0 100 100">
     <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M50 86 Q74 80 74 56 L79 22 L56 37 Q50 33 44 37 L21 22 L26 56 Q26 80 50 86 Z"/>
-      <path d="M40 54 h6"/><path d="M54 54 h6"/>
-      <path d="M50 62 l-5 7 h10 Z"/><path d="M50 69 v5"/>
-    </g>
-  </symbol>
-  <!-- 2 · orejas con punta redondeada, cabeza algo más blanda -->
-  <symbol id="s2" viewBox="0 0 100 100">
-    <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M50 86 Q75 81 76 56 Q80 26 62 34 Q56 26 50 30 Q44 26 38 34 Q20 26 24 56 Q25 81 50 86 Z"/>
-      <circle cx="41" cy="55" r="2.6" fill="currentColor" stroke="none"/><circle cx="59" cy="55" r="2.6" fill="currentColor" stroke="none"/>
-      <path d="M50 62 l-5 6 h10 Z"/><path d="M50 68 v5"/>
-    </g>
-  </symbol>
-  <!-- 3 · curvas más blandas, cabeza más ancha, gesto levemente sonriente -->
-  <symbol id="s3" viewBox="0 0 100 100">
-    <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M50 87 Q79 82 80 54 Q82 30 64 33 Q58 24 50 28 Q42 24 36 33 Q18 30 20 54 Q21 82 50 87 Z"/>
-      <circle cx="40" cy="53" r="2.8" fill="currentColor" stroke="none"/><circle cx="60" cy="53" r="2.8" fill="currentColor" stroke="none"/>
-      <path d="M50 60 v5"/><path d="M43 66 Q50 72 57 66"/>
-    </g>
-  </symbol>
-  <!-- 4 · MÁS ALEGRE: cachorro, cabeza más ancha que alta, orejas muy redondeadas, sonrisa clara -->
-  <symbol id="s4" viewBox="0 0 100 100">
-    <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M50 88 Q84 84 84 52 Q84 30 66 32 Q60 22 50 27 Q40 22 34 32 Q16 30 16 52 Q16 84 50 88 Z"/>
-      <circle cx="39" cy="52" r="3.2" fill="currentColor" stroke="none"/><circle cx="61" cy="52" r="3.2" fill="currentColor" stroke="none"/>
-      <path d="M50 58 v5"/><path d="M40 65 Q50 74 60 65"/>
+      <path d="M50 84 C69 84 79 73 79 56 C79 44 72 38 63 37 C58 30 50 31 50 31 C50 31 42 30 37 37 C28 38 21 44 21 56 C21 73 31 84 50 84 Z"/>
+      <path d="M37 37 C30 23 41 19 46 26 C48 29 47 33 46 36"/>
+      <path d="M63 37 C70 23 59 19 54 26 C52 29 53 33 54 36"/>
+      <circle cx="40" cy="53" r="3.3" fill="currentColor" stroke="none"/>
+      <circle cx="60" cy="53" r="3.3" fill="currentColor" stroke="none"/>
+      <path d="M50 59 v4"/>
+      <path d="M41 66 C46 73 54 73 59 66"/>
     </g>
   </symbol>
 </defs></svg>
@@ -121,143 +90,151 @@
 <div class="wrap">
 
 <header>
-  <div class="lbl kick">Identidad · v2 · dirección fijada por Lucas</div>
+  <div class="lbl kick">Guía de marca · v1 · 2026-08-01</div>
   <h1>MEDIPaw</h1>
-  <p>Identidad <b>propia</b>: base azul actual de MEDIPaw + un símbolo perro-gato en <b>monolínea geométrica entrelazada</b> llevado a un perfil más alegre. (MEDICAR = vara de calidad, no de identidad.) Elegí abajo: símbolo, tipografía y paleta.</p>
+  <p>Identidad elegida por Lucas: símbolo perro-gato cachorro en monolínea, wordmark <b>Baloo 2</b>, base <b>azul</b>. Esta página es la referencia para un rotulista o diseñador.</p>
 </header>
 
-<!-- ══ 1 · SÍMBOLO ══ -->
+<!-- 1 · LOGO -->
 <section>
-  <div class="sec-h"><span class="n">1</span><h2>El símbolo — perro-gato monolínea</h2></div>
-  <p class="sec-sub">Cuatro variaciones sobre la referencia, de <b>fiel</b> a <b>más alegre</b> (orejas más redondeadas, curvas más blandas, hocico levemente sonriente, proporción más cachorra). Todas monolínea entrelazada, trazo uniforme. Cada una: grande, blanco sobre el azul institucional, y a 32px — con su versión de <b>trazo grueso</b> para tamaños chicos/favicon.</p>
+  <div class="sec-h"><span class="n">1</span><h2>El logo</h2></div>
+  <p class="sec-sub">El símbolo es monolínea: un trazo <b>fino</b> para display y uno <b>grueso</b> para tamaños chicos / favicon (mismo dibujo, stroke escalado).</p>
 
   <div class="card">
-    <div class="concept-h"><span class="badge">1</span><h3 style="font-size:1.1rem;color:var(--navy)">Fiel a la referencia</h3><span class="tag">geométrica, orejas puntiagudas, alerta</span></div>
-    <div class="sym-tests">
-      <div class="t"><svg width="92" height="92" style="color:var(--azul);stroke-width:4"><use href="#s1"/></svg><span class="cap">Grande</span></div>
-      <div class="t blue"><svg width="66" height="66" style="color:#fff;stroke-width:4"><use href="#s1"/></svg><span class="cap">Blanco / azul inst.</span></div>
-      <div class="t"><svg width="32" height="32" style="color:var(--navy);stroke-width:4"><use href="#s1"/></svg><span class="cap">32px fino</span></div>
-      <div class="t"><svg width="32" height="32" style="color:var(--navy);stroke-width:8"><use href="#s1"/></svg><span class="cap">32px grueso</span></div>
-      <div class="t"><div class="wm-lock"><svg width="40" height="40" style="color:var(--azul);stroke-width:5"><use href="#s1"/></svg><span class="wm f-poppins" style="font-weight:700;font-size:1.5rem">MEDI<span class="paw">Paw</span></span></div><span class="cap">Con wordmark</span></div>
+    <div class="lbl">Símbolo solo</div>
+    <div class="grid g4" style="margin-top:12px">
+      <div class="box"><svg width="96" height="96" style="color:var(--azul);stroke-width:4"><use href="#paw"/></svg><span class="cap">Fino · display</span></div>
+      <div class="box navy"><svg width="96" height="96" style="color:#fff;stroke-width:4"><use href="#paw"/></svg><span class="cap">Blanco / navy</span></div>
+      <div class="box mono"><svg width="96" height="96" style="color:#000;stroke-width:4"><use href="#paw"/></svg><span class="cap">Monocromo negro</span></div>
+      <div class="box"><svg width="52" height="52" style="color:var(--navy);stroke-width:8"><use href="#paw"/></svg><svg width="32" height="32" style="color:var(--navy);stroke-width:9"><use href="#paw"/></svg><span class="cap">Grueso · chico</span></div>
+    </div>
+    <div style="margin-top:12px">
+      <a class="dl" href="assets/medipaw-simbolo.svg" download>⬇ símbolo (SVG fino)</a>
+      <a class="dl" href="assets/medipaw-simbolo-grueso.svg" download>⬇ símbolo (SVG grueso)</a>
     </div>
   </div>
 
   <div class="card">
-    <div class="concept-h"><span class="badge">2</span><h3 style="font-size:1.1rem;color:var(--navy)">Un paso más blanda</h3><span class="tag">puntas redondeadas</span></div>
-    <div class="sym-tests">
-      <div class="t"><svg width="92" height="92" style="color:var(--azul);stroke-width:4"><use href="#s2"/></svg><span class="cap">Grande</span></div>
-      <div class="t blue"><svg width="66" height="66" style="color:#fff;stroke-width:4"><use href="#s2"/></svg><span class="cap">Blanco / azul inst.</span></div>
-      <div class="t"><svg width="32" height="32" style="color:var(--navy);stroke-width:4"><use href="#s2"/></svg><span class="cap">32px fino</span></div>
-      <div class="t"><svg width="32" height="32" style="color:var(--navy);stroke-width:8"><use href="#s2"/></svg><span class="cap">32px grueso</span></div>
-      <div class="t"><div class="wm-lock"><svg width="40" height="40" style="color:var(--azul);stroke-width:5"><use href="#s2"/></svg><span class="wm f-poppins" style="font-weight:700;font-size:1.5rem">MEDI<span class="paw">Paw</span></span></div><span class="cap">Con wordmark</span></div>
+    <div class="lbl">Wordmark "MEDIPaw" · Baloo 2 — 2 tratamientos para tu veto</div>
+    <div class="grid g2" style="margin-top:12px">
+      <div class="box" style="min-height:120px">
+        <span class="wm" style="font-weight:800;font-size:2.6rem">MEDI<span class="paw">Paw</span></span>
+        <span class="cap">A · color-split (MEDI navy / Paw azul)</span>
+      </div>
+      <div class="box" style="min-height:120px">
+        <span class="wm" style="font-weight:800;font-size:2.6rem;color:var(--navy)"><span style="font-weight:600">MEDI</span>Paw</span>
+        <span class="cap">B · un color, peso-split (MEDI 600 / Paw 800)</span>
+      </div>
     </div>
+    <div class="warnbox" style="background:var(--azul-pale);border-color:#cfe0f5;color:var(--azul)">A es más expresivo y ata al azul; B es más flexible en monocromo/rotulación (un solo color). Elegí uno.</div>
   </div>
 
   <div class="card">
-    <div class="concept-h"><span class="badge">3</span><h3 style="font-size:1.1rem;color:var(--navy)">Blanda + sonrisa</h3><span class="tag">cabeza más ancha, gesto amable</span></div>
-    <div class="sym-tests">
-      <div class="t"><svg width="92" height="92" style="color:var(--azul);stroke-width:4"><use href="#s3"/></svg><span class="cap">Grande</span></div>
-      <div class="t blue"><svg width="66" height="66" style="color:#fff;stroke-width:4"><use href="#s3"/></svg><span class="cap">Blanco / azul inst.</span></div>
-      <div class="t"><svg width="32" height="32" style="color:var(--navy);stroke-width:4"><use href="#s3"/></svg><span class="cap">32px fino</span></div>
-      <div class="t"><svg width="32" height="32" style="color:var(--navy);stroke-width:8"><use href="#s3"/></svg><span class="cap">32px grueso</span></div>
-      <div class="t"><div class="wm-lock"><svg width="40" height="40" style="color:var(--azul);stroke-width:5"><use href="#s3"/></svg><span class="wm f-poppins" style="font-weight:700;font-size:1.5rem">MEDI<span class="paw">Paw</span></span></div><span class="cap">Con wordmark</span></div>
+    <div class="lbl">Lockups (símbolo + wordmark) — muestra con tratamiento A</div>
+    <div class="grid g3" style="margin-top:12px">
+      <div class="box"><div class="lock"><svg width="46" height="46" style="color:var(--azul);stroke-width:5"><use href="#paw"/></svg><span class="wm" style="font-weight:800;font-size:1.9rem">MEDI<span class="paw">Paw</span></span></div><span class="cap">Horizontal / claro</span></div>
+      <div class="box navy"><div class="lock"><svg width="46" height="46" style="color:#fff;stroke-width:5"><use href="#paw"/></svg><span class="wm" style="font-weight:800;font-size:1.9rem;color:#fff"><span>MEDI</span><span style="color:var(--azul-claro)">Paw</span></span></div><span class="cap">Blanco / navy</span></div>
+      <div class="box mono"><div class="lock"><svg width="46" height="46" style="color:#000;stroke-width:5"><use href="#paw"/></svg><span class="wm" style="font-weight:800;font-size:1.9rem;color:#000">MEDIPaw</span></div><span class="cap">Monocromo negro</span></div>
+      <div class="box"><div class="lock stack"><svg width="54" height="54" style="color:var(--azul);stroke-width:5"><use href="#paw"/></svg><span class="wm" style="font-weight:800;font-size:1.5rem">MEDI<span class="paw">Paw</span></span></div><span class="cap">Apilado / claro</span></div>
+      <div class="box navy"><div class="lock stack"><svg width="54" height="54" style="color:#fff;stroke-width:5"><use href="#paw"/></svg><span class="wm" style="font-weight:800;font-size:1.5rem;color:#fff"><span>MEDI</span><span style="color:var(--azul-claro)">Paw</span></span></div><span class="cap">Apilado / navy</span></div>
+      <div class="box mono"><div class="lock stack"><svg width="54" height="54" style="color:#000;stroke-width:5"><use href="#paw"/></svg><span class="wm" style="font-weight:800;font-size:1.5rem;color:#000">MEDIPaw</span></div><span class="cap">Apilado / mono</span></div>
     </div>
-  </div>
-
-  <div class="card">
-    <div class="concept-h"><span class="badge warm">4</span><h3 style="font-size:1.1rem;color:var(--navy)">Más alegre (cachorro)</h3><span class="tag">cabeza más ancha que alta, orejas muy redondeadas, sonrisa clara</span></div>
-    <div class="sym-tests">
-      <div class="t"><svg width="92" height="92" style="color:var(--azul);stroke-width:4"><use href="#s4"/></svg><span class="cap">Grande</span></div>
-      <div class="t blue"><svg width="66" height="66" style="color:#fff;stroke-width:4"><use href="#s4"/></svg><span class="cap">Blanco / azul inst.</span></div>
-      <div class="t"><svg width="32" height="32" style="color:var(--navy);stroke-width:4"><use href="#s4"/></svg><span class="cap">32px fino</span></div>
-      <div class="t"><svg width="32" height="32" style="color:var(--navy);stroke-width:8"><use href="#s4"/></svg><span class="cap">32px grueso</span></div>
-      <div class="t"><div class="wm-lock"><svg width="40" height="40" style="color:var(--azul);stroke-width:5"><use href="#s4"/></svg><span class="wm f-poppins" style="font-weight:700;font-size:1.5rem">MEDI<span class="paw">Paw</span></span></div><span class="cap">Con wordmark</span></div>
-    </div>
-  </div>
-
-  <div class="warnbox"><b>Nota técnica (la escala del trazo):</b> el trazo fino "muere" a 32px — por eso cada símbolo trae su versión de <b>trazo grueso</b> (mismo dibujo, stroke escalado) para favicon / íconos chicos. El dibujo es SVG vector real; el grosor se controla con una sola variable.</div>
-  <div class="warnbox" style="background:#FFF6E5"><b>⚠️ No recibí la imagen de referencia adjunta.</b> Estas 4 variaciones están construidas desde tu <b>descripción escrita</b> (monolínea geométrica entrelazada perro-gato). Si la V1 tiene que <b>calcar</b> la imagen puntual, reenviámela y ajusto el vector.</div>
-</section>
-
-<!-- ══ 2 · TIPOGRAFÍA ══ -->
-<section>
-  <div class="sec-h"><span class="n">2</span><h2>Wordmark "MEDIPaw" — 3 tipografías</h2></div>
-  <p class="sec-sub">Bien distintas entre sí, ninguna italic. Cada una con el símbolo al lado (uso la V4 como muestra).</p>
-  <div class="grid g3">
-    <div class="card">
-      <div class="concept-h"><span class="badge">1</span><h3 style="font-size:1.05rem">Redondeada amigable</h3></div>
-      <div class="tag" style="margin:2px 0 16px">Baloo 2 — cálida, cachorra, cercana</div>
-      <div class="wm-lock"><svg width="46" height="46" style="color:var(--azul);stroke-width:5"><use href="#s4"/></svg><span class="wm f-baloo" style="font-weight:800;font-size:2rem">MEDI<span class="paw">Paw</span></span></div>
-    </div>
-    <div class="card">
-      <div class="concept-h"><span class="badge">2</span><h3 style="font-size:1.05rem">Geométrica limpia</h3></div>
-      <div class="tag" style="margin:2px 0 16px">Poppins — moderna, ordenada, clínica</div>
-      <div class="wm-lock"><svg width="46" height="46" style="color:var(--azul);stroke-width:5"><use href="#s4"/></svg><span class="wm f-poppins" style="font-weight:700;font-size:2rem">MEDI<span class="paw">Paw</span></span></div>
-    </div>
-    <div class="card">
-      <div class="concept-h"><span class="badge">3</span><h3 style="font-size:1.05rem">Humanista con carácter</h3></div>
-      <div class="tag" style="margin:2px 0 16px">Bricolage Grotesque — personalidad, cálida-seria</div>
-      <div class="wm-lock"><svg width="46" height="46" style="color:var(--azul);stroke-width:5"><use href="#s4"/></svg><span class="wm f-bric" style="font-weight:800;font-size:2rem">MEDI<span class="paw">Paw</span></span></div>
+    <div style="margin-top:12px">
+      <a class="dl" href="assets/medipaw-lockup-horizontal.svg" download>⬇ lockup horizontal (SVG)</a>
+      <a class="dl" href="assets/medipaw-lockup-apilado.svg" download>⬇ lockup apilado (SVG)</a>
     </div>
   </div>
 </section>
 
-<!-- ══ 3 · PALETA ══ -->
+<!-- 2 · FAVICON + PWA -->
 <section>
-  <div class="sec-h"><span class="n">3</span><h2>Paleta — azul actual + acompañantes</h2></div>
-  <p class="sec-sub">El azul institucional de MEDIPaw como base. Acompañantes refinados alrededor: fondos claros, un acento cálido <b>sutil</b>, y el rojo reservado <b>solo para emergencia</b>.</p>
+  <div class="sec-h"><span class="n">2</span><h2>Favicon + PWA</h2></div>
+  <p class="sec-sub">Con el símbolo <b>grueso</b> sobre navy, esquinas redondeadas. Generados como assets del demo (el manifest de la app no se toca todavía).</p>
+  <div class="grid g4">
+    <div class="box"><svg width="64" height="64" viewBox="0 0 64 64"><rect width="64" height="64" rx="15" fill="var(--navy)"/><svg x="12" y="12" width="40" height="40" style="color:#fff;stroke-width:9"><use href="#paw"/></svg></svg><span class="cap">favicon.svg</span></div>
+    <div class="box"><svg width="96" height="96" viewBox="0 0 64 64" style="border-radius:22px"><rect width="64" height="64" rx="15" fill="var(--navy)"/><svg x="12" y="12" width="40" height="40" style="color:#fff;stroke-width:9"><use href="#paw"/></svg></svg><span class="cap">icon 192/512</span></div>
+    <div class="box"><svg width="32" height="32" viewBox="0 0 64 64" style="border-radius:8px"><rect width="64" height="64" rx="15" fill="var(--navy)"/><svg x="12" y="12" width="40" height="40" style="color:#fff;stroke-width:9"><use href="#paw"/></svg></svg><span class="cap">32px (pestaña)</span></div>
+    <div class="box mono"><svg width="16" height="16" viewBox="0 0 64 64" style="border-radius:4px"><rect width="64" height="64" rx="15" fill="var(--navy)"/><svg x="12" y="12" width="40" height="40" style="color:#fff;stroke-width:10"><use href="#paw"/></svg></svg><span class="cap">16px</span></div>
+  </div>
+  <div style="margin-top:12px">
+    <a class="dl" href="assets/favicon.svg" download>⬇ favicon.svg</a>
+    <a class="dl" href="assets/icon-192.png" download>⬇ icon-192.png</a>
+    <a class="dl" href="assets/icon-512.png" download>⬇ icon-512.png</a>
+  </div>
+</section>
+
+<!-- 3 · PALETA -->
+<section>
+  <div class="sec-h"><span class="n">3</span><h2>Paleta y usos</h2></div>
+  <div class="card">
+    <div class="lbl">Institucional</div>
+    <div class="sw-row">
+      <div class="sw"><div class="chip" style="background:#0D1B3E"></div><span class="nm">Navy</span><span class="hex">#0D1B3E</span><span class="use">Base, textos, fondos oscuros</span></div>
+      <div class="sw"><div class="chip" style="background:#1A5FB4"></div><span class="nm">Azul</span><span class="hex">#1A5FB4</span><span class="use">Primario, acciones, símbolo</span></div>
+      <div class="sw"><div class="chip" style="background:#5BA3E8"></div><span class="nm">Azul claro</span><span class="hex">#5BA3E8</span><span class="use">Detalles, hover, flechas</span></div>
+      <div class="sw"><div class="chip" style="background:#EBF3FC;border-color:#dbe7f5"></div><span class="nm">Azul pale</span><span class="hex">#EBF3FC</span><span class="use">Fondos de ícono, chips</span></div>
+      <div class="sw"><div class="chip" style="background:#F5F7FA;border-color:#e4e9f2"></div><span class="nm">Fondo</span><span class="hex">#F5F7FA</span><span class="use">Fondo general</span></div>
+    </div>
+    <div class="lbl" style="margin-top:18px">Acento cálido (sutil) · Emergencia</div>
+    <div class="sw-row">
+      <div class="sw"><div class="chip" style="background:#F2B84D"></div><span class="nm">Ámbar</span><span class="hex">#F2B84D</span><span class="use">Acento cálido, destacados suaves</span></div>
+      <div class="sw"><div class="chip" style="background:#FBE7C7;border-color:#f0dcb8"></div><span class="nm">Ámbar suave</span><span class="hex">#FBE7C7</span><span class="use">Fondos cálidos</span></div>
+      <div class="sw"><div class="chip" style="background:#e11d48"></div><span class="nm">Rojo</span><span class="hex">#e11d48</span><span class="use"><b>SOLO emergencia</b></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 4 · TIPOGRAFÍA -->
+<section>
+  <div class="sec-h"><span class="n">4</span><h2>Tipografía</h2></div>
+  <p class="sec-sub"><b>Baloo 2</b> para marca y titulares (redondeada, cálida). Cuerpo en una sans neutra (Nunito). Nunca italic en el wordmark.</p>
+  <div class="card pesos" style="font-family:'Baloo 2',cursive">
+    <div style="font-weight:800;font-size:2rem;color:var(--navy)">Aa · MEDIPaw <span style="color:var(--azul)">🐾</span></div>
+    <div style="margin-top:14px;font-size:.95rem;font-family:'Nunito',sans-serif;color:var(--texto)">
+      <div class="pesos"><b>ExtraBold 800</b> — wordmark, títulos grandes</div>
+      <div class="pesos"><b>Bold 700</b> — subtítulos, botones</div>
+      <div class="pesos"><b>SemiBold 600</b> — labels, énfasis</div>
+      <div class="pesos"><b>Regular 400</b> — cuerpo (Nunito)</div>
+    </div>
+  </div>
+</section>
+
+<!-- 5 · ZONA DE RESPETO + USOS INCORRECTOS -->
+<section>
+  <div class="sec-h"><span class="n">5</span><h2>Zona de respeto y usos incorrectos</h2></div>
   <div class="grid g2">
     <div class="card">
-      <div class="lbl">Institucional + fondos</div>
-      <div class="sw-row">
-        <div class="sw"><div class="chip" style="background:#0D1B3E"></div><span class="nm">Navy</span><span class="hex">#0D1B3E</span></div>
-        <div class="sw"><div class="chip" style="background:#1A5FB4"></div><span class="nm">Azul</span><span class="hex">#1A5FB4</span></div>
-        <div class="sw"><div class="chip" style="background:#5BA3E8"></div><span class="nm">Azul claro</span><span class="hex">#5BA3E8</span></div>
-        <div class="sw"><div class="chip" style="background:#EBF3FC;border-color:#dbe7f5"></div><span class="nm">Azul pale</span><span class="hex">#EBF3FC</span></div>
-        <div class="sw"><div class="chip" style="background:#F5F7FA;border-color:#e4e9f2"></div><span class="nm">Fondo</span><span class="hex">#F5F7FA</span></div>
-      </div>
-      <div class="lbl" style="margin-top:18px">Acento cálido (sutil) · emergencia</div>
-      <div class="sw-row">
-        <div class="sw"><div class="chip" style="background:#F2B84D"></div><span class="nm">Ámbar</span><span class="hex">#F2B84D</span></div>
-        <div class="sw"><div class="chip" style="background:#FBE7C7;border-color:#f0dcb8"></div><span class="nm">Ámbar suave</span><span class="hex">#FBE7C7</span></div>
-        <div class="sw"><div class="chip" style="background:#e11d48"></div><span class="nm">Rojo · SOLO emerg.</span><span class="hex">#e11d48</span></div>
+      <div class="lbl">Zona de respeto</div>
+      <p style="font-size:.86rem;color:var(--suave);margin:6px 0 10px">Dejá alrededor del logo un margen mínimo = la <b>altura de la oreja</b> del símbolo. No lo apretás contra bordes ni otros elementos.</p>
+      <div class="box" style="padding:0;min-height:150px">
+        <div style="border:1.5px dashed var(--azul-claro);border-radius:12px;padding:26px"><div class="lock"><svg width="44" height="44" style="color:var(--azul);stroke-width:5"><use href="#paw"/></svg><span class="wm" style="font-weight:800;font-size:1.7rem">MEDI<span class="paw">Paw</span></span></div></div>
       </div>
     </div>
     <div class="card">
-      <div class="lbl">Tile del home (mock)</div>
-      <div style="display:flex;flex-direction:column;gap:12px;margin-top:12px">
-        <div class="tile">
-          <div class="t-ico"><svg width="30" height="30" style="color:var(--azul);stroke-width:6"><use href="#s4"/></svg></div>
-          <div><div class="t-title">Cobertura de Michi</div><div class="t-sub">Consultas, vacunas y estudios</div></div>
-          <span class="t-arrow">›</span>
-        </div>
-        <div class="tile" style="background:var(--navy);border-color:var(--navy)">
-          <div class="t-ico" style="background:rgba(255,255,255,.1)"><svg width="30" height="30" style="color:#fff;stroke-width:6"><use href="#s4"/></svg></div>
-          <div><div class="t-title" style="color:#fff">VETIA</div><div class="t-sub" style="color:#aab6d4">Consultá sobre tu plan y tus mascotas</div></div>
-          <span class="t-arrow">›</span>
-        </div>
-        <a style="display:flex;align-items:center;gap:10px;background:var(--rojo-emerg);color:#fff;border-radius:14px;padding:13px 16px;text-decoration:none">
-          <span style="font-size:1.3rem">🚑</span><span style="font-weight:800;font-size:.9rem">Emergencia 24hs</span>
-          <span style="margin-left:auto;font-size:.72rem;opacity:.85">rojo = solo esto</span>
-        </a>
+      <div class="lbl">Usos incorrectos</div>
+      <div class="grid" style="grid-template-columns:1fr 1fr;margin-top:8px">
+        <div class="no"><svg width="70" height="44" preserveAspectRatio="none" viewBox="0 0 100 100" style="color:var(--navy);stroke-width:4"><use href="#paw"/></svg><span class="why">No estirar</span></div>
+        <div class="no"><svg width="52" height="52" style="color:#12a150;stroke-width:4"><use href="#paw"/></svg><span class="why">No recolorear</span></div>
+        <div class="no" style="background:linear-gradient(45deg,#F2B84D,#e11d48)"><svg width="52" height="52" style="color:var(--navy);stroke-width:4"><use href="#paw"/></svg><span class="why" style="color:#fff">Fondos que compiten</span></div>
+        <div class="no"><svg width="52" height="52" style="color:var(--navy);stroke-width:1.2"><use href="#paw"/></svg><span class="why">Trazo muy fino en chico</span></div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ══ 4 · PARA ELEGIR ══ -->
+<!-- 6 · PRUEBA PARED / AMBULANCIA -->
 <section>
-  <div class="sec-h"><span class="n">4</span><h2>Para elegir</h2></div>
-  <p class="sec-sub">Marcá una de cada fila y armo el sistema final (logo vectorizado en sus versiones + guía mínima de uso + favicon/PWA).</p>
-  <div class="card pick">
-    <div class="opt">Símbolo: <b>1</b> fiel · <b>2</b> más blanda · <b>3</b> blanda+sonrisa · <b>4</b> cachorro</div>
-    <div class="opt">Tipografía: <b>1</b> Baloo 2 (redondeada) · <b>2</b> Poppins (geométrica) · <b>3</b> Bricolage (humanista)</div>
-    <div class="opt">Paleta: <b>ok</b> como está · <b>ajustar</b> (¿otro acento cálido? ¿más/menos azul?)</div>
-    <div class="note">MEDICAR ya no es referencia de identidad — solo vara de calidad. El rojo queda reservado a emergencia. Los símbolos cumplen: monolínea entrelazada, trazo uniforme, y versión gruesa para chico/favicon.</div>
+  <div class="sec-h"><span class="n">6</span><h2>Prueba pared / ambulancia</h2></div>
+  <p class="sec-sub">El logo a gran escala en blanco sobre navy — el uso de mayor visibilidad (fachada, móvil, uniforme).</p>
+  <div style="background:var(--navy);border-radius:20px;padding:56px 24px;display:flex;flex-direction:column;align-items:center;gap:20px">
+    <svg width="150" height="150" style="color:#fff;stroke-width:4"><use href="#paw"/></svg>
+    <span class="wm" style="font-weight:800;font-size:clamp(2.4rem,8vw,4.4rem);color:#fff"><span>MEDI</span><span style="color:var(--azul-claro)">Paw</span></span>
+    <span style="color:#aab6d4;font-size:.9rem;letter-spacing:.14em;text-transform:uppercase;font-weight:700">Plan de salud para mascotas</span>
   </div>
+  <div class="warnbox"><b>Nota honesta:</b> este vector es la identidad <b>v1 digital</b>. Para <b>rotulación física de gran formato</b> (ambulancias, fachadas), pasá por un diseñador/rotulista usando esta guía y los SVG como base — ellos ajustan trazos, escalas y materiales para producción.</div>
 </section>
 
-<div class="foot">MEDIPaw · Brand Board v2 — propuesta para revisión. Base azul propia; símbolo perro-gato monolínea.</div>
+<div class="foot">MEDIPaw · Guía de marca v1 — 2026-08-01. Símbolo cachorro monolínea · Baloo 2 · base azul.</div>
 
 </div>
 </body>
