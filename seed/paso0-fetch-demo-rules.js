@@ -5,15 +5,16 @@
  * multilínea grandes). El contenido se obtiene por el Admin SDK (securityRules) EN RUNTIME
  * y lo escribe fs.writeFileSync — el comando es sólo `node seed/paso0-fetch-demo-rules.js`.
  * Uso (lo corre el subagente auditor-reglas para el diff mecánico independiente):
- *   node seed/paso0-fetch-demo-rules.js            # escribe /tmp/rules-demo-publicado.rules
- *   node seed/paso0-fetch-demo-rules.js --diff     # además corre diff -w contra el repo e imprime veredicto
- * Fetch por Admin SDK con serviceAccountKey.demo.json (project_id medipaw-demo). NO fakea nada:
- * trae el source del ruleset activo tal como está publicado.
+ *   node seed/paso0-fetch-demo-rules.js            # DEMO → /tmp/rules-demo-publicado.rules
+ *   node seed/paso0-fetch-demo-rules.js prod       # PROD (medipet-c3a4d) → /tmp/rules-prod-publicado.rules
+ *   ... agregar --diff para que además corra diff -w contra el repo e imprima veredicto.
+ * Fetch por Admin SDK (securityRules) con el SA del proyecto elegido. NO fakea nada: trae el source del ruleset activo.
  */
 const path = require('path'), fs = require('fs'), admin = require('firebase-admin');
-const KEY = path.resolve(__dirname, 'serviceAccountKey.demo.json');
+const ESPROD = process.argv.includes('prod');
+const KEY = path.resolve(__dirname, ESPROD ? 'serviceAccountKey.json' : 'serviceAccountKey.demo.json'); // prod = medipet-c3a4d
 admin.initializeApp({ credential: admin.credential.cert(require(KEY)) });
-const OUT = '/tmp/rules-demo-publicado.rules';
+const OUT = ESPROD ? '/tmp/rules-prod-publicado.rules' : '/tmp/rules-demo-publicado.rules';
 const REPO = path.resolve(__dirname, '..', 'firestore.rules');
 
 (async () => {
