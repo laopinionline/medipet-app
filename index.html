@@ -2612,7 +2612,7 @@ async function transicionarPedido(id, estadoNuevo){
     await batch.commit();
     toast('Pedido → '+(PEDIDO_LABEL[estadoNuevo]||estadoNuevo)+(ef==='baja'?' · stock bajó':ef==='reingreso'?' · stock reingresó':'')+((estadoNuevo==='entregado'&&metodo==='efectivo')?' · pago acreditado':''));
   }catch(e){ toast('Error: '+e.message); }
-  cargarPedidosAdmin();
+  cargarPedidosAdmin(); cargarProductosAdmin(); // refrescá también la lista de productos (el stock pudo moverse)
 }
 
 // ══════════════════════════════════════════════
