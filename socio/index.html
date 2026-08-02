@@ -16,7 +16,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
-<script src="/lib/medipaw-core.js?v=20260802e"></script>
+<script src="/lib/medipaw-core.js?v=20260802f"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -1428,11 +1428,13 @@ function tiendaCatalogoView(){
   if(!prods.length){ document.getElementById('home').innerHTML = back+titulo+tabs+err+`<div class="seccion"><p style="font-size:.85rem;color:var(--suave);">Estamos sumando productos.</p></div>`; return; }
   const hayDesc = !socio && prods.some(p=>p.precioSocio!=null&&p.precioSocio!==''&&Number(p.precioSocio)>0);
   const banner = hayDesc ? `<div class="seccion" style="background:var(--ambar-suave);border:1px solid #f0d9ac;margin-bottom:12px;"><div style="font-size:.82rem;color:#8a5a00;font-weight:700;display:flex;align-items:center;gap:6px;">${icon('candado')} Con el plan activo de tu mascota pagás el precio socio.</div></div>` : '';
+  const catLabel=(k)=>((MC.CATEGORIA_LABEL&&MC.CATEGORIA_LABEL[k])||k);
+  const orden=MC.CATEGORIAS_TIENDA||[]; // orden estable de góndolas (las vacías no aparecen: solo hay clave si hay producto visible)
   const porCat={};
-  prods.forEach(p=>{ const cat=p.categoria||'otros'; (porCat[cat]=porCat[cat]||[]).push(p); });
-  const cuerpo=Object.keys(porCat).sort((a,b)=>a.localeCompare(b)).map(cat=>{
+  prods.forEach(p=>{ const cat=p.categoria||'accesorios'; (porCat[cat]=porCat[cat]||[]).push(p); });
+  const cuerpo=Object.keys(porCat).sort((a,b)=>{const ia=orden.indexOf(a),ib=orden.indexOf(b);return (ia<0?99:ia)-(ib<0?99:ib)||a.localeCompare(b);}).map(cat=>{
     const cards=porCat[cat].slice().sort((a,b)=>String(a.nombre||'').localeCompare(String(b.nombre||''))).map(p=>tiendaCard(p,socio)).join('');
-    return `<div class="stit" style="margin:10px 2px 6px;text-transform:capitalize;font-size:.85rem;">${esc(cat)}</div>${cards}`;
+    return `<div class="stit" style="margin:10px 2px 6px;text-transform:none;font-size:.85rem;">${esc(catLabel(cat))}</div>${cards}`;
   }).join('');
   document.getElementById('home').innerHTML = back+titulo+tabs+banner+err+cuerpo+barraCarrito();
 }

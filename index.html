@@ -10,7 +10,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
-<script src="/lib/medipaw-core.js?v=20260802e"></script>
+<script src="/lib/medipaw-core.js?v=20260802f"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -2498,7 +2498,7 @@ async function cargarProductosAdmin(){
           <div style="display:flex;gap:10px;flex:1;">
             ${p.foto?`<img src="${esc(p.foto)}" style="width:48px;height:48px;border-radius:10px;object-fit:cover;flex-shrink:0;">`:`<div style="width:48px;height:48px;border-radius:10px;background:var(--azul-pale);display:flex;align-items:center;justify-content:center;color:var(--azul);flex-shrink:0;">${icon('mascotas')}</div>`}
             <div style="flex:1;">
-              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><strong style="font-size:.95rem;">${esc(p.nombre||'')}</strong>${p.categoria?`<span style="font-size:.68rem;color:var(--azul);text-transform:uppercase;">${esc(p.categoria)}</span>`:''}</div>
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><strong style="font-size:.95rem;">${esc(p.nombre||'')}</strong>${p.categoria?`<span style="font-size:.68rem;color:var(--azul);text-transform:uppercase;">${esc((MC.CATEGORIA_LABEL&&MC.CATEGORIA_LABEL[p.categoria])||p.categoria)}</span>`:''}</div>
               <div style="font-size:.82rem;color:var(--texto);font-weight:700;">$${precio.toLocaleString('es-AR')}${soc!=null?` · <span style="color:var(--azul);">socio $${soc.toLocaleString('es-AR')}</span>`:''}</div>
               <div style="font-size:.72rem;color:${stock>0?'#5a6a8a':'#e11d48'};">Stock: ${stock}${p.descripcion?' · '+esc(p.descripcion):''}</div>
             </div>
@@ -3006,7 +3006,7 @@ function renderPanel(data){
             <div class="frow">
               <select id="prodCategoria" class="input-field">
                 <option value="">Categoria...</option>
-                ${MC.CATEGORIAS_TIENDA.map(function(c){return '<option value="'+c+'">'+c+'</option>';}).join('')}
+                ${MC.CATEGORIAS_TIENDA.map(function(c){return '<option value="'+c+'">'+((MC.CATEGORIA_LABEL&&MC.CATEGORIA_LABEL[c])||c)+'</option>';}).join('')}
               </select>
               <input type="number" id="prodStock" placeholder="Stock" class="input-field" min="0" step="1" value="0">
             </div>

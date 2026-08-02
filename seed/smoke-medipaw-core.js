@@ -212,6 +212,10 @@ eq(ped.total, 21000, 'snapshot: el total NO se recalcula si el producto cambia d
 eq(C.armarPedido([{ prod: prodB, cant: 0 }], false).items[0].cant, 1, 'cant < 1 → mínimo 1');
 eq(C.armarPedido([{ prod: prodB, cant: 2.7 }], false).items[0].cant, 2, 'cant se piso a entero');
 check(C.CATEGORIAS_TIENDA.indexOf('alimento') >= 0 && C.ESTADOS_PEDIDO[0] === 'nuevo' && C.METODOS_PAGO.indexOf('efectivo') >= 0, 'constantes de tienda expuestas');
+eq(C.CATEGORIAS_TIENDA, ['alimento','accesorios','higiene','juguetes','camas_descanso','salud'], '6 categorías (otros fuera; +camas_descanso +salud)');
+eq(C.CATEGORIA_LABEL['camas_descanso'], 'Camas y descanso', 'label legible de camas_descanso');
+eq(C.CATEGORIA_LABEL['salud'], 'Salud', 'label de salud (categoría estratégica, nace vacía)');
+check(C.CATEGORIAS_TIENDA.every(function(k){ return !!C.CATEGORIA_LABEL[k]; }), 'toda categoría tiene label');
 
 console.log('\n— TIENDA dos ejes (F2): efecto stock + venta consumada —');
 eq(C.ESTADOS_PAGO, ['pendiente', 'acreditado'], 'estados de pago');
