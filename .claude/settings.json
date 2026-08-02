@@ -2,7 +2,24 @@
   "permissions": {
     "allow": [
       "mcp__firebase__firebase_get_security_rules",
-      "Bash(diff *)"
+      "Bash(node seed/paso0-fetch-demo-rules.js*)",
+      "Bash(node seed/paso0-fetch-demo-rules.js:*)",
+      "Bash(diff *)",
+      "Bash(diff:*)",
+      "Bash(cat *)",
+      "Bash(cat:*)",
+      "Bash(tee *)",
+      "Bash(tee:*)",
+      "Bash(printf *)",
+      "Bash(printf:*)",
+      "Write(/private/tmp/**)",
+      "Write(/tmp/**)",
+      "Write(//private/tmp/**)",
+      "Write(//tmp/**)",
+      "Read(/private/tmp/**)",
+      "Read(/tmp/**)",
+      "Read(//private/tmp/**)",
+      "Read(//tmp/**)"
     ]
   },
   "enabledMcpjsonServers": [

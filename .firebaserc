@@ -1,5 +1,7 @@
 {
   "projects": {
-    "default": "medipet-c3a4d"
+    "default": "medipaw-demo",
+    "demo": "medipaw-demo",
+    "prod": "medipet-c3a4d"
   }
 }

@@ -5,12 +5,16 @@
  *   node seed/gate-b-verif.js setup     # crea cuentas desechables, prueba N3 por REST, imprime custom-token del vet
  *   node seed/gate-b-verif.js cleanup   # borra las cuentas desechables (NO borra el caso PRUEBA)
  * Requiere seed/serviceAccountKey.json. WEB_API_KEY es la pública del app config.
+ * Override por env (para verificar el ruleset de DEMO sin tocar el default de prod):
+ *   GATE_SA_KEY=serviceAccountKey.demo.json  GATE_PROJECT=medipaw-demo \
+ *   GATE_WEB_API_KEY=<apiKey del fb-config.js del build demo>  node seed/gate-b-verif.js escalada
  */
 const path = require('path'), admin = require('firebase-admin');
-admin.initializeApp({ credential: admin.credential.cert(require(path.resolve(__dirname, 'serviceAccountKey.json'))) });
+const SA_KEY = process.env.GATE_SA_KEY || 'serviceAccountKey.json';
+admin.initializeApp({ credential: admin.credential.cert(require(path.resolve(__dirname, SA_KEY))) });
 const db = admin.firestore(), auth = admin.auth();
-const WEB_API_KEY = 'AIzaSyBW3nLFqr55xYN16rSpapqIb6yVnyKbp-4';
-const PROJECT = 'medipet-c3a4d';
+const WEB_API_KEY = process.env.GATE_WEB_API_KEY || 'AIzaSyBW3nLFqr55xYN16rSpapqIb6yVnyKbp-4';
+const PROJECT = process.env.GATE_PROJECT || 'medipet-c3a4d';
 const MODE = process.argv[2] || 'setup';
 
 const TIT = { email: 'gateb-titular@medipaw.test', pass: 'gateb-desechable-9f2', nombre: 'GateB', apellido: 'Titular' };
