@@ -10,7 +10,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
-<script src="/lib/medipaw-core.js?v=20260802c"></script>
+<script src="/lib/medipaw-core.js?v=20260802d"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -2168,6 +2168,7 @@ function switchTab(tab,btn){
   if(tab==='cuotas')cargarCuotasAdmin();
   if(tab==='pagos')cargarAtencionesAdmin();
   if(tab==='cartilla')cargarCartillaAdmin();
+  if(tab==='tienda')cargarTiendaAdmin();
 }
 
 async function cargarDashboard(){
@@ -2458,6 +2459,130 @@ async function editarCartilla(id){
 async function cambiarEstadoCartilla(id,estado){ try{ await db.collection('cartilla').doc(id).update({estado, actualizadoEn:TS()}); }catch(e){} cargarCartillaAdmin(); }
 async function eliminarCartilla(id){ if(!confirm('¿Eliminar este prestador de la cartilla?'))return; try{ await db.collection('cartilla').doc(id).delete(); }catch(e){} cargarCartillaAdmin(); }
 
+// ── TIENDA (productos + pedidos) — CRUD admin. Colecciones `productos`/`pedidos`; escritura solo admin (reglas). ──
+function toggleFormProducto(show){ const f=document.getElementById('formProducto'); if(f) f.style.display = show?'block':'none'; }
+function nuevoProducto(){
+  ['prodId','prodNombre','prodDescripcion','prodPrecio','prodPrecioSocio','prodStock','prodFoto'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  const cat=document.getElementById('prodCategoria'); if(cat)cat.value='';
+  const es=document.getElementById('prodEstado'); if(es)es.value='visible';
+  const pv=document.getElementById('prodFotoPreview'); if(pv){pv.src='';pv.style.display='none';}
+  const t=document.getElementById('prodFormTit'); if(t)t.textContent='Nuevo producto';
+  setMsg('prodMsg','',true); toggleFormProducto(true);
+}
+// Redimensiona la imagen a ≤200px (lado mayor) y la guarda como data-URI JPEG (~≤30KB) — no infla el doc Firestore (límite 1MB).
+function previewProdFoto(input){
+  const file=input.files&&input.files[0]; if(!file)return;
+  const rd=new FileReader();
+  rd.onload=e=>{ const img=new Image(); img.onload=()=>{
+    const max=200; let w=img.width, h=img.height;
+    if(w>h && w>max){ h=Math.round(h*max/w); w=max; } else if(h>=w && h>max){ w=Math.round(w*max/h); h=max; }
+    const cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(img,0,0,w,h);
+    const data=cv.toDataURL('image/jpeg',0.75);
+    const hid=document.getElementById('prodFoto'); if(hid)hid.value=data;
+    const pv=document.getElementById('prodFotoPreview'); if(pv){ pv.src=data; pv.style.display='block'; }
+  }; img.src=e.target.result; };
+  rd.readAsDataURL(file);
+}
+async function cargarTiendaAdmin(){ await cargarProductosAdmin(); await cargarPedidosAdmin(); }
+async function cargarProductosAdmin(){
+  const lista=document.getElementById('listaProductos'); if(!lista)return;
+  lista.innerHTML='<p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p>';
+  try{
+    const snap=await db.collection('productos').orderBy('nombre').get(); // el admin ve TODO (visible + oculto)
+    if(snap.empty){ lista.innerHTML='<p style="color:#5a6a8a;font-size:.85rem;">No hay productos todavía.</p>'; return; }
+    lista.innerHTML=snap.docs.map(d=>{
+      const p=d.data(); const vis=p.estado!=='oculto'; const col=vis?'#22c55e':'#9ca3af';
+      const precio=Number(p.precio||0), soc=(p.precioSocio!=null&&p.precioSocio!=='')?Number(p.precioSocio):null, stock=Number(p.stock||0);
+      return `<div class="uitem">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
+          <div style="display:flex;gap:10px;flex:1;">
+            ${p.foto?`<img src="${esc(p.foto)}" style="width:48px;height:48px;border-radius:10px;object-fit:cover;flex-shrink:0;">`:`<div style="width:48px;height:48px;border-radius:10px;background:var(--azul-pale);display:flex;align-items:center;justify-content:center;color:var(--azul);flex-shrink:0;">${icon('mascotas')}</div>`}
+            <div style="flex:1;">
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><strong style="font-size:.95rem;">${esc(p.nombre||'')}</strong>${p.categoria?`<span style="font-size:.68rem;color:var(--azul);text-transform:uppercase;">${esc(p.categoria)}</span>`:''}</div>
+              <div style="font-size:.82rem;color:var(--texto);font-weight:700;">$${precio.toLocaleString('es-AR')}${soc!=null?` · <span style="color:var(--azul);">socio $${soc.toLocaleString('es-AR')}</span>`:''}</div>
+              <div style="font-size:.72rem;color:${stock>0?'#5a6a8a':'#e11d48'};">Stock: ${stock}${p.descripcion?' · '+esc(p.descripcion):''}</div>
+            </div>
+          </div>
+          <span style="background:${col};color:white;font-size:.65rem;font-weight:700;padding:3px 9px;border-radius:100px;white-space:nowrap;flex-shrink:0;">${vis?'VISIBLE':'OCULTO'}</span>
+        </div>
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button onclick="editarProducto('${d.id}')" class="bmini">Editar</button>
+          ${vis?`<button onclick="cambiarEstadoProducto('${d.id}','oculto')" class="bmini brojo">Ocultar</button>`:`<button onclick="cambiarEstadoProducto('${d.id}','visible')" class="bmini bverde">Mostrar</button>`}
+          <button onclick="eliminarProducto('${d.id}')" class="bmini brojo">Eliminar</button>
+        </div>
+      </div>`;
+    }).join('');
+  }catch(e){ lista.innerHTML='<p style="color:#ef4444;">Error: '+e.message+'</p>'; }
+}
+async function guardarProducto(){
+  const id=v('prodId'), nombre=v('prodNombre');
+  setMsg('prodMsg','',true);
+  if(!nombre){ setMsg('prodMsg','Completá el nombre.',false); return; }
+  const precio=Number(v('prodPrecio')||0);
+  if(!(precio>0)){ setMsg('prodMsg','Poné un precio válido (mayor a 0).',false); return; }
+  const socRaw=(document.getElementById('prodPrecioSocio')?.value||'').trim();
+  const datos={ nombre, descripcion:(document.getElementById('prodDescripcion')?.value||'').trim(),
+    precio, categoria:(document.getElementById('prodCategoria')?.value||''),
+    stock:Math.max(0,Math.floor(Number(v('prodStock')||0))),
+    estado:(document.getElementById('prodEstado')?.value||'visible'),
+    foto:(document.getElementById('prodFoto')?.value||''),
+    precioSocio:(socRaw!==''?Number(socRaw):null), actualizadoEn:TS() };
+  try{
+    if(id){ await db.collection('productos').doc(id).update(datos); }
+    else{ datos.creadoEn=TS(); await db.collection('productos').add(datos); }
+    toast('Producto guardado.'); toggleFormProducto(false); cargarProductosAdmin();
+  }catch(e){ setMsg('prodMsg','Error: '+e.message,false); }
+}
+async function editarProducto(id){
+  try{
+    const d=await db.collection('productos').doc(id).get(); if(!d.exists)return; const p=d.data();
+    const set=(k,val)=>{const e=document.getElementById(k);if(e)e.value=(val==null?'':val);};
+    set('prodId',id); set('prodNombre',p.nombre); set('prodDescripcion',p.descripcion); set('prodPrecio',p.precio);
+    set('prodPrecioSocio',p.precioSocio); set('prodStock',p.stock); set('prodFoto',p.foto);
+    const cat=document.getElementById('prodCategoria'); if(cat)cat.value=(p.categoria||'');
+    const es=document.getElementById('prodEstado'); if(es)es.value=(p.estado||'visible');
+    const pv=document.getElementById('prodFotoPreview'); if(pv){ if(p.foto){pv.src=p.foto;pv.style.display='block';}else{pv.src='';pv.style.display='none';} }
+    const t=document.getElementById('prodFormTit'); if(t)t.textContent='Editar producto';
+    setMsg('prodMsg','',true); toggleFormProducto(true);
+  }catch(e){}
+}
+async function cambiarEstadoProducto(id,estado){ try{ await db.collection('productos').doc(id).update({estado, actualizadoEn:TS()}); }catch(e){} cargarProductosAdmin(); }
+async function eliminarProducto(id){ if(!confirm('¿Eliminar este producto?'))return; try{ await db.collection('productos').doc(id).delete(); }catch(e){} cargarProductosAdmin(); }
+
+// ── COLA DE PEDIDOS (admin) — transiciones de estado + cancelación ──
+var PEDIDO_SIGUIENTE={ nuevo:'confirmado', confirmado:'en_camino', en_camino:'entregado' };
+var PEDIDO_LABEL={ nuevo:'Nuevo', confirmado:'Confirmado', en_camino:'En camino', entregado:'Entregado', cancelado:'Cancelado' };
+var PEDIDO_COLOR={ nuevo:'#0369a1', confirmado:'#7c3aed', en_camino:'#d97706', entregado:'#166534', cancelado:'#9ca3af' };
+async function cargarPedidosAdmin(){
+  const lista=document.getElementById('listaPedidos'); if(!lista)return;
+  lista.innerHTML='<p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p>';
+  try{
+    const snap=await db.collection('pedidos').orderBy('creadoEn','desc').get();
+    if(snap.empty){ lista.innerHTML='<p style="color:#5a6a8a;font-size:.85rem;">No hay pedidos.</p>'; return; }
+    lista.innerHTML=snap.docs.map(d=>{
+      const p=d.data(); const est=p.estado||'nuevo'; const col=PEDIDO_COLOR[est]||'#5a6a8a';
+      const items=(p.items||[]).map(it=>`${esc(it.nombre||'')} ×${Number(it.cant||1)} — $${(Number(it.precioAplicado||0)*Number(it.cant||1)).toLocaleString('es-AR')}`).join('<br>');
+      const ent=p.entrega||{}; const sig=PEDIDO_SIGUIENTE[est];
+      return `<div class="uitem">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+          <div style="flex:1;">
+            <div style="font-size:.82rem;color:#5a6a8a;">${esc(ent.direccion||'(sin dirección)')}${ent.telefono?' · '+esc(ent.telefono):''}</div>
+            <div style="font-size:.8rem;margin-top:6px;">${items||'(sin items)'}</div>
+            <div style="font-size:.9rem;font-weight:800;margin-top:6px;">Total $${Number(p.total||0).toLocaleString('es-AR')} · ${esc((p.metodo||'').toUpperCase())}</div>
+          </div>
+          <span style="background:${col};color:white;font-size:.65rem;font-weight:700;padding:3px 9px;border-radius:100px;white-space:nowrap;flex-shrink:0;">${(PEDIDO_LABEL[est]||est).toUpperCase()}</span>
+        </div>
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+          ${sig?`<button onclick="avanzarPedido('${d.id}','${sig}')" class="bmini bverde">→ ${PEDIDO_LABEL[sig]}</button>`:''}
+          ${(est!=='entregado'&&est!=='cancelado')?`<button onclick="cancelarPedidoAdmin('${d.id}')" class="bmini brojo">Cancelar</button>`:''}
+        </div>
+      </div>`;
+    }).join('');
+  }catch(e){ lista.innerHTML='<p style="color:#ef4444;">Error: '+e.message+'</p>'; }
+}
+async function avanzarPedido(id,estado){ try{ await db.collection('pedidos').doc(id).update({estado, actualizadoEn:TS()}); toast('Pedido → '+(PEDIDO_LABEL[estado]||estado)+'.'); }catch(e){ toast('Error: '+e.message); } cargarPedidosAdmin(); }
+async function cancelarPedidoAdmin(id){ if(!confirm('¿Cancelar este pedido?'))return; try{ await db.collection('pedidos').doc(id).update({estado:'cancelado', actualizadoEn:TS()}); }catch(e){} cargarPedidosAdmin(); }
+
 // ══════════════════════════════════════════════
 // ══  RENDER PRINCIPAL (por rol activo)        ══
 // ══════════════════════════════════════════════
@@ -2683,6 +2808,7 @@ function renderPanel(data){
       <button class="tab" onclick="switchTab('cuotas',this)">Cuotas</button>
       <button class="tab" onclick="switchTab('pagos',this)">Pagos</button>
       <button class="tab" onclick="switchTab('cartilla',this)">Cartilla</button>
+      <button class="tab" onclick="switchTab('tienda',this)">Tienda</button>
     </div>
     <div id="tab-cuotas" class="tab-content" style="display:none;">
       <div class="seccion">
@@ -2826,6 +2952,53 @@ function renderPanel(data){
           </div>
         </div>
         <div id="listaCartilla"><p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p></div>
+      </div>
+    </div>
+    <div id="tab-tienda" class="tab-content" style="display:none;">
+      <div class="seccion">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+          <div class="stit" style="margin-bottom:0;">Productos</div>
+          <button onclick="nuevoProducto()" class="bmini" style="background:#e0f2fe;color:#0369a1;font-size:.8rem;padding:7px 14px;">+ Nuevo</button>
+        </div>
+        <div id="formProducto" style="display:none;" class="form-box">
+          <p style="font-size:.75rem;font-weight:800;color:var(--noche);margin-bottom:10px;text-transform:uppercase;" id="prodFormTit">Nuevo producto</p>
+          <div class="fstack">
+            <input type="hidden" id="prodId">
+            <input type="hidden" id="prodFoto">
+            <input type="text" id="prodNombre" placeholder="Nombre *" class="input-field">
+            <textarea id="prodDescripcion" placeholder="Descripcion" class="input-field" style="height:52px;resize:vertical;"></textarea>
+            <div class="frow">
+              <input type="number" id="prodPrecio" placeholder="Precio *" class="input-field" min="0" step="1">
+              <input type="number" id="prodPrecioSocio" placeholder="Precio socio (opcional)" class="input-field" min="0" step="1">
+            </div>
+            <div class="frow">
+              <select id="prodCategoria" class="input-field">
+                <option value="">Categoria...</option>
+                ${MC.CATEGORIAS_TIENDA.map(function(c){return '<option value="'+c+'">'+c+'</option>';}).join('')}
+              </select>
+              <input type="number" id="prodStock" placeholder="Stock" class="input-field" min="0" step="1" value="0">
+            </div>
+            <select id="prodEstado" class="input-field">
+              <option value="visible">Visible en la tienda</option>
+              <option value="oculto">Oculto</option>
+            </select>
+            <div>
+              <label class="foto-label" for="prodFotoInput">Foto del producto (opcional)</label>
+              <input type="file" id="prodFotoInput" accept="image/*" style="display:none" onchange="previewProdFoto(this)">
+              <img id="prodFotoPreview" src="" style="width:72px;height:72px;border-radius:12px;object-fit:cover;margin-top:8px;display:none;border:2px solid #5BA3E8;">
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button onclick="guardarProducto()" class="btn-primary" style="flex:1;">Guardar</button>
+              <button onclick="toggleFormProducto(false)" class="bmini brojo" style="padding:10px 16px;">X</button>
+            </div>
+            <p id="prodMsg" style="font-size:.8rem;"></p>
+          </div>
+        </div>
+        <div id="listaProductos"><p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p></div>
+      </div>
+      <div class="seccion">
+        <div class="stit">Cola de pedidos</div>
+        <div id="listaPedidos"><p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p></div>
       </div>
     </div>`;
     setTimeout(cargarDashboard,300);

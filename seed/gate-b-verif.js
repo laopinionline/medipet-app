@@ -112,6 +112,42 @@ async function restCreate(idToken, pathDoc, fields) {
     console.log('  PATCH usuarios/' + titUid + ' telefono → HTTP ' + st2 + '  ' + (st2 === 200 ? '✓ OK (campo permitido)' : '✗ ESPERABA 200'));
     process.exit(0);
   }
+  // ── TIENDA (Fase 1): reglas de productos + pedidos por REST con identidad de titular real ──
+  if (MODE === 'tienda') {
+    console.log('\n=== TIENDA — reglas productos + pedidos (titular real por REST) ===\n');
+    const titUid = await ensureUser(TIT, ['afiliado']);
+    const otroUid = 'OTRO-UID-INEXISTENTE-9z';
+    const tok = await idTokenDe(titUid);
+    const items = { arrayValue: { values: [ { mapValue: { fields: {
+      productoId: { stringValue: 'DEMO-PROD-03' }, nombre: { stringValue: 'Collar' },
+      precio: { integerValue: '6500' }, precioAplicado: { integerValue: '6500' }, cant: { integerValue: '1' } } } } ] } };
+    const entrega = { mapValue: { fields: { direccion: { stringValue: 'Calle 1' }, telefono: { stringValue: '11-0000-0000' } } } };
+    const pedido = (uid, estado) => ({ titularUid: { stringValue: uid }, estado: { stringValue: estado },
+      total: { integerValue: '6500' }, items, metodo: { stringValue: 'efectivo' }, entrega, creadoEn: { timestampValue: '2026-08-02T12:00:00Z' } });
+
+    // (1) El titular NO puede escribir productos (solo admin).
+    const p1 = await restCreate(tok, 'productos/GATEB-PROD-TEST1', { nombre: { stringValue: 'Falso' }, precio: { integerValue: '1' } });
+    console.log('  CREATE productos por titular          → HTTP ' + p1 + '  ' + (p1 === 403 ? '✓ DENIED' : '✗ ESPERABA 403'));
+    // (2) Pedido VÁLIDO propio (dueño, estado nuevo, shape completo) → 200.
+    const t2 = await restCreate(tok, 'pedidos/GATEB-PED-OK', pedido(titUid, 'nuevo'));
+    console.log('  CREATE pedido propio válido (nuevo)   → HTTP ' + t2 + '  ' + (t2 === 200 ? '✓ ALLOW' : '✗ ESPERABA 200'));
+    // (3) Pedido a nombre de OTRO uid → 403.
+    const t3 = await restCreate(tok, 'pedidos/GATEB-PED-AJENO', pedido(otroUid, 'nuevo'));
+    console.log('  CREATE pedido con titularUid ajeno    → HTTP ' + t3 + '  ' + (t3 === 403 ? '✓ DENIED' : '✗ ESPERABA 403'));
+    // (4) Pedido que nace 'confirmado' (saltar el flujo) → 403.
+    const t4 = await restCreate(tok, 'pedidos/GATEB-PED-CONF', pedido(titUid, 'confirmado'));
+    console.log('  CREATE pedido estado=confirmado       → HTTP ' + t4 + '  ' + (t4 === 403 ? '✓ DENIED' : '✗ ESPERABA 403'));
+    // (5) El titular intenta AVANZAR su propio pedido a 'entregado' (solo admin) → 403.
+    const t5 = await restPatch(tok, 'pedidos/GATEB-PED-OK', { estado: { stringValue: 'entregado' } }, ['estado']);
+    console.log('  UPDATE pedido propio → entregado      → HTTP ' + t5 + '  ' + (t5 === 403 ? '✓ DENIED (solo admin avanza)' : '✗ ESPERABA 403'));
+    // (6) El titular SÍ puede CANCELAR su pedido nuevo → 200.
+    const t6 = await restPatch(tok, 'pedidos/GATEB-PED-OK', { estado: { stringValue: 'cancelado' } }, ['estado']);
+    console.log('  UPDATE pedido propio → cancelado      → HTTP ' + t6 + '  ' + (t6 === 200 ? '✓ OK (cancela su pedido nuevo)' : '✗ ESPERABA 200'));
+    // limpiar el pedido de prueba (Admin SDK)
+    await db.collection('pedidos').doc('GATEB-PED-OK').delete().catch(()=>{});
+    console.log('\n(limpiado GATEB-PED-OK; corré cleanup para borrar la cuenta desechable)');
+    process.exit(0);
+  }
   if (MODE === 'cleanup') {
     console.log('\n=== CLEANUP cuentas desechables + caso PRUEBA ===');
     await delUser(TIT.email); await delUser(VET.email);

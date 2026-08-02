@@ -194,6 +194,25 @@ check(srv.every(function (s) { return s.key && s.nombre && ('detalle' in s) && s
 srv[0].estado = 'PISADO';
 check(C.plantillaServicios()[0].estado === 'activo', 'copia fresca: mutar el resultado NO altera la plantilla');
 
+console.log('\n— TIENDA (Fase 1): precio aplicado + snapshot del pedido —');
+var prodA = { id: 'PR-1', nombre: 'Alimento 3kg', precio: 10000, precioSocio: 8000 };
+var prodB = { id: 'PR-2', nombre: 'Correa', precio: 5000 }; // sin precioSocio
+eq(C.precioAplicado(prodA, true), 8000, 'socio con precioSocio → paga precioSocio');
+eq(C.precioAplicado(prodA, false), 10000, 'NO socio → paga precio de lista aunque haya precioSocio');
+eq(C.precioAplicado(prodB, true), 5000, 'socio sin precioSocio → precio de lista');
+eq(C.precioAplicado({ precio: 5000, precioSocio: 0 }, true), 5000, 'precioSocio 0/vacío se ignora → lista');
+var ped = C.armarPedido([{ prod: prodA, cant: 2 }, { prod: prodB, cant: 1 }], true);
+eq(ped.total, 8000 * 2 + 5000, 'total socio = Σ precioAplicado*cant (21000)');
+eq(ped.items.length, 2, 'dos ítems');
+eq(ped.items[0], { productoId: 'PR-1', nombre: 'Alimento 3kg', precio: 10000, precioAplicado: 8000, cant: 2 }, 'ítem congela id/nombre/precio/precioAplicado/cant');
+var pedNoSocio = C.armarPedido([{ prod: prodA, cant: 1 }], false);
+eq(pedNoSocio.total, 10000, 'no-socio: total con precio de lista');
+prodA.precio = 99999; prodA.precioSocio = 99999; // cambio de precio DESPUÉS
+eq(ped.total, 21000, 'snapshot: el total NO se recalcula si el producto cambia de precio después');
+eq(C.armarPedido([{ prod: prodB, cant: 0 }], false).items[0].cant, 1, 'cant < 1 → mínimo 1');
+eq(C.armarPedido([{ prod: prodB, cant: 2.7 }], false).items[0].cant, 2, 'cant se piso a entero');
+check(C.CATEGORIAS_TIENDA.indexOf('alimento') >= 0 && C.ESTADOS_PEDIDO[0] === 'nuevo' && C.METODOS_PAGO.indexOf('efectivo') >= 0, 'constantes de tienda expuestas');
+
 console.log('\n———');
 console.log((fail === 0 ? '✓ TODO EN VERDE' : '✗ HAY FALLOS') + ' — ' + ok + ' ok, ' + fail + ' fallos');
 process.exit(fail === 0 ? 0 : 1);
