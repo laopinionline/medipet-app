@@ -7,9 +7,11 @@
  * Fotos = placeholders SVG dignos embebidos como data-URI base64 (patrón F1: foto inline, sin Storage).
  */
 const path = require('path'), admin = require('firebase-admin');
-const KEY = path.resolve(__dirname, 'serviceAccountKey.demo.json');
+const ESPROD = process.argv.includes('prod');
+const KEY = path.resolve(__dirname, ESPROD ? 'serviceAccountKey.json' : 'serviceAccountKey.demo.json');
 const cred = require(KEY);
-if (cred.project_id !== 'medipaw-demo') { console.error('ABORT: seed de productos SOLO contra medipaw-demo (cred: ' + cred.project_id + ')'); process.exit(1); }
+const EXPECTED = ESPROD ? 'medipet-c3a4d' : 'medipaw-demo';
+if (cred.project_id !== EXPECTED) { console.error('ABORT: proyecto ' + cred.project_id + ' != esperado ' + EXPECTED + ' (arg prod → medipet-c3a4d)'); process.exit(1); }
 admin.initializeApp({ credential: admin.credential.cert(cred) });
 const db = admin.firestore();
 const WRITE = process.argv.includes('--write');
