@@ -122,7 +122,8 @@ async function restCreate(idToken, pathDoc, fields) {
       productoId: { stringValue: 'DEMO-PROD-03' }, nombre: { stringValue: 'Collar' },
       precio: { integerValue: '6500' }, precioAplicado: { integerValue: '6500' }, cant: { integerValue: '1' } } } } ] } };
     const entrega = { mapValue: { fields: { direccion: { stringValue: 'Calle 1' }, telefono: { stringValue: '11-0000-0000' } } } };
-    const pedido = (uid, estado) => ({ titularUid: { stringValue: uid }, estado: { stringValue: estado },
+    const pedido = (uid, estado, pago) => ({ titularUid: { stringValue: uid }, estado: { stringValue: estado },
+      pago: { stringValue: pago || 'pendiente' },
       total: { integerValue: '6500' }, items, metodo: { stringValue: 'efectivo' }, entrega, creadoEn: { timestampValue: '2026-08-02T12:00:00Z' } });
 
     // (1) El titular NO puede escribir productos (solo admin).
@@ -137,6 +138,9 @@ async function restCreate(idToken, pathDoc, fields) {
     // (4) Pedido que nace 'confirmado' (saltar el flujo) → 403.
     const t4 = await restCreate(tok, 'pedidos/GATEB-PED-CONF', pedido(titUid, 'confirmado'));
     console.log('  CREATE pedido estado=confirmado       → HTTP ' + t4 + '  ' + (t4 === 403 ? '✓ DENIED' : '✗ ESPERABA 403'));
+    // (4b) Pedido que nace ya 'acreditado' (autoacreditarse el pago) → 403.
+    const t4b = await restCreate(tok, 'pedidos/GATEB-PED-PAGO', pedido(titUid, 'nuevo', 'acreditado'));
+    console.log('  CREATE pedido pago=acreditado         → HTTP ' + t4b + '  ' + (t4b === 403 ? '✓ DENIED (pago lo acredita admin)' : '✗ ESPERABA 403'));
     // (5) El titular intenta AVANZAR su propio pedido a 'entregado' (solo admin) → 403.
     const t5 = await restPatch(tok, 'pedidos/GATEB-PED-OK', { estado: { stringValue: 'entregado' } }, ['estado']);
     console.log('  UPDATE pedido propio → entregado      → HTTP ' + t5 + '  ' + (t5 === 403 ? '✓ DENIED (solo admin avanza)' : '✗ ESPERABA 403'));

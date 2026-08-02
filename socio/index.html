@@ -16,7 +16,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
-<script src="/lib/medipaw-core.js?v=20260802d"></script>
+<script src="/lib/medipaw-core.js?v=20260802e"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -292,12 +292,14 @@ function getRoles(u){
 }
 
 // ── Estado único ──
-const S = { view:'boot', sub:'home', cred:null, mascotaSel:0, deferredPrompt:null, caso:null, chequeo:null, historia:null, mismascotas:null, cartilla:null, vetia:null, turnos:null };
+const S = { view:'boot', sub:'home', cred:null, mascotaSel:0, deferredPrompt:null, caso:null, chequeo:null, historia:null, mismascotas:null, cartilla:null, vetia:null, turnos:null, tienda:null };
+// Carrito en memoria (persiste entre vistas hasta confirmar/vaciar). productoId → cantidad.
+let CARRITO = {};
 // Dispatcher del sub-view: home | caso | cuenta | alta (embudo) | chequeo (peso) | historia (atenciones) | mismascotas (planes+servicios) | vetia (chat IA, demo) | turnos (agenda, demo)
-function render(){ if(S.sub==='caso') casoView(); else if(S.sub==='cuenta') cuentaView(); else if(S.sub==='alta') altaView(); else if(S.sub==='chequeo') chequeoView(); else if(S.sub==='historia') historiaView(); else if(S.sub==='mismascotas') misMascotasView(); else if(S.sub==='cartilla') cartillaView(); else if(S.sub==='vetia') vetiaView(); else if(S.sub==='turnos') turnosView(); else if(S.sub==='activacion') activacionView(); else homeView(); animarVista(); }
+function render(){ if(S.sub==='caso') casoView(); else if(S.sub==='cuenta') cuentaView(); else if(S.sub==='alta') altaView(); else if(S.sub==='chequeo') chequeoView(); else if(S.sub==='historia') historiaView(); else if(S.sub==='mismascotas') misMascotasView(); else if(S.sub==='cartilla') cartillaView(); else if(S.sub==='vetia') vetiaView(); else if(S.sub==='turnos') turnosView(); else if(S.sub==='activacion') activacionView(); else if(S.sub==='tienda') tiendaView(); else homeView(); animarVista(); }
 // Fade+slide sutil del contenedor al navegar entre vistas. CERO animación en "no está bien" (caso).
 function animarVista(){ if(S.sub==='caso') return; const h=document.getElementById('home'); if(!h) return; h.classList.remove('view-anim'); void h.offsetWidth; h.classList.add('view-anim'); }
-function volverHome(){ S.sub='home'; S.caso=null; S.alta=null; S.chequeo=null; S.historia=null; S.mismascotas=null; S.cartilla=null; S.vetia=null; S.turnos=null; S.activacion=null; render(); }
+function volverHome(){ S.sub='home'; S.caso=null; S.alta=null; S.chequeo=null; S.historia=null; S.mismascotas=null; S.cartilla=null; S.vetia=null; S.turnos=null; S.activacion=null; S.tienda=null; render(); }
 
 // ── Colección mascotas (fuente de verdad; reusa el núcleo) ──
 async function mascGetByTitular(uid){
@@ -417,6 +419,7 @@ function homeView(){
     bloqueHistoria(m) +
     bloqueCuota(c) +
     bloqueMisMascotas(c) +
+    bloqueTienda(m) +
     bloqueCartilla() +
     bloqueFeed();
 }
@@ -1380,6 +1383,179 @@ function cartillaView(){
     return `<div class="stit" style="margin:10px 2px 6px;text-transform:none;font-size:.85rem;">${esc(loc)}</div>${items}`;
   }).join('');
   document.getElementById('home').innerHTML = back + titulo + err + cuerpo;
+}
+
+/* ══════════════ TIENDA (Fase 2) — catálogo + carrito + checkout + mis pedidos ══════════════ */
+// SOCIO = titular con al menos una mascota con cobertura vigente (paga precioSocio). El resto (free/sin activa) ve AMBOS
+// precios (palanca de conversión). El eje logístico/pago los maneja el admin; acá el titular solo crea 'nuevo'/'pendiente'.
+var TB_ADD='background:var(--azul);color:#fff;border:none;border-radius:100px;padding:8px 14px;font-weight:800;font-size:.8rem;cursor:pointer;font-family:var(--font-body);';
+var TB_Q='width:30px;height:30px;border-radius:50%;border:1.5px solid var(--azul);background:#fff;color:var(--azul);font-weight:900;font-size:1rem;cursor:pointer;line-height:1;';
+var TB_CANCEL='background:#fee2e2;color:#991b1b;border:none;border-radius:100px;padding:7px 14px;font-weight:800;font-size:.78rem;cursor:pointer;font-family:var(--font-body);margin-top:10px;';
+function esSocioTitular(){ return ((S.cred&&S.cred.mascotas)||[]).some(function(m){ return MC.coberturaMascota(m).ok; }); }
+function bloqueTienda(m){
+  return `<button class="tile" onclick="abrirTienda()">
+    <div class="t-ico">${icon('tienda')}</div>
+    <div class="t-body"><div class="t-title">Tienda MEDIPaw</div><div class="t-sub">Alimento, accesorios y más — con envío</div></div>
+    <span class="t-arrow">›</span>
+  </button>`;
+}
+function abrirTienda(){ S.sub='tienda'; S.tienda={ productos:null, pedidos:null, sub:'catalogo', busy:false, err:'', info:'' }; render(); cargarProductosTienda(); }
+async function cargarProductosTienda(){
+  try{
+    const snap=await db.collection('productos').where('estado','==','visible').get(); // el oculto no viaja
+    S.tienda.productos=snap.docs.map(d=>({id:d.id,...d.data()}));
+  }catch(e){ S.tienda.productos=[]; S.tienda.err='No pudimos cargar la tienda.'; }
+  if(S.sub==='tienda') tiendaView();
+}
+// ── Carrito (memoria) ──
+function carritoCant(){ return Object.keys(CARRITO).reduce((s,k)=>s+Number(CARRITO[k]||0),0); }
+function carritoLineas(){ const prods=(S.tienda&&S.tienda.productos)||[]; return Object.keys(CARRITO).map(pid=>({ prod:prods.find(p=>p.id===pid), cant:CARRITO[pid] })).filter(l=>l.prod&&l.cant>0); }
+function addCarrito(pid){ const prods=(S.tienda&&S.tienda.productos)||[]; const p=prods.find(x=>x.id===pid); if(!p)return; const stock=Number(p.stock||0); const cur=Number(CARRITO[pid]||0); if(cur>=stock){ toast('No hay más stock de '+(p.nombre||'')); return; } CARRITO[pid]=cur+1; tiendaView(); }
+function subCarrito(pid){ const cur=Number(CARRITO[pid]||0); if(cur<=1){ delete CARRITO[pid]; } else { CARRITO[pid]=cur-1; } tiendaView(); }
+// ── Router de la tienda ──
+function tiendaView(){ if(!S.tienda){ abrirTienda(); return; } if(S.tienda.sub==='checkout') return tiendaCheckoutView(); if(S.tienda.sub==='pedidos') return tiendaPedidosView(); return tiendaCatalogoView(); }
+function tiendaIrPedidos(){ S.tienda.sub='pedidos'; S.tienda.pedidos=null; tiendaView(); cargarMisPedidos(); }
+function tiendaIrCatalogo(){ S.tienda.sub='catalogo'; tiendaView(); }
+function tiendaIrCheckout(){ if(!carritoCant()){ toast('Tu carrito está vacío.'); return; } S.tienda.sub='checkout'; tiendaView(); }
+function tiendaCatalogoView(){
+  const back=`<button class="link-btn" style="margin-bottom:10px;display:inline-block;" onclick="volverHome()">‹ Volver</button>`;
+  const titulo=`<div class="stit" style="margin:4px 2px 8px;text-transform:none;font-size:1rem;">Tienda MEDIPaw</div>`;
+  const tabs=`<div style="margin-bottom:12px;"><button class="link-btn" style="font-weight:800;color:var(--azul);" onclick="tiendaIrPedidos()">Mis pedidos ›</button></div>`;
+  if(!S.tienda.productos){ document.getElementById('home').innerHTML = back+titulo+`<div class="seccion">${patitas('Cargando…')}</div>`; return; }
+  const err=S.tienda.err?`<p class="errmsg">${esc(S.tienda.err)}</p>`:'';
+  const socio=esSocioTitular();
+  const prods=S.tienda.productos;
+  if(!prods.length){ document.getElementById('home').innerHTML = back+titulo+tabs+err+`<div class="seccion"><p style="font-size:.85rem;color:var(--suave);">Estamos sumando productos.</p></div>`; return; }
+  const hayDesc = !socio && prods.some(p=>p.precioSocio!=null&&p.precioSocio!==''&&Number(p.precioSocio)>0);
+  const banner = hayDesc ? `<div class="seccion" style="background:var(--ambar-suave);border:1px solid #f0d9ac;margin-bottom:12px;"><div style="font-size:.82rem;color:#8a5a00;font-weight:700;display:flex;align-items:center;gap:6px;">${icon('candado')} Con el plan activo de tu mascota pagás el precio socio.</div></div>` : '';
+  const porCat={};
+  prods.forEach(p=>{ const cat=p.categoria||'otros'; (porCat[cat]=porCat[cat]||[]).push(p); });
+  const cuerpo=Object.keys(porCat).sort((a,b)=>a.localeCompare(b)).map(cat=>{
+    const cards=porCat[cat].slice().sort((a,b)=>String(a.nombre||'').localeCompare(String(b.nombre||''))).map(p=>tiendaCard(p,socio)).join('');
+    return `<div class="stit" style="margin:10px 2px 6px;text-transform:capitalize;font-size:.85rem;">${esc(cat)}</div>${cards}`;
+  }).join('');
+  document.getElementById('home').innerHTML = back+titulo+tabs+banner+err+cuerpo+barraCarrito();
+}
+function tiendaCard(p, socio){
+  const precio=Number(p.precio||0);
+  const soc=(p.precioSocio!=null&&p.precioSocio!=='')?Number(p.precioSocio):null;
+  const sinStock=Number(p.stock||0)<=0;
+  let precioHTML;
+  if(socio){ const ap=MC.precioAplicado(p,true); precioHTML=`<span style="font-weight:900;color:var(--azul);">$${ap.toLocaleString('es-AR')}</span>${(soc!=null&&soc>0)?`<span style="font-size:.68rem;color:var(--verde);font-weight:800;margin-left:6px;">precio socio</span>`:''}`; }
+  else { precioHTML=`<span style="font-weight:900;color:var(--noche);">$${precio.toLocaleString('es-AR')}</span>${(soc!=null&&soc>0)?`<span style="font-size:.72rem;color:#8a5a00;font-weight:800;margin-left:6px;">· con plan activo: $${soc.toLocaleString('es-AR')}</span>`:''}`; }
+  const enCarrito=Number(CARRITO[p.id]||0);
+  const foto = p.foto ? `<img src="${esc(p.foto)}" style="width:56px;height:56px;border-radius:12px;object-fit:cover;flex-shrink:0;">` : `<div style="width:56px;height:56px;border-radius:12px;background:var(--azul-pale);display:flex;align-items:center;justify-content:center;color:var(--azul);flex-shrink:0;">${icon('tienda')}</div>`;
+  const ctrl = sinStock
+    ? `<span style="font-size:.72rem;color:var(--rojo);font-weight:800;">Sin stock</span>`
+    : (enCarrito>0
+        ? `<div style="display:inline-flex;align-items:center;gap:10px;"><button style="${TB_Q}" onclick="subCarrito('${p.id}')">−</button><b>${enCarrito}</b><button style="${TB_Q}" onclick="addCarrito('${p.id}')">+</button></div>`
+        : `<button style="${TB_ADD}" onclick="addCarrito('${p.id}')">Agregar</button>`);
+  return `<div style="background:white;border:1px solid rgba(26,95,180,.08);border-radius:14px;padding:12px;margin-bottom:10px;display:flex;gap:12px;align-items:center;">
+    ${foto}
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:.92rem;font-weight:800;color:var(--noche);">${esc(p.nombre||'—')}</div>
+      ${p.descripcion?`<div style="font-size:.74rem;color:var(--suave);">${esc(p.descripcion)}</div>`:''}
+      <div style="font-size:.9rem;margin-top:4px;">${precioHTML}</div>
+    </div>
+    <div style="flex-shrink:0;">${ctrl}</div>
+  </div>`;
+}
+function barraCarrito(){
+  const cant=carritoCant(); if(!cant) return '';
+  const ped=MC.armarPedido(carritoLineas(), esSocioTitular());
+  return `<div style="position:sticky;bottom:10px;margin-top:14px;background:var(--noche);color:#fff;border-radius:16px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 12px 30px rgba(13,27,62,.3);">
+    <div><div style="font-size:.7rem;opacity:.7;">${cant} ${cant===1?'producto':'productos'}</div><div style="font-size:1.1rem;font-weight:900;">$${ped.total.toLocaleString('es-AR')}</div></div>
+    <button class="btn-primary" style="width:auto;padding:11px 18px;" onclick="tiendaIrCheckout()">Ir al checkout</button>
+  </div>`;
+}
+function tiendaCheckoutView(){
+  const back=`<button class="link-btn" style="margin-bottom:10px;display:inline-block;" onclick="tiendaIrCatalogo()">‹ Seguir comprando</button>`;
+  const titulo=`<div class="stit" style="margin:4px 2px 8px;text-transform:none;font-size:1rem;">Checkout</div>`;
+  const lineas=carritoLineas();
+  if(!lineas.length){ S.tienda.sub='catalogo'; return tiendaView(); }
+  const ped=MC.armarPedido(lineas, esSocioTitular());
+  const items=ped.items.map(it=>`<div style="display:flex;justify-content:space-between;font-size:.85rem;padding:6px 0;border-bottom:1px solid var(--linea);"><span>${esc(it.nombre)} ×${it.cant}</span><b>$${(it.precioAplicado*it.cant).toLocaleString('es-AR')}</b></div>`).join('');
+  const u=(S.cred&&S.cred.u)||{};
+  const cuerpo=`<div class="seccion">
+    <div class="stit" style="font-size:.8rem;">Tu pedido</div>${items}
+    <div style="display:flex;justify-content:space-between;font-size:1.05rem;font-weight:900;margin-top:8px;"><span>Total</span><span>$${ped.total.toLocaleString('es-AR')}</span></div>
+  </div>
+  <div class="seccion">
+    <div class="stit" style="font-size:.8rem;">Entrega (Pergamino)</div>
+    <input type="text" id="tiendaDireccion" class="input-field" placeholder="Dirección *" value="${esc(u.direccion||'')}">
+    <input type="tel" id="tiendaTelefono" class="input-field" style="margin-top:8px;" placeholder="Teléfono *" value="${esc(u.telefono||'')}">
+  </div>
+  <div class="seccion">
+    <div class="stit" style="font-size:.8rem;">Pago</div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:.9rem;font-weight:700;"><input type="radio" name="tiendaMetodo" value="efectivo" checked> Efectivo contra entrega</label>
+    <label style="display:flex;align-items:center;gap:8px;font-size:.9rem;color:var(--tenue);margin-top:6px;"><input type="radio" disabled> MercadoPago <span style="font-size:.72rem;">(próximamente)</span></label>
+  </div>
+  <p id="tiendaCheckoutMsg" class="errmsg"></p>
+  <button class="btn-primary" onclick="confirmarPedido()" ${S.tienda.busy?'disabled':''}>${S.tienda.busy?'Enviando…':'Confirmar pedido'}</button>`;
+  document.getElementById('home').innerHTML = back+titulo+cuerpo;
+}
+async function confirmarPedido(){
+  const dir=v('tiendaDireccion'), tel=v('tiendaTelefono');
+  setErr('tiendaCheckoutMsg','');
+  if(!dir){ setErr('tiendaCheckoutMsg','Completá la dirección de entrega.'); return; }
+  if(!tel){ setErr('tiendaCheckoutMsg','Completá el teléfono.'); return; }
+  const lineas=carritoLineas();
+  if(!lineas.length){ setErr('tiendaCheckoutMsg','Tu carrito está vacío.'); return; }
+  const ped=MC.armarPedido(lineas, esSocioTitular()); // snapshot de precios (núcleo, fuente única)
+  const uid=S.cred.u.uid;
+  S.tienda.busy=true; tiendaCheckoutView();
+  try{
+    await db.collection('pedidos').add({
+      titularUid:uid, items:ped.items, total:ped.total,
+      entrega:{ direccion:dir, telefono:tel }, metodo:'efectivo',
+      estado:'nuevo', pago:'pendiente', creadoEn:TS(), actualizadoEn:TS()
+    });
+    CARRITO={}; S.tienda.busy=false; S.tienda.sub='pedidos'; S.tienda.pedidos=null;
+    celebrar(); toast('¡Pedido enviado! Te contactamos para coordinar la entrega.');
+    tiendaView(); cargarMisPedidos();
+  }catch(e){ S.tienda.busy=false; setErr('tiendaCheckoutMsg','No pudimos enviar el pedido: '+e.message); tiendaCheckoutView(); }
+}
+// ── Mis pedidos (AMBOS ejes visibles) ──
+var PED_EST_LABEL={ nuevo:'Nuevo', confirmado:'Confirmado', en_camino:'En camino', entregado:'Entregado', cancelado:'Cancelado' };
+var PED_EST_COLOR={ nuevo:'#0369a1', confirmado:'#7c3aed', en_camino:'#d97706', entregado:'#166534', cancelado:'#9ca3af' };
+async function cargarMisPedidos(){
+  const uid=(S.cred&&S.cred.u)?S.cred.u.uid:null;
+  if(!uid){ S.tienda.pedidos=[]; return tiendaPedidosView(); }
+  try{
+    const snap=await db.collection('pedidos').where('titularUid','==',uid).get(); // la regla exige titularUid en el where
+    S.tienda.pedidos=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>tms(b.creadoEn)-tms(a.creadoEn));
+  }catch(e){ S.tienda.pedidos=[]; S.tienda.err='No pudimos cargar tus pedidos.'; }
+  if(S.sub==='tienda') tiendaPedidosView();
+}
+function tiendaPedidosView(){
+  const back=`<button class="link-btn" style="margin-bottom:10px;display:inline-block;" onclick="tiendaIrCatalogo()">‹ Volver a la tienda</button>`;
+  const titulo=`<div class="stit" style="margin:4px 2px 8px;text-transform:none;font-size:1rem;">Mis pedidos</div>`;
+  if(!S.tienda.pedidos){ document.getElementById('home').innerHTML = back+titulo+`<div class="seccion">${patitas('Cargando…')}</div>`; return; }
+  const peds=S.tienda.pedidos;
+  if(!peds.length){ document.getElementById('home').innerHTML = back+titulo+`<div class="seccion"><p style="font-size:.85rem;color:var(--suave);">Todavía no hiciste pedidos.</p></div>`; return; }
+  const cuerpo=peds.map(p=>{
+    const est=p.estado||'nuevo'; const ecol=PED_EST_COLOR[est]||'#5a6a8a'; const pagoAcred=p.pago==='acreditado';
+    const items=(p.items||[]).map(it=>`${esc(it.nombre||'')} ×${Number(it.cant||1)}`).join(' · ');
+    const consumada=MC.ventaConsumada(p);
+    return `<div style="background:white;border:1px solid rgba(26,95,180,.08);border-radius:14px;padding:12px 14px;margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+        <div style="font-size:.74rem;color:var(--suave);flex:1;min-width:0;">${esc(items)}</div>
+        <div style="font-size:1rem;font-weight:900;flex-shrink:0;">$${Number(p.total||0).toLocaleString('es-AR')}</div>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center;">
+        <span style="background:${ecol};color:#fff;font-size:.65rem;font-weight:800;padding:3px 9px;border-radius:100px;">${esc(PED_EST_LABEL[est]||est)}</span>
+        <span style="background:${pagoAcred?'#dcfce7':'#f3f4f6'};color:${pagoAcred?'#166534':'#6b7280'};font-size:.65rem;font-weight:800;padding:3px 9px;border-radius:100px;">Pago: ${pagoAcred?'acreditado':'pendiente'}</span>
+        ${consumada?`<span style="background:var(--azul);color:#fff;font-size:.62rem;font-weight:800;padding:3px 9px;border-radius:100px;">Entregado y pagado</span>`:''}
+      </div>
+      ${est==='nuevo'?`<button style="${TB_CANCEL}" onclick="cancelarMiPedido('${p.id}')">Cancelar pedido</button>`:''}
+    </div>`;
+  }).join('');
+  document.getElementById('home').innerHTML = back+titulo+cuerpo;
+}
+async function cancelarMiPedido(id){
+  try{ await db.collection('pedidos').doc(id).update({ estado:'cancelado', actualizadoEn:TS() }); toast('Pedido cancelado.'); }
+  catch(e){ toast('No pudimos cancelar: '+e.message); }
+  S.tienda.pedidos=null; cargarMisPedidos();
 }
 
 // 9) [Bloque de instalación PWA quitado del home (2026-07-29): se removió el cluster completo (el builder del bloque,

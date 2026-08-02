@@ -10,7 +10,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
-<script src="/lib/medipaw-core.js?v=20260802d"></script>
+<script src="/lib/medipaw-core.js?v=20260802e"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -2550,9 +2550,17 @@ async function cambiarEstadoProducto(id,estado){ try{ await db.collection('produ
 async function eliminarProducto(id){ if(!confirm('¿Eliminar este producto?'))return; try{ await db.collection('productos').doc(id).delete(); }catch(e){} cargarProductosAdmin(); }
 
 // ── COLA DE PEDIDOS (admin) — transiciones de estado + cancelación ──
+// DOS EJES: estado (logística) + pago. El STOCK lo mueve el ADMIN al despachar (en_camino baja · cancelar-desde-en_camino
+// reingresa · entregado no toca — ya bajó). En EFECTIVO, entregar ACREDITA el pago en el mismo acto. Todo en un batch atómico.
 var PEDIDO_SIGUIENTE={ nuevo:'confirmado', confirmado:'en_camino', en_camino:'entregado' };
 var PEDIDO_LABEL={ nuevo:'Nuevo', confirmado:'Confirmado', en_camino:'En camino', entregado:'Entregado', cancelado:'Cancelado' };
 var PEDIDO_COLOR={ nuevo:'#0369a1', confirmado:'#7c3aed', en_camino:'#d97706', entregado:'#166534', cancelado:'#9ca3af' };
+function efectoLabel(estadoDe, estadoA, metodo){
+  const ef=MC.efectoStock(estadoDe, estadoA); let t='→ '+(PEDIDO_LABEL[estadoA]||estadoA);
+  if(ef==='baja') t+=' (baja stock)'; else if(ef==='reingreso') t+=' (reingresa stock)';
+  if(estadoA==='entregado' && metodo==='efectivo') t+=' · cobra';
+  return t;
+}
 async function cargarPedidosAdmin(){
   const lista=document.getElementById('listaPedidos'); if(!lista)return;
   lista.innerHTML='<p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p>';
@@ -2561,27 +2569,51 @@ async function cargarPedidosAdmin(){
     if(snap.empty){ lista.innerHTML='<p style="color:#5a6a8a;font-size:.85rem;">No hay pedidos.</p>'; return; }
     lista.innerHTML=snap.docs.map(d=>{
       const p=d.data(); const est=p.estado||'nuevo'; const col=PEDIDO_COLOR[est]||'#5a6a8a';
+      const metodo=p.metodo||'efectivo'; const pagoAcred=p.pago==='acreditado';
       const items=(p.items||[]).map(it=>`${esc(it.nombre||'')} ×${Number(it.cant||1)} — $${(Number(it.precioAplicado||0)*Number(it.cant||1)).toLocaleString('es-AR')}`).join('<br>');
-      const ent=p.entrega||{}; const sig=PEDIDO_SIGUIENTE[est];
+      const ent=p.entrega||{}; const sig=PEDIDO_SIGUIENTE[est]; const consumada=MC.ventaConsumada(p);
       return `<div class="uitem">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
           <div style="flex:1;">
             <div style="font-size:.82rem;color:#5a6a8a;">${esc(ent.direccion||'(sin dirección)')}${ent.telefono?' · '+esc(ent.telefono):''}</div>
             <div style="font-size:.8rem;margin-top:6px;">${items||'(sin items)'}</div>
-            <div style="font-size:.9rem;font-weight:800;margin-top:6px;">Total $${Number(p.total||0).toLocaleString('es-AR')} · ${esc((p.metodo||'').toUpperCase())}</div>
+            <div style="font-size:.9rem;font-weight:800;margin-top:6px;">Total $${Number(p.total||0).toLocaleString('es-AR')} · ${esc(metodo.toUpperCase())}</div>
           </div>
-          <span style="background:${col};color:white;font-size:.65rem;font-weight:700;padding:3px 9px;border-radius:100px;white-space:nowrap;flex-shrink:0;">${(PEDIDO_LABEL[est]||est).toUpperCase()}</span>
+          <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0;">
+            <span style="background:${col};color:white;font-size:.62rem;font-weight:800;padding:3px 9px;border-radius:100px;white-space:nowrap;">${(PEDIDO_LABEL[est]||est).toUpperCase()}</span>
+            <span style="background:${pagoAcred?'#dcfce7':'#fef3c7'};color:${pagoAcred?'#166534':'#92400e'};font-size:.62rem;font-weight:800;padding:3px 9px;border-radius:100px;white-space:nowrap;">PAGO: ${pagoAcred?'ACREDITADO':'PENDIENTE'}</span>
+            ${consumada?`<span style="background:#1A5FB4;color:white;font-size:.58rem;font-weight:800;padding:2px 8px;border-radius:100px;">✓ VENTA</span>`:''}
+          </div>
         </div>
         <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
-          ${sig?`<button onclick="avanzarPedido('${d.id}','${sig}')" class="bmini bverde">→ ${PEDIDO_LABEL[sig]}</button>`:''}
-          ${(est!=='entregado'&&est!=='cancelado')?`<button onclick="cancelarPedidoAdmin('${d.id}')" class="bmini brojo">Cancelar</button>`:''}
+          ${sig?`<button onclick="transicionarPedido('${d.id}','${sig}')" class="bmini bverde">${efectoLabel(est,sig,metodo)}</button>`:''}
+          ${(est!=='entregado'&&est!=='cancelado')?`<button onclick="transicionarPedido('${d.id}','cancelado')" class="bmini brojo">Cancelar${MC.efectoStock(est,'cancelado')==='reingreso'?' (reingresa stock)':''}</button>`:''}
         </div>
       </div>`;
     }).join('');
   }catch(e){ lista.innerHTML='<p style="color:#ef4444;">Error: '+e.message+'</p>'; }
 }
-async function avanzarPedido(id,estado){ try{ await db.collection('pedidos').doc(id).update({estado, actualizadoEn:TS()}); toast('Pedido → '+(PEDIDO_LABEL[estado]||estado)+'.'); }catch(e){ toast('Error: '+e.message); } cargarPedidosAdmin(); }
-async function cancelarPedidoAdmin(id){ if(!confirm('¿Cancelar este pedido?'))return; try{ await db.collection('pedidos').doc(id).update({estado:'cancelado', actualizadoEn:TS()}); }catch(e){} cargarPedidosAdmin(); }
+async function transicionarPedido(id, estadoNuevo){
+  try{
+    const ref=db.collection('pedidos').doc(id);
+    const snap=await ref.get(); if(!snap.exists)return; const p=snap.data();
+    const estadoDe=p.estado||'nuevo'; const metodo=p.metodo||'efectivo';
+    const ef=MC.efectoStock(estadoDe, estadoNuevo);
+    if(estadoNuevo==='cancelado' && !confirm('¿Cancelar el pedido?'+(ef==='reingreso'?' El stock reingresa.':''))) return;
+    if(estadoNuevo==='entregado' && metodo==='efectivo' && !confirm('¿Marcar ENTREGADO? En efectivo esto ACREDITA el pago en el mismo acto.')) return;
+    const batch=db.batch();
+    if(ef!=='nada'){
+      const signo = ef==='baja' ? -1 : 1;
+      (p.items||[]).forEach(it=>{ if(it.productoId){ batch.update(db.collection('productos').doc(it.productoId), { stock: firebase.firestore.FieldValue.increment(signo*Number(it.cant||1)), actualizadoEn:TS() }); } });
+    }
+    const upd={ estado:estadoNuevo, actualizadoEn:TS() };
+    if(estadoNuevo==='entregado' && metodo==='efectivo') upd.pago='acreditado'; // entregar = cobrar (efectivo), un solo acto
+    batch.update(ref, upd);
+    await batch.commit();
+    toast('Pedido → '+(PEDIDO_LABEL[estadoNuevo]||estadoNuevo)+(ef==='baja'?' · stock bajó':ef==='reingreso'?' · stock reingresó':'')+((estadoNuevo==='entregado'&&metodo==='efectivo')?' · pago acreditado':''));
+  }catch(e){ toast('Error: '+e.message); }
+  cargarPedidosAdmin();
+}
 
 // ══════════════════════════════════════════════
 // ══  RENDER PRINCIPAL (por rol activo)        ══

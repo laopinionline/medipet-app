@@ -213,6 +213,20 @@ eq(C.armarPedido([{ prod: prodB, cant: 0 }], false).items[0].cant, 1, 'cant < 1 
 eq(C.armarPedido([{ prod: prodB, cant: 2.7 }], false).items[0].cant, 2, 'cant se piso a entero');
 check(C.CATEGORIAS_TIENDA.indexOf('alimento') >= 0 && C.ESTADOS_PEDIDO[0] === 'nuevo' && C.METODOS_PAGO.indexOf('efectivo') >= 0, 'constantes de tienda expuestas');
 
+console.log('\n— TIENDA dos ejes (F2): efecto stock + venta consumada —');
+eq(C.ESTADOS_PAGO, ['pendiente', 'acreditado'], 'estados de pago');
+eq(C.efectoStock('confirmado', 'en_camino'), 'baja', 'stock: → en_camino baja');
+eq(C.efectoStock('en_camino', 'cancelado'), 'reingreso', 'stock: en_camino → cancelado reingresa');
+eq(C.efectoStock('en_camino', 'confirmado'), 'reingreso', 'stock: en_camino → atrás (vuelve) reingresa');
+eq(C.efectoStock('en_camino', 'entregado'), 'nada', 'stock: en_camino → entregado NO toca (ya bajó)');
+eq(C.efectoStock('nuevo', 'confirmado'), 'nada', 'stock: crear/confirmar NO reservan');
+eq(C.efectoStock('nuevo', 'cancelado'), 'nada', 'stock: cancelar un nuevo (nunca salió) NO reingresa');
+eq(C.efectoStock('en_camino', 'en_camino'), 'nada', 'stock: no-op mismo estado');
+check(C.ventaConsumada({ estado: 'entregado', pago: 'acreditado' }) === true, 'venta consumada = entregado + acreditado');
+check(C.ventaConsumada({ estado: 'entregado', pago: 'pendiente' }) === false, 'entregado sin acreditar → NO consumada');
+check(C.ventaConsumada({ estado: 'en_camino', pago: 'acreditado' }) === false, 'pagado (MP) pero no entregado → NO consumada');
+check(C.ventaConsumada(null) === false, 'sin pedido → NO consumada');
+
 console.log('\n———');
 console.log((fail === 0 ? '✓ TODO EN VERDE' : '✗ HAY FALLOS') + ' — ' + ok + ' ok, ' + fail + ' fallos');
 process.exit(fail === 0 ? 0 : 1);

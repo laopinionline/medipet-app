@@ -250,12 +250,15 @@ service cloud.firestore {
     // comprar: items[]/total se congelan al crear (como el comprobante). ⚠️ RIESGO ACEPTADO (F1): el total lo trae el
     // cliente y NO se revalida contra `productos` en la regla (Firestore no suma arrays); el ADMIN lo AUDITA al
     // CONFIRMAR (estado 'nuevo' no dispara nada; pago contra-entrega, sin cobro automático). Se endurece a endpoint
-    // del VPS (Admin SDK) en Fase 3 (MP). El create valida SHAPE: dueño real + estado inicial 'nuevo' + total/items
-    // presentes + método válido. Los estados los maneja el ADMIN; el titular solo puede CANCELAR un pedido 'nuevo'.
+    // del VPS (Admin SDK) en Fase 3 (MP). DOS EJES INDEPENDIENTES (F2): `estado` (logística) + `pago` (pendiente|
+    // acreditado). El create valida SHAPE: dueño real + `estado=='nuevo'` + `pago=='pendiente'` + total/items presentes
+    // + método válido. Los DOS ejes los maneja el ADMIN (acreditar = solo admin; en efectivo acredita al entregar). El
+    // titular solo puede CANCELAR un pedido 'nuevo'. El STOCK lo mueve el admin en `productos` (write=admin) al despachar.
     match /pedidos/{id} {
       allow create: if request.auth != null
         && request.resource.data.titularUid == request.auth.uid
         && request.resource.data.estado == 'nuevo'
+        && request.resource.data.pago == 'pendiente'
         && request.resource.data.total is number
         && request.resource.data.items is list
         && request.resource.data.items.size() > 0
