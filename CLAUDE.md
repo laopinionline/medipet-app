@@ -23,10 +23,12 @@ proyecto Firebase `medipet-c3a4d`. Prod: VPS 186.148.233.122 (Nginx + Cloudflare
    los MISMOS strings y valores. Si cambiás `PRECIOS` o el mapeo edad→plan, **cambialo en el núcleo Y en las reglas**.
    Strings exactos (con tilde): `MEDIPaw Urgencias` 23988 · `MEDIPaw Básico` 40000 · `MEDIPaw Joven` 58788 ·
    `MEDIPaw Adulto` 54388 · `MEDIPaw Senior` 70788.
-4. **Alta = embudo; el SISTEMA fija plan/cuota por especie + `edadAprox`.** El titular NO los elige. La regla
-   `mascotas` create revalida `plan==planEsperadoR` y `cuota==precioDeR`. Especies: perro/gato/ave/otros. Buckets:
-   cachorro/joven/adulto/mayor (cachorro→Joven, joven+adulto→Adulto, mayor→Senior; ave/otros→Básico). La mascota
-   del titular nace **activa**; la fecha exacta es OPCIONAL (solo refina el recálculo, no decide el plan).
+4. **Alta = embudo; el SISTEMA fija plan/cuota por especie + `edadAprox`.** El titular NO los elige. **Freemium (F4):
+   la mascota del titular nace `free`** (`plan:'Sin definir'`, `cuota:0`); el plan/cuota REALES los asigna el ADMIN al
+   ACTIVAR, por especie/edad (`planPorEdadAprox`, rama `isAdmin`). Especies: perro/gato/ave/otros. Buckets:
+   cachorro/joven/adulto/mayor (**cachorro/joven→Joven, adulto→Adulto, mayor→Senior**; ave/otros→Básico). Las reglas
+   `planEsperadoR`/`precioDeR` REPLICAN ese mapeo (hoy sin uso en el create free, pero **se mantienen sincronizadas con
+   el núcleo** — invariante #3). La fecha exacta es OPCIONAL (solo refina el recálculo, no decide el plan).
    ⚠️ RIESGO ACEPTADO: la edad la declara el titular (puede sub-declarar); lo audita el admin.
 5. **Asimetría N3 (INVIOLABLE).** Lo clínico interno (prioridad, notas del vet) vive en `casos_clinico` = **solo
    staff**. El titular NUNCA lo lee. Split de colecciones: `casos` (titular-safe) + `casos_clinico` (staff). Al

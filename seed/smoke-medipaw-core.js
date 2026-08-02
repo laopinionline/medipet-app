@@ -36,13 +36,23 @@ check(C.planEnCatalogo('MEDIPaw Básico') === true, 'planEnCatalogo reconoce Bá
 check(C.especieValida('perro') && C.especieValida('gato') && C.especieValida('ave') && C.especieValida('otros'), 'las 4 especies válidas');
 check(C.especieValida('pez') === false, 'especie fuera de lista → inválida');
 // ASIGNACIÓN POR EDAD APROXIMADA (bucket) — lo que maneja el plan y lo que valida la regla.
+// MATRIZ COMPLETA especie×edad → plan (fuente única; embudo Y activación admin usan MC.planPorEdadAprox).
+// Mapeo corregido: perro/gato cachorro/joven→Joven · adulto→Adulto · mayor→Senior · ave/otros→Básico (cualquier edad).
 eq(C.EDADES_APROX, ['cachorro','joven','adulto','mayor'], '4 buckets de edad');
-eq(C.planPorEdadAprox('perro', 'cachorro'), 'MEDIPaw Joven', 'perro cachorro → Joven');
-eq(C.planPorEdadAprox('gato', 'joven'), 'MEDIPaw Adulto', 'gato joven → Adulto');
-eq(C.planPorEdadAprox('perro', 'adulto'), 'MEDIPaw Adulto', 'perro adulto → Adulto');
-eq(C.planPorEdadAprox('gato', 'mayor'), 'MEDIPaw Senior', 'gato mayor → Senior');
-eq(C.planPorEdadAprox('ave', 'adulto'), 'MEDIPaw Básico', 'ave → Básico (sin importar edad)');
-eq(C.planPorEdadAprox('otros', 'cachorro'), 'MEDIPaw Básico', 'otros → Básico');
+var MATRIZ_PLAN = {
+  perro: { cachorro: 'MEDIPaw Joven', joven: 'MEDIPaw Joven', adulto: 'MEDIPaw Adulto', mayor: 'MEDIPaw Senior' },
+  gato:  { cachorro: 'MEDIPaw Joven', joven: 'MEDIPaw Joven', adulto: 'MEDIPaw Adulto', mayor: 'MEDIPaw Senior' },
+  ave:   { cachorro: 'MEDIPaw Básico', joven: 'MEDIPaw Básico', adulto: 'MEDIPaw Básico', mayor: 'MEDIPaw Básico' },
+  otros: { cachorro: 'MEDIPaw Básico', joven: 'MEDIPaw Básico', adulto: 'MEDIPaw Básico', mayor: 'MEDIPaw Básico' },
+};
+Object.keys(MATRIZ_PLAN).forEach(function (esp) {
+  C.EDADES_APROX.forEach(function (ed) {
+    eq(C.planPorEdadAprox(esp, ed), MATRIZ_PLAN[esp][ed], 'matriz: ' + esp + ' ' + ed + ' → ' + MATRIZ_PLAN[esp][ed]);
+  });
+});
+// Caso Luna (referencia del bug): gato joven → MEDIPaw Joven $58.788 (NO Adulto).
+eq(C.planPorEdadAprox('gato', 'joven'), 'MEDIPaw Joven', 'Luna: gato joven → Joven (no Adulto)');
+eq(C.planCuota(C.planPorEdadAprox('gato', 'joven')), 58788, 'Luna: cuota gato joven = $58.788');
 eq(C.planCuota(C.planPorEdadAprox('perro', 'mayor')), 70788, 'cuota del plan asignado (Senior)');
 // EDAD EXACTA (opcional) — solo para el recálculo cuando hay fecha real.
 var now = 1000 * 365.25 * 24 * 3600 * 1000;

@@ -16,7 +16,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
-<script src="/lib/medipaw-core.js?v=20260802a"></script>
+<script src="/lib/medipaw-core.js?v=20260802b"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -486,7 +486,7 @@ function altaView(){
       <div class="seccion" style="background:var(--azul-pale);margin:10px 0;">
         <div style="font-size:.72rem;color:var(--suave);text-transform:uppercase;letter-spacing:1px;">Plan asignado por ${a.especie==='perro'||a.especie==='gato'?('edad ('+ (p?p.franja:'') +')'):'especie'}</div>
         <div style="font-size:1.2rem;font-weight:900;color:var(--azul);">${p?esc(p.plan):'—'}</div>
-        <div style="font-weight:800;">$${p?p.cuota.toLocaleString('es-AR'):'—'}/mes · cobertura activa</div>
+        <div style="font-weight:800;">$${p?p.cuota.toLocaleString('es-AR'):'—'}/mes · este es el plan que vas a poder activar</div>
       </div>
       <div style="font-size:.82rem;color:var(--texto);">${esc(a.nombre)} · ${ESPECIE_LABEL[a.especie]||''} · ${esc(a.raza)} · ${a.sexo==='macho'?'macho':'hembra'} · ${esc(a.peso)} kg</div>
       <p style="font-size:.72rem;color:var(--suave);margin-top:6px;">El plan lo asigna MEDIPaw según especie y edad. No se elige a mano.</p>`;

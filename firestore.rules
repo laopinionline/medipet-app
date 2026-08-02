@@ -29,7 +29,7 @@ service cloud.firestore {
     //    es opcional y NO decide el plan (solo refina el recálculo). Sin math de request.time → sin bordes. ──
     function planEsperadoR(data) {
       return (data.especie == 'perro' || data.especie == 'gato')
-        ? (data.edadAprox == 'cachorro' ? 'MEDIPaw Joven'
+        ? ((data.edadAprox == 'cachorro' || data.edadAprox == 'joven') ? 'MEDIPaw Joven'
            : (data.edadAprox == 'mayor' ? 'MEDIPaw Senior' : 'MEDIPaw Adulto'))
         : 'MEDIPaw Básico';
     }
