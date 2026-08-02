@@ -68,6 +68,20 @@ console.log('2b) Desdoble consulta: consultaGuardia (sin límite en los 5 planes
   eq(MC.reglaCobertura('consulta', 'MEDIPaw Adulto'), null, "'consulta' legacy fuera del catálogo (desdoblada)");
 }
 
+// ── 2c) Estados free/activo/legacy (Fase 4): free NO cubre y lleva flag; legacy "Sin definir" ≠ free ──
+console.log('2c) Estados: free vs activo vs legacy "Sin definir":');
+{
+  const free = MC.coberturaMascota({ estado: 'free', plan: 'Sin definir' });
+  eq(free.ok, false, 'free → sin cobertura');
+  eq(free.free, true, 'free → flag free:true (para el UI)');
+  const activo = MC.coberturaMascota({ estado: 'activo', plan: 'MEDIPaw Joven' });
+  eq(activo.ok, true, 'activo + plan del catálogo → cobertura');
+  const legacy = MC.coberturaMascota({ estado: 'activo', plan: 'Sin definir' });
+  eq(legacy.ok, false, 'legacy "Sin definir" (activo) → sin cobertura');
+  ok(!legacy.free, 'legacy "Sin definir" NO es free (Valentin/Rocco intactos)', 'free=' + legacy.free);
+  eq(legacy.chip, 'Sin plan', 'legacy → chip "Sin plan" (no "Free")');
+}
+
 // ── 3) Senior con tope distinto (periodontal: Adulto $60.000 vs Senior $80.000) ──
 console.log('3) Senior con tope distinto (periodontal 60k vs 80k):');
 {

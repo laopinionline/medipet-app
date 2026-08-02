@@ -10,7 +10,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
-<script src="/lib/medipaw-core.js?v=20260728a"></script>
+<script src="/lib/medipaw-core.js?v=20260802a"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -697,7 +697,15 @@ async function cambiarPlanMascota(uid, index, nuevoPlan) {
   } catch(e) { alert('Error al cambiar plan: ' + e.message); }
 }
 
-// F0.5: control de COBERTURA por mascota (admin). Setea estado + cuota en el doc de la colección.
+// F0.5 + FREEMIUM (Fase 4): control de COBERTURA por mascota (admin). Al ACTIVAR una mascota FREE (o sin plan de
+// catálogo), el SISTEMA le asigna plan+cuota por especie/edad (invariante #4: el titular nunca eligió plan; ni lo
+// trajo) y crea el primer punto de la serie de peso desde `pesoInicial` (el embudo free lo guardó porque las reglas
+// le bloquean el peso al titular free). Suspender/baja NO tocan el plan (para reactivar con el mismo).
+function planParaActivar(m){
+  if(!m) return 'MEDIPaw Básico';
+  if(m.especie && m.fechaNacimiento && m.fechaNacimiento.toMillis) return MC.planPorEspecieEdad(m.especie, m.fechaNacimiento.toMillis(), Date.now());
+  return MC.planPorEdadAprox(m.especie, m.edadAprox); // free siempre trae edadAprox (embudo)
+}
 async function cambiarEstadoMascota(mascotaId, estado) {
   if (!mascotaId) return;
   try {
@@ -705,11 +713,35 @@ async function cambiarEstadoMascota(mascotaId, estado) {
     const cur = await ref.get();
     if (!cur.exists) { alert('Esa mascota todavía no está en la colección (activá al titular primero).'); return; }
     const m = cur.data();
-    await ref.set({ estado, cuota: estado==='activo' ? MC.planCuota(m.plan) : 0 }, { merge: true });
-    // Reflejar el estado a la ficha pública si tiene token.
-    if (m.token) { try { await db.collection('mascotas_publicas').doc(m.token).update({ estado }); } catch(e) {} }
+    const upd = { estado };
+    if (estado === 'activo') {
+      const plan = MC.planEnCatalogo(m.plan) ? m.plan : planParaActivar(m); // free/'Sin definir' → plan por especie/edad
+      upd.plan = plan; upd.cuota = MC.planCuota(plan);
+      if (!Array.isArray(m.servicios) || !m.servicios.length) upd.servicios = MC.plantillaServicios();
+    } else {
+      upd.cuota = 0;
+    }
+    await ref.set(upd, { merge: true });
+    // Primer punto de peso desde pesoInicial (una sola vez, solo al activar). El titular free no pudo cargarlo (reglas).
+    if (estado === 'activo' && Number(m.pesoInicial) > 0) {
+      try {
+        const yaHay = await db.collection('pesos').where('mascotaId','==',mascotaId).limit(1).get();
+        if (yaHay.empty) await db.collection('pesos').add({ mascotaId, titularUid: m.titularUid||'', peso: Number(m.pesoInicial), fecha: TS(), origen: 'activacion' });
+      } catch(e) { /* no bloquea la activación */ }
+    }
+    // Reflejar estado (y plan si se asignó) a la ficha pública si tiene token.
+    if (m.token) { try { await db.collection('mascotas_publicas').doc(m.token).update({ estado, plan: upd.plan || m.plan }); } catch(e) {} }
     cargarUsuariosAdmin();
+    if (typeof cargarDashboard === 'function' && document.getElementById('dashboard-content')) { try { cargarDashboard(); } catch(e){} }
   } catch(e) { alert('Error al cambiar estado: ' + e.message); }
+}
+// FREEMIUM: activar directamente desde una solicitud tipo 'activacion' (reusa cambiarEstadoMascota → plan por
+// especie/edad + estado activo + primer peso) y marca la solicitud resuelta.
+async function activarDesdeSolicitud(solicitudId, mascotaId){
+  if(!mascotaId){ alert('La solicitud no tiene mascota asociada.'); return; }
+  await cambiarEstadoMascota(mascotaId, 'activo');
+  try { await db.collection('solicitudes').doc(solicitudId).update({ estado:'resuelta', resueltaEn: TS() }); } catch(e){}
+  try { cargarDashboard(); } catch(e){}
 }
 
 async function actualizarFotoTitular(input, uid) {
@@ -2177,7 +2209,7 @@ async function cargarDashboard(){
       const solSnap = await db.collection('solicitudes').orderBy('creadoEn','desc').limit(30).get();
       // F0.5: mostrar solo pendientes (las resueltas se ocultan). Etiquetar el tipo (cambio de plan / baja / interés).
       const pendSol = solSnap.docs.filter(d => (d.data().estado||'pendiente') !== 'resuelta');
-      const TIPO_SOL = { cambio_plan:{txt:'Cambio de plan',bg:'#fef3c7',col:'#92400e'}, baja:{txt:'Baja',bg:'#fee2e2',col:'#991b1b'} };
+      const TIPO_SOL = { cambio_plan:{txt:'Cambio de plan',bg:'#fef3c7',col:'#92400e'}, baja:{txt:'Baja',bg:'#fee2e2',col:'#991b1b'}, activacion:{txt:'Activación',bg:'#dcfce7',col:'#166534'} };
       if (pendSol.length > 0) {
         solHtml = `<div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;border:1px solid rgba(26,95,180,.08);box-shadow:0 2px 8px rgba(26,95,180,.06);">
           <div style="font-size:.75rem;font-weight:800;color:#0D1B3E;text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;">Solicitudes pendientes (${pendSol.length})</div>
@@ -2187,11 +2219,14 @@ async function cargarDashboard(){
             const t = TIPO_SOL[s.tipo] || {txt:(s.servicioKey||'Interés'),bg:'#EBF3FC',col:'#1A5FB4'};
             const detalle = s.tipo==='cambio_plan' ? `${esc(s.mascotaNombre||'')}: ${esc(s.planActual||'—')} → <strong>${esc(s.planPedido||'—')}</strong>`
                           : s.tipo==='baja' ? `${esc(s.mascotaNombre||'')}`
+                          : s.tipo==='activacion' ? `<strong>${esc(s.mascotaNombre||'')}</strong>${s.especie?` · ${esc(s.especie)}`:''}${s.edadAprox?` · ${esc(s.edadAprox)}`:''} — pide activar el plan`
                           : `${esc(s.mascotaNombre||'')} · ${esc(s.servicioKey||'')}`;
             return `<div style="padding:10px 0;border-bottom:1px solid #f5f7fa;font-size:.82rem;">
               <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
                 <span style="background:${t.bg};color:${t.col};font-size:.62rem;font-weight:800;padding:2px 8px;border-radius:100px;text-transform:uppercase;">${esc(t.txt)}</span>
-                <button onclick="marcarSolicitudResuelta('${d.id}')" class="bmini" style="background:#dcfce7;color:#166534;font-size:.7rem;padding:4px 10px;">Marcar resuelta</button>
+                ${s.tipo==='activacion' && s.mascotaId
+                  ? `<button onclick="activarDesdeSolicitud('${d.id}','${esc(s.mascotaId)}')" class="bmini bverde" style="background:#166534;color:#fff;font-size:.7rem;padding:4px 12px;">Activar plan</button>`
+                  : `<button onclick="marcarSolicitudResuelta('${d.id}')" class="bmini" style="background:#dcfce7;color:#166534;font-size:.7rem;padding:4px 10px;">Marcar resuelta</button>`}
               </div>
               <div style="margin-top:4px;"><strong>${esc(s.solicitanteNombre||'—')}</strong>${s.nroSocio?` · ${esc(s.nroSocio)}`:''}${s.solicitanteTel?` · ${esc(s.solicitanteTel)}`:''}</div>
               <span style="color:var(--suave);">${detalle} · ${f}</span>

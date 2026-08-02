@@ -74,13 +74,16 @@ service cloud.firestore {
 
       // (b) FIX orden de evaluación: rama TITULAR primero (no llama isAdmin() para un titular). Con getUserRoles
       //     robusto, isAdmin() ya no puede errorear igual; el orden es defensa extra + claridad.
+      // FREEMIUM (Fase 4): el embudo del titular crea la mascota en FREE (sin plan, cuota 0). El plan se asigna
+      // recién al ACTIVAR, que hace el ADMIN (rama isAdmin del update, por especie/edad — invariante #4 intacto:
+      // el titular NUNCA elige plan; ahora ni siquiera lo trae). 'Sin definir'/0 son sentinelas sin cobertura.
       allow create: if (request.auth != null
             && request.resource.data.titularUid == request.auth.uid
-            && request.resource.data.estado == 'activo'
+            && request.resource.data.estado == 'free'
+            && request.resource.data.plan == 'Sin definir'
+            && request.resource.data.cuota == 0
             && (request.resource.data.especie in ['perro', 'gato', 'ave', 'otros'])
-            && (request.resource.data.edadAprox in ['cachorro', 'joven', 'adulto', 'mayor'])
-            && request.resource.data.plan == planEsperadoR(request.resource.data)
-            && request.resource.data.cuota == precioDeR(request.resource.data.plan))
+            && (request.resource.data.edadAprox in ['cachorro', 'joven', 'adulto', 'mayor']))
         || isAdmin();
 
       // El titular edita SOLO cosméticos (nombre/foto). NO toca fechaNacimiento (afecta el plan), ni plan/estado/cuota.
@@ -102,11 +105,14 @@ service cloud.firestore {
     // lee lo suyo; vet/admin leen. Inmutable para el titular (no edita ni borra puntos).
     match /pesos/{id} {
       // (f) FIX: el vet/admin también cargan peso (guardia). La mascota debe existir; el titular solo la suya.
+      // FREEMIUM (Fase 4): el chequeo/peso es prestación de valor → el titular de una mascota FREE NO puede cargar
+      // pesos (client-mediado, sin server que medie). Staff (vet/admin) sí, siempre (guardia).
       allow create: if request.auth != null
         && exists(/databases/$(database)/documents/mascotas/$(request.resource.data.mascotaId))
         && (isAdmin() || esVeterinario()
             || (request.resource.data.titularUid == request.auth.uid
-                && get(/databases/$(database)/documents/mascotas/$(request.resource.data.mascotaId)).data.titularUid == request.auth.uid));
+                && get(/databases/$(database)/documents/mascotas/$(request.resource.data.mascotaId)).data.titularUid == request.auth.uid
+                && get(/databases/$(database)/documents/mascotas/$(request.resource.data.mascotaId)).data.estado != 'free'));
       allow get, list: if request.auth != null
         && (isAdmin() || esVeterinario() || resource.data.titularUid == request.auth.uid);
       allow update, delete: if isAdmin();
@@ -247,21 +253,14 @@ service cloud.firestore {
       allow get, list: if request.auth != null
         && (isAdmin() || esVeterinario() || resource.data.titularUid == request.auth.uid);
 
-      // Update:
-      //  · vet/admin MARCA asistencia — acotado a campos de marca; estado dentro de la máquina.
-      //  · el TITULAR dueño CANCELA su turno — acotado a estado:'cancelado' (+ canceladoEn). El endpoint es la vía que
-      //    además LIBERA el slot; una cancelación directa por cliente deja el slot marcado (se reconcilia por el vet).
+      // Update: SOLO vet/admin MARCA asistencia — acotado a campos de marca; estado dentro de la máquina.
+      // DUDA-1 RESUELTA (Fase 4): se quita la rama de cancelación por cliente → la cancelación va SOLO por el endpoint
+      // del VPS (Admin SDK), que además LIBERA el slot atómicamente. Ya no hay slots huérfanos por cancelación directa.
       allow update: if request.auth != null
-        && (
-          ( (isAdmin() || esVeterinario())
-            && request.resource.data.diff(resource.data).affectedKeys()
-                 .hasOnly(['estado', 'estadoMarcadoPor', 'estadoMarcadoEn', 'canceladoEn'])
-            && request.resource.data.estado in ['creado', 'atendido', 'ausente', 'sin_registrar', 'cancelado'] )
-          ||
-          ( resource.data.titularUid == request.auth.uid
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado', 'canceladoEn'])
-            && request.resource.data.estado == 'cancelado' )
-        );
+        && (isAdmin() || esVeterinario())
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['estado', 'estadoMarcadoPor', 'estadoMarcadoEn', 'canceladoEn'])
+        && request.resource.data.estado in ['creado', 'atendido', 'ausente', 'sin_registrar', 'cancelado'];
 
       allow delete: if false;
     }

@@ -35,7 +35,9 @@ function fmtFechaMs(ms) { const d = new Date(ms); return d.getUTCDate() + '/' + 
 // Consumos de UNA mascota: { vigente, chip, renueva, conCupo[], sinLimite[] }.
 function consumosDeMascota(m, atsMasc, nowMs) {
   const cobM = MC.coberturaMascota(m);
-  if (!cobM.ok) return { vigente: false, chip: cobM.chip, renueva: null, conCupo: [], sinLimite: [] };
+  // FREEMIUM (Fase 4): free = mascota registrada gratis, sin plan. VETIA no miente cobertura: da cuidado general +
+  // cartilla y deriva a activar. `free` la distingue de suspendido/legacy (ambos también !ok pero por otra razón).
+  if (!cobM.ok) return { vigente: false, free: cobM.free === true, chip: cobM.chip, renueva: null, conCupo: [], sinLimite: [] };
   const ats = atsMasc || [];
   const conCupo = [], sinLimite = [];
   for (const key of Object.keys(MC.COBERTURAS)) {
@@ -57,7 +59,7 @@ function consumosDeMascota(m, atsMasc, nowMs) {
     conCupo.push(`${label}: usó ${usadas} de ${r.cupoAnual} este año (quedan ${restantes == null ? 'sin límite' : restantes})`);
   }
   const vent = MC.ventanaAniversario(docAltaMs(m), nowMs);
-  return { vigente: true, chip: cobM.chip, renueva: vent ? fmtFechaMs(vent.fin) : null, conCupo, sinLimite };
+  return { vigente: true, free: false, chip: cobM.chip, renueva: vent ? fmtFechaMs(vent.fin) : null, conCupo, sinLimite };
 }
 
 // Arma el contexto completo. mascotasDocs = docs crudos de `mascotas`; atByMasc = { mascotaId: [atenciones] }.

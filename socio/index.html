@@ -16,7 +16,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
-<script src="/lib/medipaw-core.js?v=20260729a"></script>
+<script src="/lib/medipaw-core.js?v=20260802a"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -112,6 +112,23 @@ body{font-family:var(--font-body);background:var(--fondo);color:var(--texto);min
 .tile .t-title{font-size:.95rem;font-weight:800;color:var(--navy)}
 .tile .t-sub{font-size:.76rem;color:var(--suave);margin-top:1px}
 .tile .t-soon{font-size:.6rem;font-weight:800;color:var(--tenue);background:var(--fondo);border:1px solid var(--linea);border-radius:var(--r-pill);padding:2px 8px;text-transform:uppercase;letter-spacing:.5px}
+/* ── FREEMIUM: carnet FREE en gris (se ve incompleto, a propósito) + tiles con candado + CTA de activación ── */
+.carnet.free{background:linear-gradient(135deg,#5c6474,#3a4150);box-shadow:0 12px 40px rgba(58,65,80,.26)}
+.carnet.free .cplan{color:#cdd4e0}
+.carnet.free .mfoto,.carnet.free .mph{filter:grayscale(.65) opacity(.92)}
+.carnet.free .cobchip{opacity:.9}
+.carnet-cta{width:100%;display:flex;align-items:center;gap:11px;text-align:left;background:linear-gradient(135deg,#fff,var(--ambar-suave));border:1.5px solid var(--ambar);border-radius:var(--r-md);padding:13px 15px;margin-bottom:14px;cursor:pointer;font-family:var(--font-body);box-shadow:var(--sombra-sm);transition:transform .15s}
+.carnet-cta:active{transform:scale(.985)}
+.carnet-cta .cc-ico{width:40px;height:40px;border-radius:12px;background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.carnet-cta .cc-ico svg{width:21px;height:21px;color:#b8791e;display:block}
+.carnet-cta .cc-t{font-size:.92rem;font-weight:800;color:var(--navy);line-height:1.2}
+.carnet-cta .cc-s{font-size:.74rem;color:var(--suave);margin-top:2px}
+.carnet-cta .cc-arrow{margin-left:auto;color:#b8791e;font-size:1.15rem;font-weight:800}
+.tile.lock .t-ico{background:#f2f4f7}
+.tile.lock .t-ico svg{color:#9aa3b6}
+.tile.lock .t-title{color:var(--suave)}
+.tile.lock .t-lock{display:inline-flex;align-items:center;gap:5px;font-size:.6rem;font-weight:800;color:#b8791e;background:var(--ambar-suave);border:1px solid #f0d9ac;border-radius:var(--r-pill);padding:3px 9px}
+.tile.lock .t-lock svg{width:12px;height:12px;color:#b8791e}
 .tile .t-arrow{color:var(--azul-claro);font-size:1.2rem;font-weight:700}
 /* Feed / instalar */
 .foot-note{font-size:.72rem;color:var(--suave);text-align:center;line-height:1.5;margin-top:8px}
@@ -169,6 +186,8 @@ body{font-family:var(--font-body);background:var(--fondo);color:var(--texto);min
     <symbol id="ic-cuota" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h10v17l-2.5-1.8-2.5 1.8-2.5-1.8L7 20.5z"/><path d="M10 8.5h4M10 12.5h4"/></g></symbol>
     <symbol id="ic-mascotas" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="16" rx="4.2" ry="3.4"/><circle cx="6.6" cy="11.2" r="1.7"/><circle cx="10" cy="8" r="1.7"/><circle cx="14" cy="8" r="1.7"/><circle cx="17.4" cy="11.2" r="1.7"/></g></symbol>
     <symbol id="ic-cartilla" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s6-5.5 6-10a6 6 0 0 0-12 0c0 4.5 6 10 6 10z"/><circle cx="12" cy="11" r="2.4"/></g></symbol>
+    <!-- Candado (freemium: tiles bloqueados hasta activar el plan). Monolínea, mismo trazo. -->
+    <symbol id="ic-candado" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9.5" rx="2.4"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/><circle cx="12" cy="14.8" r="1.15" fill="currentColor" stroke="none"/></g></symbol>
     <!-- Avatares por especie (monolínea, mismo lenguaje) -->
     <symbol id="ic-perro" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 6C5.5 6 5 8.5 5 11c0 4 3 7.5 7 7.5s7-3.5 7-7.5c0-2.5-.5-5-2.5-5"/><path d="M7.5 6c-.3 2.5.2 4.3 1.3 5.4M16.5 6c.3 2.5-.2 4.3-1.3 5.4"/><path d="M10 13.5h4M12 13.5v2"/><circle cx="9.7" cy="11" r=".4"/><circle cx="14.3" cy="11" r=".4"/></g></symbol>
     <symbol id="ic-gato" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9L5 4l4 2.5M18 9l1-5-4 2.5"/><path d="M6 9c-.6 1.2-1 2.4-1 3.8C5 16 8 18.5 12 18.5s7-2.5 7-5.7c0-1.4-.4-2.6-1-3.8"/><path d="M10.5 13h3M12 13v1.5"/><circle cx="9.6" cy="11" r=".4"/><circle cx="14.4" cy="11" r=".4"/><path d="M4.5 12.5h2M17.5 12.5h2"/></g></symbol>
@@ -275,10 +294,10 @@ function getRoles(u){
 // ── Estado único ──
 const S = { view:'boot', sub:'home', cred:null, mascotaSel:0, deferredPrompt:null, caso:null, chequeo:null, historia:null, mismascotas:null, cartilla:null, vetia:null, turnos:null };
 // Dispatcher del sub-view: home | caso | cuenta | alta (embudo) | chequeo (peso) | historia (atenciones) | mismascotas (planes+servicios) | vetia (chat IA, demo) | turnos (agenda, demo)
-function render(){ if(S.sub==='caso') casoView(); else if(S.sub==='cuenta') cuentaView(); else if(S.sub==='alta') altaView(); else if(S.sub==='chequeo') chequeoView(); else if(S.sub==='historia') historiaView(); else if(S.sub==='mismascotas') misMascotasView(); else if(S.sub==='cartilla') cartillaView(); else if(S.sub==='vetia') vetiaView(); else if(S.sub==='turnos') turnosView(); else homeView(); animarVista(); }
+function render(){ if(S.sub==='caso') casoView(); else if(S.sub==='cuenta') cuentaView(); else if(S.sub==='alta') altaView(); else if(S.sub==='chequeo') chequeoView(); else if(S.sub==='historia') historiaView(); else if(S.sub==='mismascotas') misMascotasView(); else if(S.sub==='cartilla') cartillaView(); else if(S.sub==='vetia') vetiaView(); else if(S.sub==='turnos') turnosView(); else if(S.sub==='activacion') activacionView(); else homeView(); animarVista(); }
 // Fade+slide sutil del contenedor al navegar entre vistas. CERO animación en "no está bien" (caso).
 function animarVista(){ if(S.sub==='caso') return; const h=document.getElementById('home'); if(!h) return; h.classList.remove('view-anim'); void h.offsetWidth; h.classList.add('view-anim'); }
-function volverHome(){ S.sub='home'; S.caso=null; S.alta=null; S.chequeo=null; S.historia=null; S.mismascotas=null; S.cartilla=null; S.vetia=null; S.turnos=null; render(); }
+function volverHome(){ S.sub='home'; S.caso=null; S.alta=null; S.chequeo=null; S.historia=null; S.mismascotas=null; S.cartilla=null; S.vetia=null; S.turnos=null; S.activacion=null; render(); }
 
 // ── Colección mascotas (fuente de verdad; reusa el núcleo) ──
 async function mascGetByTitular(uid){
@@ -365,8 +384,12 @@ auth.onAuthStateChanged(async user=>{
     try{ casos=(await db.collection('casos').where('titularUid','==',user.uid).get()).docs.map(d=>({id:d.id,...d.data()})); }catch(_){ }
     try{ comprobantes=(await db.collection('comprobantes').where('titularUid','==',user.uid).get()).docs.map(d=>({id:d.id,...d.data()})); }catch(_){ }
     S.cred={ u, mascotas, casos, comprobantes }; S.mascotaSel=0; S.sub='home';
+    // FREEMIUM: ¿alguna mascota conocida pasó a ACTIVA desde la última visita? Es el clímax → seleccionarla + celebrar.
+    const recienActivada=chequearActivaciones(user.uid, mascotas);
+    if(recienActivada){ const i=mascotas.findIndex(m=>m.mascotaId===recienActivada.mascotaId); if(i>=0) S.mascotaSel=i; }
     render();
     showScreen('appScreen');
+    if(recienActivada){ setTimeout(function(){ celebrar(); toast('¡'+(recienActivada.nombre||'Tu mascota')+' ya tiene su plan activo!'); }, 420); }
   }catch(e){ showScreen('loginScreen'); setErr('loginError','Error al cargar tu cuenta: '+e.message); }
 });
 
@@ -481,11 +504,13 @@ async function finalizarAlta(){
   try{
     const mascotaId='MP-'+genCodigo(8);
     const token=genCodigo(24); // crypto.getRandomValues (genCodigo) — para la ficha pública /m/{token}. La colección es la fuente.
-    // Mascota ACTIVA; plan/cuota los pone el sistema por EDAD APROXIMADA (la regla los revalida por el bucket).
+    // FREEMIUM (Fase 4): la mascota nace FREE (sin plan, cuota 0). El plan lo asigna el ADMIN al ACTIVAR, por
+    // especie/edad (invariante #4 intacto). Guardamos pesoInicial (las reglas bloquean el peso del titular free;
+    // el primer punto de la serie lo crea la activación).
     const doc={
       mascotaId, titularUid:uid, nombre:a.nombre, especie:a.especie, edadAprox:a.edadAprox, raza:a.raza, sexo:a.sexo,
-      plan:p.plan, cuota:p.cuota, estado:'activo', foto:'', token,
-      servicios:(typeof MC.plantillaServicios==='function'?MC.plantillaServicios():[]), // plantilla del núcleo (fuente única); antes []
+      plan:'Sin definir', cuota:0, estado:'free', pesoInicial:(Number(a.peso)||null), foto:'', token,
+      servicios:(typeof MC.plantillaServicios==='function'?MC.plantillaServicios():[]), // plantilla del núcleo (fuente única)
       creadoEn:TS()
     };
     // Fecha exacta OPCIONAL: solo si el titular la cargó (refina el recálculo futuro).
@@ -493,15 +518,15 @@ async function finalizarAlta(){
     await db.collection('mascotas').doc(mascotaId).set(doc);
     // Espejo al array embebido usuarios.mascotas[] (invariante expand/contract: el admin identifica afiliados por ahí).
     try{ const s=await db.collection('usuarios').doc(uid).get(); const ud=s.data()||{}; const arr=Array.isArray(ud.mascotas)?ud.mascotas.slice():[];
-      arr.push({ nombre:a.nombre, raza:a.raza, especie:a.especie, sexo:a.sexo, plan:p.plan, mascotaId, token });
+      arr.push({ nombre:a.nombre, raza:a.raza, especie:a.especie, sexo:a.sexo, plan:'Sin definir', mascotaId, token });
       await db.collection('usuarios').doc(uid).update({ mascotas:arr }); S.cred.u.mascotas=arr;
     }catch(_){}
-    // Primer punto de la SERIE DE PESO (no es un campo que se pisa).
-    try{ await db.collection('pesos').add({ mascotaId, titularUid:uid, peso:Number(a.peso), fecha:TS(), origen:'alta' }); }catch(_){}
+    // FREE: el primer punto de la serie de peso NO se crea acá (las reglas bloquean el peso del titular free);
+    // se guardó pesoInicial en el doc y lo crea la ACTIVACIÓN (admin). Sin peso.add en el alta free.
     S.cred.mascotas=await mascGetByTitular(uid);
     S.mascotaSel=Math.max(0,S.cred.mascotas.findIndex(m=>m.mascotaId===mascotaId));
     S.sub='home'; S.alta=null; render();
-    toast(a.nombre+' quedó con cobertura activa.'); celebrar(); // alta completada
+    toast('Ya cargaste a '+a.nombre+'. Activá su plan desde su carnet.'); celebrar(); // alta (free) completada
   }catch(e){ a.busy=false; a.err='No se pudo dar de alta: '+e.message; altaView(); }
 }
 
@@ -528,12 +553,23 @@ function bloqueMascotaCarnet(c, m){
       <button class="btn-primary" style="margin-top:14px;" onclick="abrirAlta()">Dar de alta una mascota</button>
     </div>`;
   }
-  const cob=MC.coberturaMascota(m); const cuota=MC.planCuota(m.plan);
+  const cob=MC.coberturaMascota(m); const cuota=MC.planCuota(m.plan); const free=esFree(m);
+  // FREEMIUM: si la mascota es free, el carnet va GRIS (sin plan visible, "se ve incompleto" a propósito) y debajo
+  // va la CTA de activación (ámbar, NO rojo). Si tiene cobertura/legacy, se mantiene la banda informativa de siempre.
+  const banda = free
+    ? `<button class="carnet-cta" onclick="abrirActivacion('${esc(m.mascotaId)}')">
+        <span class="cc-ico">${icon('candado')}</span>
+        <span><span class="cc-t">Activá el plan de ${esc(nombreMasc(m))}</span><span class="cc-s">Carnet free — todavía sin cobertura. Activalo para empezar.</span></span>
+        <span class="cc-arrow">›</span>
+      </button>`
+    : `<div class="seccion" style="display:flex;justify-content:space-between;align-items:center;gap:8px;background:${cob.ok?'var(--azul-pale)':'#F1F3F7'};margin-bottom:14px;">
+        <div class="inline-ic" style="font-size:.8rem;font-weight:700;color:${cob.ok?'var(--azul)':'var(--suave)'};">${cob.ok?icon('check'):icon('dash')} <span>${esc(cob.label)}${cob.ok&&cuota?` · $${cuota.toLocaleString('es-AR')}/mes`:''}</span></div>
+      </div>`;
   return selector + `
-  <div class="carnet" style="margin-bottom:14px;">
+  <div class="carnet${free?' free':''}" style="margin-bottom:14px;">
     <div class="iso"><svg width="34" height="34" style="color:rgba(255,255,255,.92);stroke-width:5"><use href="#paw"/></svg></div>
     <div class="cplan-lbl">PLAN</div>
-    <div class="cplan">${esc(m.plan||'Sin definir')}</div>
+    <div class="cplan">${free?'Carnet free':esc(m.plan||'Sin definir')}</div>
     <div class="mrow">
       ${m.foto?`<img class="mfoto" src="${esc(m.foto)}" alt="">`:`<div class="mph">${iconEspecie(m.especie)}</div>`}
       <div><div class="mname">${esc(m.nombre||'—')}</div><div class="mraza">${esc(tituloCaso(m.raza||''))}</div></div>
@@ -544,14 +580,11 @@ function bloqueMascotaCarnet(c, m){
         <div class="resp">${titular}</div>
         ${c.u.nroSocio?`<div style="font-size:.56rem;opacity:.5;letter-spacing:1px;">${esc(c.u.nroSocio)}</div>`:''}
       </div>
-      <div class="cobchip" style="background:${cob.ok?'var(--azul-pale)':'#F1F3F7'};color:${cob.ok?'var(--azul)':'var(--suave)'};">
-        <span class="cobdot" style="background:${cob.ok?'var(--azul)':'var(--tenue)'};"></span> ${esc(cob.chip)}
+      <div class="cobchip" style="background:${free?'rgba(255,255,255,.16)':(cob.ok?'var(--azul-pale)':'#F1F3F7')};color:${free?'#e8ebf2':(cob.ok?'var(--azul)':'var(--suave)')};">
+        <span class="cobdot" style="background:${free?'#cdd4e0':(cob.ok?'var(--azul)':'var(--tenue)')};"></span> ${esc(cob.chip)}
       </div>
     </div>
-  </div>
-  <div class="seccion" style="display:flex;justify-content:space-between;align-items:center;gap:8px;background:${cob.ok?'var(--azul-pale)':'#F1F3F7'};margin-bottom:14px;">
-    <div class="inline-ic" style="font-size:.8rem;font-weight:700;color:${cob.ok?'var(--azul)':'var(--suave)'};">${cob.ok?icon('check'):icon('dash')} <span>${esc(cob.label)}${cob.ok&&cuota?` · $${cuota.toLocaleString('es-AR')}/mes`:''}</span></div>
-  </div>`;
+  </div>` + banda;
 }
 
 // 2) EMERGENCIA · guardia veterinaria 24hs — botón grande, tel:, constante única TEL_EMERG.
@@ -569,6 +602,86 @@ function tilePlaceholder(ico, titulo, sub){
     <div class="t-body"><div class="t-title">${titulo}</div><div class="t-sub">${sub}</div></div>
     <span class="t-soon">Pronto</span>
   </button>`;
+}
+
+// ══ FREEMIUM (Fase 4) ══════════════════════════════════════════════════════
+// La mascota FREE ve SOLO VETIA + emergencia + carnet gris. El resto de las prestaciones (caso, turnos, chequeo,
+// historia) van con CANDADO y CTA elegante (ámbar/gris, NUNCA rojo). El candado NO reprocha: invita a activar.
+function esFree(m){ return !!(m && MC.coberturaMascota(m).free); }
+// Tile bloqueado: mismo layout que un tile real pero apagado, con badge "Activar" y CTA → embudo de activación.
+function tileLock(ico, titulo, m){
+  const mid = (m&&m.mascotaId) ? `'${esc(m.mascotaId)}'` : 'null';
+  return `<button class="tile lock" onclick="abrirActivacion(${mid})">
+    <div class="t-ico">${ico}</div>
+    <div class="t-body"><div class="t-title">${titulo}</div><div class="t-sub">Se activa con el plan de ${esc(nombreMasc(m))}</div></div>
+    <span class="t-lock">${icon('candado')} Activar</span>
+  </button>`;
+}
+// Embudo de activación: pantalla honesta (qué suma el plan + cómo se paga) → crea `solicitudes` tipo 'activacion'
+// (mascotaId + datos del titular) → confirmación "Te contactamos…". NO activa nada acá: lo activa el ADMIN.
+function abrirActivacion(mascotaId){ S.sub='activacion'; S.activacion={ mascotaId:mascotaId||null, done:false, busy:false, err:'' }; render(); }
+function activacionView(){
+  const st=S.activacion||(S.activacion={ mascotaId:null });
+  const ms=S.cred.mascotas||[];
+  const m = st.mascotaId ? (ms.find(x=>x.mascotaId===st.mascotaId)||mascotaActiva()) : mascotaActiva();
+  const nombre=nombreMasc(m);
+  const back=`<button class="link-btn" style="margin-bottom:10px;display:inline-block;" onclick="volverHome()">‹ Volver</button>`;
+  let body;
+  if(st.done){
+    body=`<div class="seccion" style="text-align:center;">
+      <div class="big-ic ok">${icon('check')}</div>
+      <div class="stit" style="text-transform:none;font-size:1.05rem;margin-top:6px;">Te contactamos para activar el plan de ${esc(nombre)}</div>
+      <p style="font-size:.85rem;color:var(--suave);line-height:1.55;margin-top:8px;">Recibimos tu pedido. Un asesor de MEDIPaw se comunica con vos para activar el plan de ${esc(nombre)} y coordinar el pago. Mientras tanto, ${esc(nombre)} ya está cargado en tu cuenta.</p>
+      <button class="btn-primary" style="margin-top:16px;" onclick="volverHome()">Volver al inicio</button>
+    </div>`;
+  } else {
+    const filas=[['nobien','Consultas con un veterinario cuando no está bien'],['turnos','Turnos con el veterinario de guardia'],['chequeo','Seguimiento de peso y chequeos'],['historia','Historia clínica: atenciones, vacunas y estudios']]
+      .map(f=>`<div class="inline-ic" style="font-size:.84rem;color:var(--navy);"><span style="color:var(--azul);">${icon(f[0])}</span> <span>${esc(f[1])}</span></div>`).join('');
+    body=`<div class="seccion">
+      <div class="stit" style="text-transform:none;font-size:1.05rem;">Activá el plan de ${esc(nombre)}</div>
+      <p style="font-size:.85rem;color:var(--texto);line-height:1.55;margin-top:6px;">Con el plan activo, ${esc(nombre)} suma todo lo de MEDIPaw:</p>
+      <div style="margin:12px 0;display:flex;flex-direction:column;gap:9px;">${filas}</div>
+      <div class="cart-ic" style="background:var(--ambar-suave);border-radius:10px;padding:10px 12px;font-size:.78rem;color:#7a5510;align-items:flex-start;">${icon('candado')} <span>El pago se coordina con MEDIPaw (todavía no se paga desde la app). Te contactamos para activarlo.</span></div>
+      ${st.err?`<p class="errmsg">${esc(st.err)}</p>`:''}
+      <button class="btn-primary" style="margin-top:14px;" onclick="confirmarActivacion()" ${st.busy?'disabled':''}>${st.busy?'Enviando…':'Quiero activar el plan de '+esc(nombre)}</button>
+    </div>`;
+  }
+  document.getElementById('home').innerHTML = back + body;
+}
+async function confirmarActivacion(){
+  const st=S.activacion; if(!st||st.busy) return;
+  const ms=S.cred.mascotas||[]; const m = st.mascotaId ? ms.find(x=>x.mascotaId===st.mascotaId) : mascotaActiva();
+  if(!m){ st.err='No encontramos la mascota.'; activacionView(); return; }
+  st.busy=true; st.err=''; activacionView();
+  try{
+    const c=S.cred; const u=c.u||{};
+    // Campos alineados con el dashboard del panel (solicitanteNombre/solicitanteTel/nroSocio, estado 'pendiente').
+    await db.collection('solicitudes').add({
+      tipo:'activacion', servicioKey:'activacion', mascotaId:m.mascotaId, mascotaNombre:m.nombre||'', especie:m.especie||'', edadAprox:m.edadAprox||'',
+      titularUid:u.uid, nroSocio:u.nroSocio||'',
+      solicitanteNombre:`${u.nombre||''} ${u.apellido||''}`.trim(),
+      solicitanteTel:u.telefono||'', solicitanteEmail:u.email||(auth.currentUser&&auth.currentUser.email)||'',
+      estado:'pendiente', creadoEn:TS()
+    });
+    st.busy=false; st.done=true; activacionView();
+  }catch(e){ st.busy=false; st.err='No pudimos enviar el pedido: '+e.message; activacionView(); }
+}
+// Celebración de ACTIVACIÓN (el clímax del producto): si una mascota que YA conocíamos pasó a tener cobertura
+// activa desde la última visita, es su momento → carnet a color + cachorro. Persistimos por titular en localStorage
+// (sin listeners real-time: se detecta en la carga). Primera vez que vemos una mascota NO celebra (no sabemos su
+// transición); recién cuando pasa de conocida-sin-cobertura a con-cobertura.
+function chequearActivaciones(uid, mascotas){
+  try{
+    const kKnown='mp_known_'+uid, kActive='mp_active_'+uid;
+    const known=new Set(JSON.parse(localStorage.getItem(kKnown)||'[]'));
+    const activePrev=new Set(JSON.parse(localStorage.getItem(kActive)||'[]'));
+    const lista=mascotas||[];
+    let recien=null;
+    for(const m of lista){ if(MC.coberturaMascota(m).ok && known.has(m.mascotaId) && !activePrev.has(m.mascotaId)){ recien=m; break; } }
+    localStorage.setItem(kKnown, JSON.stringify(lista.map(m=>m.mascotaId)));
+    localStorage.setItem(kActive, JSON.stringify(lista.filter(m=>MC.coberturaMascota(m).ok).map(m=>m.mascotaId)));
+    return recien;
+  }catch(_){ return null; }
 }
 // VETIA — en el DEMO es un tile vivo (abre el chat); en PROD sigue placeholder "Pronto" (gate por hostname).
 function bloqueIA(m){
@@ -646,6 +759,7 @@ async function enviarVetia(){
 function tms(t){ return t&&t.toMillis?t.toMillis():(t&&t.seconds?t.seconds*1000:0); }
 function casosDe(m){ if(!m) return []; return (S.cred.casos||[]).filter(c=>c.mascotaId===m.mascotaId); }
 function bloqueNoEstaBien(m){
+  if(esFree(m)) return tileLock(icon('nobien'), esc(nombreMasc(m))+' no está bien', m); // FREEMIUM: prestación de valor → candado
   const abiertos = casosDe(m).filter(c=>c.estado!=='cerrado').sort((a,b)=>tms(b.creadoEn)-tms(a.creadoEn));
   let estado='';
   if(abiertos.length){
@@ -712,6 +826,7 @@ async function enviarCaso(){
 }
 // TURNOS — en el DEMO es un tile vivo (agenda del vet de guardia); en PROD sigue "Pronto" (mismo gate que VETIA).
 function bloqueTurnos(m){
+  if(esFree(m)) return tileLock(icon('turnos'), 'Turnos', m); // FREEMIUM: candado hasta activar
   if(!VETIA_ON) return tilePlaceholder(icon('turnos'),'Turnos','Pedí un turno para tu mascota');
   return `<button class="tile" onclick="abrirTurnos()">
     <div class="t-ico">${icon('turnos')}</div>
@@ -860,6 +975,7 @@ function turnosView(){
 }
 // Chequeo y peso — tile REAL (abre la serie de peso). Append-only, sin juicio de si el peso está bien o mal.
 function bloqueChequeo(m){
+  if(esFree(m)) return tileLock(icon('chequeo'), 'Chequeo y peso de '+esc(nombreMasc(m)), m); // FREEMIUM: candado
   return `<button class="tile" onclick="abrirChequeo(mascotaActiva())">
     <div class="t-ico">${icon('chequeo')}</div>
     <div class="t-body"><div class="t-title">Chequeo y peso de ${esc(nombreMasc(m))}</div><div class="t-sub">Seguimiento de peso</div></div>
@@ -868,6 +984,7 @@ function bloqueChequeo(m){
 }
 // Historia — tile REAL (abre las atenciones del titular). Solo lectura; el titular no carga, escribe el vet.
 function bloqueHistoria(m){
+  if(esFree(m)) return tileLock(icon('historia'), 'Historia de '+esc(nombreMasc(m)), m); // FREEMIUM: candado
   return `<button class="tile" onclick="abrirHistoria(mascotaActiva())">
     <div class="t-ico">${icon('historia')}</div>
     <div class="t-body"><div class="t-title">Historia de ${esc(nombreMasc(m))}</div><div class="t-sub">Atenciones, vacunas y estudios</div></div>

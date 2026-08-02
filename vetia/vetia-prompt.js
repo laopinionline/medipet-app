@@ -35,7 +35,11 @@ function bloqueContexto(contexto) {
     partes.push(`- ${nombre} (${especie}${edad}) — plan: ${plan}.`);
     const cob = m.cobertura || null;
     if (!cob) continue;
-    if (!cob.vigente) { partes.push(`    Sin cobertura vigente (${cob.chip || 'sin plan activo'}).`); continue; }
+    if (!cob.vigente) {
+      if (cob.free) partes.push(`    Carnet FREE: ${nombre} está registrada gratis y TODAVÍA NO tiene plan activo (sin cobertura). Para tener cobertura hay que activar el plan desde el carnet de ${nombre} en la app.`);
+      else partes.push(`    Sin cobertura vigente (${cob.chip || 'sin plan activo'}).`);
+      continue;
+    }
     if (cob.renueva) partes.push(`    Su año de cobertura renueva el ${cob.renueva}.`);
     for (const linea of (cob.conCupo || [])) partes.push(`    · ${linea}`);
     if (cob.sinLimite && cob.sinLimite.length) partes.push(`    · Sin límite anual: ${cob.sinLimite.join(', ')}.`);
@@ -62,6 +66,10 @@ function buildSystem(contexto, rojo, nowMs) {
     '6. Respuestas breves (2 a 6 frases). Si hace falta, cerrá con un paso concreto.',
     '7. Respondé SIEMPRE en TEXTO PLANO. NADA de markdown: sin **negritas**, sin # de títulos, sin viñetas con "-" o "*",',
     '   sin tablas. Escribí en frases y párrafos simples; si enumerás, hacelo en la misma oración o con punto y aparte.',
+    '8. Si una mascota figura como Carnet FREE (registrada gratis, sin plan activo): dale consejos generales de cuidado y',
+    '   prevención y podés orientar sobre la cartilla de prestadores, pero NO tiene cobertura. Si preguntan por cobertura,',
+    '   turnos, reintegros, descuentos o consultas cubiertas de esa mascota, respondé con honestidad: eso viene con el plan',
+    '   de esa mascota y se activa desde su carnet en la app. NUNCA inventes que una mascota free tiene cobertura ni cupos.',
     '',
     'CONTEXTO DEL TITULAR (usalo para responder sobre su plan, su cobertura y sus consumos):',
     ctx || '(sin contexto)',
