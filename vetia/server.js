@@ -23,6 +23,7 @@ const { escanear } = require('./banderas-rojas-vet.js');
 const { buildSystem } = require('./vetia-prompt.js');
 const { armarContexto } = require('./contexto.js');
 const turnos = require('./turnos.js');
+const tienda = require('./tienda.js');
 const MC = require('../lib/medipaw-core.js'); // núcleo (fuente única) para el veredicto informativo de la reserva
 
 // --- Carga mínima de .env (sin dependencia dotenv). No pisa variables ya presentes en el entorno (PM2 gana). ---
@@ -54,6 +55,8 @@ const CFG = {
   MAX_TOKENS: parseInt(process.env.MAX_TOKENS || '512', 10),
   TIMEOUT_MS: parseInt(process.env.TIMEOUT_MS || '18000', 10),
   MAX_MSG_CHARS: parseInt(process.env.MAX_MSG_CHARS || '2000', 10),
+  // Tienda / pago MP: modo SIMULADO por defecto (acredita directo). En productivo, TIENDA_MP_SIMULADO=false + credenciales reales.
+  TIENDA_MP_SIMULADO: process.env.TIENDA_MP_SIMULADO !== 'false',
 };
 
 // --- firebase-admin: verificación del ID token del proyecto demo. Init defensivo (si falta el SA, log y sigue: los
@@ -155,7 +158,7 @@ const server = http.createServer((req, res) => {
   if (req.method === 'OPTIONS') { res.writeHead(204, corsHeaders(origin)); return res.end(); }
 
   const ruta = req.url.split('?')[0];
-  const RUTAS = ['/api/vetia', '/api/turnos/reservar', '/api/turnos/cancelar'];
+  const RUTAS = ['/api/vetia', '/api/turnos/reservar', '/api/turnos/cancelar', '/api/tienda/pagar'];
   if (req.method !== 'POST' || !RUTAS.includes(ruta)) {
     return enviarJSON(res, 404, { error: 'no encontrado' }, origin);
   }
@@ -202,6 +205,23 @@ const server = http.createServer((req, res) => {
         } catch (e) {
           if (e && e.code) return enviarJSON(res, 409, { ok: false, error: e.code }, origin); // rechazo de negocio (slot ocupado, etc.)
           console.error('[turnos] error interno:', e);
+          return enviarJSON(res, 500, { ok: false, error: 'error interno' }, origin);
+        }
+      }
+
+      // ── RUTA TIENDA / PAGO (acreditación del pago; Admin SDK) ──
+      // MODO SIMULADO (default): acredita el pago del pedido del titular. El cliente NUNCA acredita por reglas;
+      // esta es la vía server-side. En productivo (TIENDA_MP_SIMULADO=false) el mismo camino crea la preferencia MP real.
+      if (ruta === '/api/tienda/pagar') {
+        if (!admin || !admin.apps.length) return enviarJSON(res, 503, { error: 'firestore no configurado' }, origin);
+        const db = admin.firestore();
+        const FV = () => admin.firestore.FieldValue.serverTimestamp();
+        try {
+          const out = await tienda.pagar({ db, FV }, { uid, pedidoId: data.pedidoId }, { simulado: CFG.TIENDA_MP_SIMULADO }, Date.now());
+          return enviarJSON(res, 200, { ok: true, pago: out }, origin);
+        } catch (e) {
+          if (e && e.code) return enviarJSON(res, 409, { ok: false, error: e.code }, origin); // rechazo de negocio (ajeno, ya-pagado, etc.)
+          console.error('[tienda] error interno:', e);
           return enviarJSON(res, 500, { ok: false, error: 'error interno' }, origin);
         }
       }

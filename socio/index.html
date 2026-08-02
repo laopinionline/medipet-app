@@ -284,6 +284,8 @@ const VETIA_URL = 'https://medipaw.com.ar/api/vetia';
 // TURNOS — mismo gate demo y mismo servicio del VPS. La reserva/cancelación van SOLO por endpoint (nunca update directo).
 const TURNOS_RESERVAR = 'https://medipaw.com.ar/api/turnos/reservar';
 const TURNOS_CANCELAR = 'https://medipaw.com.ar/api/turnos/cancelar';
+// TIENDA / PAGO MP — mismo servicio del VPS. La acreditación va SOLO por endpoint (el cliente no toca `pago`). Modo simulado.
+const TIENDA_PAGAR = 'https://medipaw.com.ar/api/tienda/pagar';
 
 // Roles del doc usuario (compat legacy rol→roles, prestador→veterinario vía el núcleo).
 function getRoles(u){
@@ -1414,7 +1416,7 @@ function carritoLineas(){ const prods=(S.tienda&&S.tienda.productos)||[]; return
 function addCarrito(pid){ const prods=(S.tienda&&S.tienda.productos)||[]; const p=prods.find(x=>x.id===pid); if(!p)return; const stock=Number(p.stock||0); const cur=Number(CARRITO[pid]||0); if(cur>=stock){ toast('No hay más stock de '+(p.nombre||'')); return; } CARRITO[pid]=cur+1; tiendaView(); }
 function subCarrito(pid){ const cur=Number(CARRITO[pid]||0); if(cur<=1){ delete CARRITO[pid]; } else { CARRITO[pid]=cur-1; } tiendaView(); }
 // ── Router de la tienda ──
-function tiendaView(){ if(!S.tienda){ abrirTienda(); return; } if(S.tienda.sub==='checkout') return tiendaCheckoutView(); if(S.tienda.sub==='pedidos') return tiendaPedidosView(); if(S.tienda.sub==='ficha') return tiendaFichaView(); return tiendaCatalogoView(); }
+function tiendaView(){ if(!S.tienda){ abrirTienda(); return; } if(S.tienda.sub==='checkout') return tiendaCheckoutView(); if(S.tienda.sub==='pago') return tiendaPagoView(); if(S.tienda.sub==='pedidos') return tiendaPedidosView(); if(S.tienda.sub==='ficha') return tiendaFichaView(); return tiendaCatalogoView(); }
 function tiendaIrPedidos(){ S.tienda.sub='pedidos'; S.tienda.pedidos=null; tiendaView(); cargarMisPedidos(); }
 function tiendaIrCatalogo(){ S.tienda.sub='catalogo'; tiendaView(); }
 function tiendaFiltrar(key){ S.tienda.filtro=key; S.tienda.sub='catalogo'; tiendaView(); animarVista(); }
@@ -1533,7 +1535,7 @@ function tiendaCheckoutView(){
   <div class="seccion">
     <div class="stit" style="font-size:.8rem;">Pago</div>
     <label style="display:flex;align-items:center;gap:8px;font-size:.9rem;font-weight:700;"><input type="radio" name="tiendaMetodo" value="efectivo" checked> Efectivo contra entrega</label>
-    <label style="display:flex;align-items:center;gap:8px;font-size:.9rem;color:var(--tenue);margin-top:6px;"><input type="radio" disabled> MercadoPago <span style="font-size:.72rem;">(próximamente)</span></label>
+    <label style="display:flex;align-items:center;gap:8px;font-size:.9rem;font-weight:700;margin-top:6px;"><input type="radio" name="tiendaMetodo" value="mp"> Mercado Pago <span style="font-size:.72rem;color:var(--tenue);">(simulado en demo)</span></label>
   </div>
   <p id="tiendaCheckoutMsg" class="errmsg"></p>
   <button class="btn-primary" onclick="confirmarPedido()" ${S.tienda.busy?'disabled':''}>${S.tienda.busy?'Enviando…':'Confirmar pedido'}</button>`;
@@ -1546,19 +1548,57 @@ async function confirmarPedido(){
   if(!tel){ setErr('tiendaCheckoutMsg','Completá el teléfono.'); return; }
   const lineas=carritoLineas();
   if(!lineas.length){ setErr('tiendaCheckoutMsg','Tu carrito está vacío.'); return; }
+  const metodoEl=document.querySelector('input[name="tiendaMetodo"]:checked');
+  const metodo=(metodoEl&&metodoEl.value==='mp')?'mp':'efectivo';
   const ped=MC.armarPedido(lineas, esSocioTitular()); // snapshot de precios (núcleo, fuente única)
   const uid=S.cred.u.uid;
   S.tienda.busy=true; tiendaCheckoutView();
   try{
-    await db.collection('pedidos').add({
+    const ref=await db.collection('pedidos').add({
       titularUid:uid, items:ped.items, total:ped.total,
-      entrega:{ direccion:dir, telefono:tel }, metodo:'efectivo',
+      entrega:{ direccion:dir, telefono:tel }, metodo:metodo,
       estado:'nuevo', pago:'pendiente', creadoEn:TS(), actualizadoEn:TS()
     });
-    CARRITO={}; S.tienda.busy=false; S.tienda.sub='pedidos'; S.tienda.pedidos=null;
-    celebrar(); toast('¡Pedido enviado! Te contactamos para coordinar la entrega.');
-    tiendaView(); cargarMisPedidos();
+    S.tienda.busy=false;
+    if(metodo==='mp'){
+      // MP: el pedido nace nuevo/pendiente (como efectivo); el pago se acredita por el endpoint del VPS. No vaciar aún.
+      S.tienda.pago={ pedidoId:ref.id, total:ped.total, busy:false, err:'' };
+      S.tienda.sub='pago'; tiendaView(); animarVista();
+    } else {
+      CARRITO={}; S.tienda.sub='pedidos'; S.tienda.pedidos=null;
+      celebrar(); toast('¡Pedido enviado! Te contactamos para coordinar la entrega.');
+      tiendaView(); cargarMisPedidos();
+    }
   }catch(e){ S.tienda.busy=false; setErr('tiendaCheckoutMsg','No pudimos enviar el pedido: '+e.message); tiendaCheckoutView(); }
+}
+// ── Pantalla de pago MP (simulada). El pedido ya está creado (nuevo/pendiente); acá se acredita por el endpoint. ──
+function tiendaPagoView(){
+  const pg=S.tienda.pago||{};
+  const back=`<button class="link-btn" style="margin-bottom:10px;display:inline-block;" onclick="tiendaIrPedidos()">‹ Ver mis pedidos</button>`;
+  const cuerpo=`<div class="seccion" style="text-align:center;">
+    <div style="width:56px;height:56px;border-radius:16px;background:var(--azul-pale);display:flex;align-items:center;justify-content:center;color:var(--azul);margin:4px auto 10px;">${icon('tienda')}</div>
+    <div class="stit" style="font-size:1rem;text-transform:none;">Pago con Mercado Pago</div>
+    <div style="font-size:.78rem;color:var(--suave);margin-top:2px;">Pago simulado (demo) — con la seguridad de siempre</div>
+    <div style="font-size:2rem;font-weight:900;color:var(--noche);margin:14px 0 2px;">$${Number(pg.total||0).toLocaleString('es-AR')}</div>
+    <div style="font-size:.72rem;color:var(--tenue);">Pedido ${esc(pg.pedidoId||'')}</div>
+    <button class="btn-primary" style="margin-top:16px;" onclick="pagarMP()" ${pg.busy?'disabled':''}>${pg.busy?'Procesando…':'Pagar $'+Number(pg.total||0).toLocaleString('es-AR')}</button>
+    <p id="tiendaPagoMsg" class="errmsg" style="margin-top:8px;">${esc(pg.err||'')}</p>
+    <div style="font-size:.72rem;color:var(--tenue);margin-top:6px;">El pedido ya quedó cargado; si algo falla podés pagarlo más tarde.</div>
+  </div>`;
+  document.getElementById('home').innerHTML = back+cuerpo;
+}
+async function pagarMP(){
+  const pg=S.tienda.pago; if(!pg||!pg.pedidoId) return;
+  pg.busy=true; pg.err=''; tiendaPagoView();
+  try{
+    const token=await auth.currentUser.getIdToken();
+    const res=await fetch(TIENDA_PAGAR,{ method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}, body:JSON.stringify({ pedidoId:pg.pedidoId }) });
+    const j=await res.json().catch(()=>({}));
+    if(!res.ok || !j.ok){ throw new Error((j&&j.error)||('HTTP '+res.status)); }
+    CARRITO={}; S.tienda.pago=null; S.tienda.sub='pedidos'; S.tienda.pedidos=null;
+    celebrar(); toast('¡Pago acreditado! Te contactamos para coordinar la entrega.');
+    tiendaView(); cargarMisPedidos();
+  }catch(e){ pg.busy=false; pg.err='No pudimos procesar el pago: '+e.message+'.'; tiendaPagoView(); }
 }
 // ── Mis pedidos (AMBOS ejes visibles) ──
 var PED_EST_LABEL={ nuevo:'Nuevo', confirmado:'Confirmado', en_camino:'En camino', entregado:'Entregado', cancelado:'Cancelado' };
@@ -1589,7 +1629,7 @@ function tiendaPedidosView(){
       </div>
       <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center;">
         <span style="background:${ecol};color:#fff;font-size:.65rem;font-weight:800;padding:3px 9px;border-radius:100px;">${esc(PED_EST_LABEL[est]||est)}</span>
-        <span style="background:${pagoAcred?'#dcfce7':'#f3f4f6'};color:${pagoAcred?'#166534':'#6b7280'};font-size:.65rem;font-weight:800;padding:3px 9px;border-radius:100px;">Pago: ${pagoAcred?'acreditado':'pendiente'}</span>
+        <span style="background:${pagoAcred?'#dcfce7':'#f3f4f6'};color:${pagoAcred?'#166534':'#6b7280'};font-size:.65rem;font-weight:800;padding:3px 9px;border-radius:100px;">${pagoAcred?'Pagado':'Pago pendiente'}</span>
         ${consumada?`<span style="background:var(--azul);color:#fff;font-size:.62rem;font-weight:800;padding:3px 9px;border-radius:100px;">Entregado y pagado</span>`:''}
       </div>
       ${est==='nuevo'?`<button style="${TB_CANCEL}" onclick="cancelarMiPedido('${p.id}')">Cancelar pedido</button>`:''}
