@@ -57,8 +57,18 @@ eq(C.planCuota(C.planPorEdadAprox('perro', 'mayor')), 70788, 'cuota del plan asi
 // EDAD EXACTA (opcional) — solo para el recálculo cuando hay fecha real.
 var now = 1000 * 365.25 * 24 * 3600 * 1000;
 var haceAnios = function (a) { return now - a * C.ANIO_MS; };
-eq(C.planPorEspecieEdad('perro', haceAnios(9), now), 'MEDIPaw Senior', 'recálculo por fecha: perro 9 años → Senior');
-eq(C.franjaEtaria('perro', haceAnios(0.5), now), 'Joven', 'franja exacta legible');
+// BANDAS confirmadas por Lucas (02/08): perro/gato Joven <3 · Adulto 3–7 · Senior ≥8. Coherente con los buckets.
+eq(C.planPorEspecieEdad('gato', haceAnios(1.5), now), 'MEDIPaw Joven', 'exacta: gato 1.5 años → Joven (antes caía a Adulto)');
+eq(C.planPorEspecieEdad('perro', haceAnios(2.9), now), 'MEDIPaw Joven', 'borde 2.9 → Joven');
+eq(C.planPorEspecieEdad('perro', haceAnios(3),   now), 'MEDIPaw Adulto', 'borde 3.0 → Adulto');
+eq(C.planPorEspecieEdad('perro', haceAnios(7),   now), 'MEDIPaw Adulto', 'borde 7.0 → Adulto');
+eq(C.planPorEspecieEdad('perro', haceAnios(7.9), now), 'MEDIPaw Adulto', 'borde 7.9 → Adulto');
+eq(C.planPorEspecieEdad('perro', haceAnios(8),   now), 'MEDIPaw Senior', 'borde 8.0 → Senior');
+eq(C.planPorEspecieEdad('perro', haceAnios(9),   now), 'MEDIPaw Senior', 'recálculo por fecha: perro 9 años → Senior');
+eq(C.planPorEspecieEdad('ave',   haceAnios(1),   now), 'MEDIPaw Básico', 'ave (cualquier edad) → Básico');
+eq(C.planPorEspecieEdad('otros', haceAnios(5),   now), 'MEDIPaw Básico', 'otros → Básico');
+eq(C.franjaEtaria('perro', haceAnios(1.5), now), 'Joven', 'franja exacta: 1.5 → Joven');
+eq(C.franjaEtaria('gato',  haceAnios(8),   now), 'Senior', 'franja exacta: 8 → Senior');
 
 console.log('\n— COMPROBANTES: snapshot congelado + no-prorrateo + numeración + vencimiento —');
 var msComp = [
