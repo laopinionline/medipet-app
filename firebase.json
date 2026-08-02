@@ -16,6 +16,16 @@
       "firebase.json",
       "**/.*",
       "**/node_modules/**"
+    ],
+    "headers": [
+      { "source": "**/sw.js",         "headers": [{ "key": "Cache-Control", "value": "no-cache" }] },
+      { "source": "**/manifest.json", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] },
+      { "source": "**/*.html",        "headers": [{ "key": "Cache-Control", "value": "no-cache" }] },
+      { "source": "/",       "headers": [{ "key": "Cache-Control", "value": "no-cache" }] },
+      { "source": "/socio",  "headers": [{ "key": "Cache-Control", "value": "no-cache" }] },
+      { "source": "/app",    "headers": [{ "key": "Cache-Control", "value": "no-cache" }] },
+      { "source": "/landing","headers": [{ "key": "Cache-Control", "value": "no-cache" }] },
+      { "source": "/brand",  "headers": [{ "key": "Cache-Control", "value": "no-cache" }] }
     ]
   }
 }
