@@ -49,7 +49,8 @@ const CFG = {
   ALLOW_ORIGIN: process.env.ALLOW_ORIGIN || 'https://medipaw-demo.web.app',
   ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || '',
   ANTHROPIC_MODEL: process.env.ANTHROPIC_MODEL || 'claude-haiku-4-5',
-  FIREBASE_SA_PATH: process.env.FIREBASE_SA_PATH || '',
+  FIREBASE_SA_PATH: process.env.FIREBASE_SA_PATH || '',           // demo (medipaw-demo)
+  FIREBASE_SA_PATH_PROD: process.env.FIREBASE_SA_PATH_PROD || '',  // prod (medipet-c3a4d) — Lucas lo coloca cuando encienda prod
   FIREBASE_PROJECT_ID: process.env.FIREBASE_PROJECT_ID || 'medipaw-demo',
   TEL_EMERG: process.env.TEL_EMERG || '0800-URGENCIA', // placeholder hasta que Lucas fije el teléfono real de guardia
   MAX_TOKENS: parseInt(process.env.MAX_TOKENS || '512', 10),
@@ -59,22 +60,41 @@ const CFG = {
   TIENDA_MP_SIMULADO: process.env.TIENDA_MP_SIMULADO !== 'false',
 };
 
-// --- firebase-admin: verificación del ID token del proyecto demo. Init defensivo (si falta el SA, log y sigue: los
-//     requests fallarán la auth con 401, no se cae el proceso). ---
+// --- firebase-admin: verificación del ID token — DUAL-PROYECTO (demo + prod). Init defensivo (si falta un SA, log y
+//     sigue). Un token trae su `aud`=projectId → solo valida en el app de SU proyecto; leemos/escribimos en ESE
+//     Firestore. Prod entra solo cuando Lucas coloca FIREBASE_SA_PATH_PROD (hasta entonces, solo demo). ---
 let admin = null;
+const APPS = []; // [{ app, project }] — un app de firebase-admin por proyecto con SA presente
 try {
   admin = require('firebase-admin');
+  const initApp = (saPath, nombre) => {
+    if (!saPath || !fs.existsSync(saPath)) return;
+    try {
+      const sa = JSON.parse(fs.readFileSync(saPath, 'utf8'));
+      const app = admin.initializeApp({ credential: admin.credential.cert(sa), projectId: sa.project_id }, nombre);
+      APPS.push({ app, project: sa.project_id });
+      console.log('[vetia] firebase-admin listo (proyecto ' + sa.project_id + ' · ' + nombre + ')');
+    } catch (e) { console.warn('[vetia] no se pudo init ' + nombre + ':', e.message); }
+  };
   if (!admin.apps.length) {
-    if (CFG.FIREBASE_SA_PATH && fs.existsSync(CFG.FIREBASE_SA_PATH)) {
-      const sa = JSON.parse(fs.readFileSync(CFG.FIREBASE_SA_PATH, 'utf8'));
-      admin.initializeApp({ credential: admin.credential.cert(sa), projectId: sa.project_id || CFG.FIREBASE_PROJECT_ID });
-      console.log('[vetia] firebase-admin listo (proyecto ' + (sa.project_id || CFG.FIREBASE_PROJECT_ID) + ')');
-    } else {
-      console.warn('[vetia] FALTA FIREBASE_SA_PATH válido — la auth rechazará todo con 401 hasta configurarlo.');
-    }
+    initApp(CFG.FIREBASE_SA_PATH, 'demo');
+    initApp(CFG.FIREBASE_SA_PATH_PROD, 'prod');
   }
+  if (!APPS.length) console.warn('[vetia] FALTA algún SA válido — la auth rechazará todo con 401 hasta configurarlo.');
 } catch (e) {
   console.warn('[vetia] firebase-admin no disponible:', e.message);
+}
+
+// Verifica el ID token contra CADA proyecto inicializado. Devuelve { uid, db, project } del que valida (o null).
+// Escribir/leer en `db` (el Firestore del proyecto del token) mantiene demo y prod aislados con un solo servicio.
+async function verificarToken(token) {
+  for (const { app, project } of APPS) {
+    try {
+      const decoded = await app.auth().verifyIdToken(token);
+      return { uid: decoded.uid, db: app.firestore(), project };
+    } catch (_) { /* token de otro proyecto → probar el siguiente app */ }
+  }
+  return null;
 }
 
 if (!CFG.ANTHROPIC_API_KEY) console.warn('[vetia] FALTA ANTHROPIC_API_KEY — el modelo devolverá siempre respuesta de caída.');
@@ -173,18 +193,16 @@ const server = http.createServer((req, res) => {
   req.on('end', async () => {
     if (abortado) return; // ya se cortó la conexión
     try {
-      // 1) Auth: ID token del demo
+      // 1) Auth: ID token (dual-proyecto). `reqDb` = Firestore del PROYECTO del token (demo o prod).
       const authz = req.headers['authorization'] || '';
       const m = authz.match(/^Bearer\s+(.+)$/i);
       if (!m) return enviarJSON(res, 401, { error: 'falta token' }, origin);
-      if (!admin || !admin.apps.length) return enviarJSON(res, 503, { error: 'auth no configurada' }, origin);
-      let uid;
-      try {
-        const decoded = await admin.auth().verifyIdToken(m[1]);
-        uid = decoded.uid;
-      } catch (_) {
-        return enviarJSON(res, 401, { error: 'token inválido' }, origin);
-      }
+      if (!APPS.length) return enviarJSON(res, 503, { error: 'auth no configurada' }, origin);
+      const authInfo = await verificarToken(m[1]);
+      if (!authInfo) return enviarJSON(res, 401, { error: 'token inválido' }, origin);
+      const uid = authInfo.uid;
+      const reqDb = authInfo.db;
+      const FV = () => admin.firestore.FieldValue.serverTimestamp();
 
       // 2) Payload
       let data = {};
@@ -192,9 +210,7 @@ const server = http.createServer((req, res) => {
 
       // ── RUTAS DE TURNOS (reserva/cancelación con TX atómica; Admin SDK) ──
       if (ruta === '/api/turnos/reservar' || ruta === '/api/turnos/cancelar') {
-        if (!admin || !admin.apps.length) return enviarJSON(res, 503, { error: 'firestore no configurado' }, origin);
-        const db = admin.firestore();
-        const FV = () => admin.firestore.FieldValue.serverTimestamp();
+        const db = reqDb; // Firestore del proyecto del token (demo o prod)
         try {
           if (ruta === '/api/turnos/reservar') {
             const out = await turnos.reservar({ db, FV, MC }, { uid, agendaId: data.agendaId, hora: data.hora, mascotaId: data.mascotaId }, Date.now());
@@ -213,9 +229,7 @@ const server = http.createServer((req, res) => {
       // MODO SIMULADO (default): acredita el pago del pedido del titular. El cliente NUNCA acredita por reglas;
       // esta es la vía server-side. En productivo (TIENDA_MP_SIMULADO=false) el mismo camino crea la preferencia MP real.
       if (ruta === '/api/tienda/pagar') {
-        if (!admin || !admin.apps.length) return enviarJSON(res, 503, { error: 'firestore no configurado' }, origin);
-        const db = admin.firestore();
-        const FV = () => admin.firestore.FieldValue.serverTimestamp();
+        const db = reqDb; // Firestore del proyecto del token (demo o prod)
         try {
           const out = await tienda.pagar({ db, FV }, { uid, pedidoId: data.pedidoId }, { simulado: CFG.TIENDA_MP_SIMULADO }, Date.now());
           return enviarJSON(res, 200, { ok: true, pago: out }, origin);
@@ -247,7 +261,7 @@ const server = http.createServer((req, res) => {
         //     cliente (plan sin consumos) para no romper la respuesta.
         let contexto = clientCtx;
         try {
-          const db = admin.firestore();
+          const db = reqDb; // Firestore del proyecto del token (demo o prod)
           const [mSnap, aSnap] = await Promise.all([
             db.collection('mascotas').where('titularUid', '==', uid).get(),
             db.collection('atenciones').where('titularUid', '==', uid).get(),
