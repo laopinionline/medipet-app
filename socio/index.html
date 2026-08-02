@@ -1399,7 +1399,8 @@ function bloqueTienda(m){
     <span class="t-arrow">›</span>
   </button>`;
 }
-function abrirTienda(){ S.sub='tienda'; S.tienda={ productos:null, pedidos:null, sub:'catalogo', busy:false, err:'', info:'' }; render(); cargarProductosTienda(); }
+function abrirTienda(){ S.sub='tienda'; S.tienda={ productos:null, pedidos:null, sub:'catalogo', filtro:'todos', fichaId:null, busy:false, err:'', info:'' }; render(); cargarProductosTienda(); }
+function catTienda(k){ return (MC.CATEGORIA_LABEL&&MC.CATEGORIA_LABEL[k])||k; }
 async function cargarProductosTienda(){
   try{
     const snap=await db.collection('productos').where('estado','==','visible').get(); // el oculto no viaja
@@ -1413,9 +1414,11 @@ function carritoLineas(){ const prods=(S.tienda&&S.tienda.productos)||[]; return
 function addCarrito(pid){ const prods=(S.tienda&&S.tienda.productos)||[]; const p=prods.find(x=>x.id===pid); if(!p)return; const stock=Number(p.stock||0); const cur=Number(CARRITO[pid]||0); if(cur>=stock){ toast('No hay más stock de '+(p.nombre||'')); return; } CARRITO[pid]=cur+1; tiendaView(); }
 function subCarrito(pid){ const cur=Number(CARRITO[pid]||0); if(cur<=1){ delete CARRITO[pid]; } else { CARRITO[pid]=cur-1; } tiendaView(); }
 // ── Router de la tienda ──
-function tiendaView(){ if(!S.tienda){ abrirTienda(); return; } if(S.tienda.sub==='checkout') return tiendaCheckoutView(); if(S.tienda.sub==='pedidos') return tiendaPedidosView(); return tiendaCatalogoView(); }
+function tiendaView(){ if(!S.tienda){ abrirTienda(); return; } if(S.tienda.sub==='checkout') return tiendaCheckoutView(); if(S.tienda.sub==='pedidos') return tiendaPedidosView(); if(S.tienda.sub==='ficha') return tiendaFichaView(); return tiendaCatalogoView(); }
 function tiendaIrPedidos(){ S.tienda.sub='pedidos'; S.tienda.pedidos=null; tiendaView(); cargarMisPedidos(); }
 function tiendaIrCatalogo(){ S.tienda.sub='catalogo'; tiendaView(); }
+function tiendaFiltrar(key){ S.tienda.filtro=key; S.tienda.sub='catalogo'; tiendaView(); animarVista(); }
+function abrirFicha(pid){ S.tienda.fichaId=pid; S.tienda.sub='ficha'; tiendaView(); animarVista(); }
 function tiendaIrCheckout(){ if(!carritoCant()){ toast('Tu carrito está vacío.'); return; } S.tienda.sub='checkout'; tiendaView(); }
 function tiendaCatalogoView(){
   const back=`<button class="link-btn" style="margin-bottom:10px;display:inline-block;" onclick="volverHome()">‹ Volver</button>`;
@@ -1428,15 +1431,18 @@ function tiendaCatalogoView(){
   if(!prods.length){ document.getElementById('home').innerHTML = back+titulo+tabs+err+`<div class="seccion"><p style="font-size:.85rem;color:var(--suave);">Estamos sumando productos.</p></div>`; return; }
   const hayDesc = !socio && prods.some(p=>p.precioSocio!=null&&p.precioSocio!==''&&Number(p.precioSocio)>0);
   const banner = hayDesc ? `<div class="seccion" style="background:var(--ambar-suave);border:1px solid #f0d9ac;margin-bottom:12px;"><div style="font-size:.82rem;color:#8a5a00;font-weight:700;display:flex;align-items:center;gap:6px;">${icon('candado')} Con el plan activo de tu mascota pagás el precio socio.</div></div>` : '';
-  const catLabel=(k)=>((MC.CATEGORIA_LABEL&&MC.CATEGORIA_LABEL[k])||k);
-  const orden=MC.CATEGORIAS_TIENDA||[]; // orden estable de góndolas (las vacías no aparecen: solo hay clave si hay producto visible)
-  const porCat={};
-  prods.forEach(p=>{ const cat=p.categoria||'accesorios'; (porCat[cat]=porCat[cat]||[]).push(p); });
-  const cuerpo=Object.keys(porCat).sort((a,b)=>{const ia=orden.indexOf(a),ib=orden.indexOf(b);return (ia<0?99:ia)-(ib<0?99:ib)||a.localeCompare(b);}).map(cat=>{
-    const cards=porCat[cat].slice().sort((a,b)=>String(a.nombre||'').localeCompare(String(b.nombre||''))).map(p=>tiendaCard(p,socio)).join('');
-    return `<div class="stit" style="margin:10px 2px 6px;text-transform:none;font-size:.85rem;">${esc(catLabel(cat))}</div>${cards}`;
-  }).join('');
-  document.getElementById('home').innerHTML = back+titulo+tabs+banner+err+cuerpo+barraCarrito();
+  const orden=MC.CATEGORIAS_TIENDA||[];
+  // categorías con al menos un producto visible, en orden de catálogo (omisión elegante de las vacías)
+  const catsPresentes=orden.filter(c=>prods.some(p=>(p.categoria||'accesorios')===c));
+  const filtro=(S.tienda.filtro && catsPresentes.indexOf(S.tienda.filtro)>=0)?S.tienda.filtro:'todos';
+  // Chips de categoría (scroll horizontal en mobile). El activo, con la semántica azul.
+  const chip=(key,label)=>{const on=filtro===key;return `<button onclick="tiendaFiltrar('${key}')" style="flex-shrink:0;white-space:nowrap;cursor:pointer;font-family:var(--font-body);font-weight:800;font-size:.8rem;padding:7px 15px;border-radius:100px;border:1.5px solid ${on?'var(--azul)':'var(--linea)'};background:${on?'var(--azul)':'#fff'};color:${on?'#fff':'var(--azul)'};">${esc(label)}</button>`;};
+  const chips=`<div style="display:flex;gap:8px;overflow-x:auto;padding:2px 2px 10px;margin:0 -2px;-webkit-overflow-scrolling:touch;">${chip('todos','Todos')}${catsPresentes.map(c=>chip(c,catTienda(c))).join('')}</div>`;
+  const cardsDe=(cat)=>prods.filter(p=>(p.categoria||'accesorios')===cat).slice().sort((a,b)=>String(a.nombre||'').localeCompare(String(b.nombre||''))).map(p=>tiendaCard(p,socio)).join('');
+  let cuerpo;
+  if(filtro==='todos'){ cuerpo=catsPresentes.map(cat=>`<div class="stit" style="margin:10px 2px 6px;text-transform:none;font-size:.85rem;">${esc(catTienda(cat))}</div>${cardsDe(cat)}`).join(''); }
+  else { cuerpo=`<div class="stit" style="margin:6px 2px 8px;text-transform:none;font-size:.9rem;">${esc(catTienda(filtro))}</div>${cardsDe(filtro)}`; }
+  document.getElementById('home').innerHTML = back+titulo+tabs+chips+banner+err+cuerpo+barraCarrito();
 }
 function tiendaCard(p, socio){
   const precio=Number(p.precio||0);
@@ -1452,15 +1458,52 @@ function tiendaCard(p, socio){
     : (enCarrito>0
         ? `<div style="display:inline-flex;align-items:center;gap:10px;"><button style="${TB_Q}" onclick="subCarrito('${p.id}')">−</button><b>${enCarrito}</b><button style="${TB_Q}" onclick="addCarrito('${p.id}')">+</button></div>`
         : `<button style="${TB_ADD}" onclick="addCarrito('${p.id}')">Agregar</button>`);
+  const descCorta = p.descripcion ? String(p.descripcion).replace(/\s*\n\s*/g,' · ') : '';
   return `<div style="background:white;border:1px solid rgba(26,95,180,.08);border-radius:14px;padding:12px;margin-bottom:10px;display:flex;gap:12px;align-items:center;">
-    ${foto}
-    <div style="flex:1;min-width:0;">
-      <div style="font-size:.92rem;font-weight:800;color:var(--noche);">${esc(p.nombre||'—')}</div>
-      ${p.descripcion?`<div style="font-size:.74rem;color:var(--suave);">${esc(p.descripcion)}</div>`:''}
-      <div style="font-size:.9rem;margin-top:4px;">${precioHTML}</div>
+    <div onclick="abrirFicha('${p.id}')" style="display:flex;gap:12px;align-items:center;flex:1;min-width:0;cursor:pointer;">
+      ${foto}
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:.92rem;font-weight:800;color:var(--noche);">${esc(p.nombre||'—')}</div>
+        ${descCorta?`<div style="font-size:.74rem;color:var(--suave);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(descCorta)}</div>`:''}
+        <div style="font-size:.9rem;margin-top:4px;">${precioHTML}</div>
+      </div>
     </div>
     <div style="flex-shrink:0;">${ctrl}</div>
   </div>`;
+}
+function tiendaFichaView(){
+  const back=`<button class="link-btn" style="margin-bottom:10px;display:inline-block;" onclick="tiendaIrCatalogo()">‹ Volver</button>`;
+  const p=((S.tienda&&S.tienda.productos)||[]).find(x=>x.id===S.tienda.fichaId);
+  if(!p){ S.tienda.sub='catalogo'; return tiendaView(); }
+  const socio=esSocioTitular();
+  const precio=Number(p.precio||0);
+  const soc=(p.precioSocio!=null&&p.precioSocio!=='')?Number(p.precioSocio):null;
+  const stock=Number(p.stock||0), sinStock=stock<=0;
+  const stockLabel = sinStock
+    ? `<span style="color:var(--rojo);font-weight:800;">Sin stock</span>`
+    : (stock<=3 ? `<span style="color:#b8791e;font-weight:800;">Quedan pocas</span>` : `<span style="color:var(--verde);font-weight:800;">Disponible</span>`);
+  let precioHTML;
+  if(socio){ const ap=MC.precioAplicado(p,true); precioHTML=`<span style="font-size:1.5rem;font-weight:900;color:var(--azul);">$${ap.toLocaleString('es-AR')}</span>${(soc!=null&&soc>0)?`<span style="font-size:.78rem;color:var(--verde);font-weight:800;margin-left:8px;">precio socio</span>`:''}`; }
+  else { precioHTML=`<span style="font-size:1.5rem;font-weight:900;color:var(--noche);">$${precio.toLocaleString('es-AR')}</span>${(soc!=null&&soc>0)?`<div style="font-size:.82rem;color:#8a5a00;font-weight:800;margin-top:2px;display:flex;align-items:center;gap:5px;">${icon('candado')} Con plan activo: $${soc.toLocaleString('es-AR')}</div>`:''}`; }
+  const enCarrito=Number(CARRITO[p.id]||0);
+  const ctrl = sinStock
+    ? `<button disabled style="${TB_ADD}opacity:.5;cursor:not-allowed;width:100%;padding:13px;">Sin stock</button>`
+    : (enCarrito>0
+        ? `<div style="display:flex;align-items:center;justify-content:center;gap:18px;padding:6px 0;"><button style="${TB_Q}" onclick="subCarrito('${p.id}')">−</button><b style="font-size:1.05rem;">${enCarrito} en el carrito</b><button style="${TB_Q}" onclick="addCarrito('${p.id}')">+</button></div>`
+        : `<button style="${TB_ADD}width:100%;padding:13px;font-size:.95rem;" onclick="addCarrito('${p.id}')">Agregar al carrito</button>`);
+  const foto = p.foto
+    ? `<img src="${esc(p.foto)}" style="width:100%;max-height:260px;object-fit:contain;border-radius:16px;background:#fff;border:1px solid var(--linea);">`
+    : `<div style="width:100%;height:200px;border-radius:16px;background:var(--azul-pale);display:flex;align-items:center;justify-content:center;color:var(--azul);">${icon('tienda')}</div>`;
+  const desc = p.descripcion ? `<div style="font-size:.9rem;color:var(--texto);white-space:pre-line;line-height:1.5;margin-top:12px;">${esc(p.descripcion)}</div>` : '';
+  const cuerpo=`${foto}
+    <div style="font-size:.68rem;color:var(--azul);text-transform:uppercase;letter-spacing:1px;font-weight:800;margin-top:14px;">${esc(catTienda(p.categoria||''))}</div>
+    <div style="font-size:1.25rem;font-weight:900;color:var(--noche);margin-top:2px;">${esc(p.nombre||'')}</div>
+    <div style="margin-top:8px;">${precioHTML}</div>
+    <div style="font-size:.85rem;margin-top:10px;">Stock: ${stockLabel}</div>
+    ${desc}
+    <div style="margin-top:18px;">${ctrl}</div>
+    ${carritoCant()?`<button class="btn-primary" style="margin-top:12px;" onclick="tiendaIrCheckout()">Ir al checkout (${carritoCant()})</button>`:''}`;
+  document.getElementById('home').innerHTML = back+cuerpo;
 }
 function barraCarrito(){
   const cant=carritoCant(); if(!cant) return '';

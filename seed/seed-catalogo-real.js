@@ -30,17 +30,26 @@ function fotoBase64(file) {
 }
 
 const CATALOGO = [
-  // ── REEMPLAZOS (conservan id/stock/estado; se refresca foto/nombre/precio/precioSocio/categoria) ──
-  { file: 'Purina Perros 1k.png',           id: 'DEMO-PROD-01', accion: 'reemplaza', nombre: 'Pro Plan Adult Perro Razas Medianas 1kg', categoria: 'alimento',   precio: 9800,  precioSocio: 8300 },
-  { file: 'Comedero para mascotas.png',     id: 'DEMO-PROD-04', accion: 'reemplaza', nombre: 'Comedero doble elevado (acero + antivoracidad)', categoria: 'accesorios', precio: 16500, precioSocio: null },
+  // ── REEMPLAZOS (conservan id/stock/estado; se refresca foto/nombre/precio/precioSocio/categoria/descripcion) ──
+  { file: 'Purina Perros 1k.png',           id: 'DEMO-PROD-01', accion: 'reemplaza', nombre: 'Pro Plan Adult Perro Razas Medianas 1kg', categoria: 'alimento',   precio: 9800,  precioSocio: 8300,
+    descripcion: 'Alimento súper premium para perros adultos de razas medianas.\nCarne de pollo como primer ingrediente y tecnología OptiHealth con Spirulina.\n26% de proteína para energía y masa muscular. Presentación 1 kg.' },
+  { file: 'Comedero para mascotas.png',     id: 'DEMO-PROD-04', accion: 'reemplaza', nombre: 'Comedero doble elevado (acero + antivoracidad)', categoria: 'accesorios', precio: 16500, precioSocio: null,
+    descripcion: 'Comedero doble con base elevada: mejora la postura al comer y ayuda a la digestión.\nIncluye bowl de acero inoxidable + bowl antivoracidad para que coma más despacio.\nEstructura firme y estable, fácil de higienizar.' },
   // ── NUEVOS (stock 10, visible) ──
-  { file: 'Pro Plan caja x10 unidades.png', id: 'DEMO-PROD-07', accion: 'nuevo', nombre: 'Pro Plan pouch Gato Pollo caja x10', categoria: 'alimento', precio: 18500, precioSocio: 15700 },
-  { file: 'Purina Gatos 3k.png',            id: 'DEMO-PROD-08', accion: 'nuevo', nombre: 'Pro Plan LiveClear Gato Adulto 3kg', categoria: 'alimento', precio: 28900, precioSocio: 24500 },
-  { file: 'Royal Canin Perros 3k.png',      id: 'DEMO-PROD-09', accion: 'nuevo', nombre: 'Royal Canin Mini Adult 3kg', categoria: 'alimento', precio: 24500, precioSocio: 20800 },
-  { file: 'Caja para gatos.png',            id: 'DEMO-PROD-10', accion: 'nuevo', nombre: 'Caja sanitaria cerrada con pala', categoria: 'higiene', precio: 32000, precioSocio: null },
-  { file: 'Comedero automàtico.png',        id: 'DEMO-PROD-11', accion: 'nuevo', nombre: 'Comedero automático por gravedad', categoria: 'accesorios', precio: 19900, precioSocio: null },
-  { file: 'Cama para gatos.png',            id: 'DEMO-PROD-12', accion: 'nuevo', nombre: 'Cama cueva para gatos', categoria: 'camas_descanso', precio: 21000, precioSocio: null },
-  { file: 'Guante quitapelos.png',          id: 'DEMO-PROD-13', accion: 'nuevo', nombre: 'Guante quitapelos', categoria: 'higiene', precio: 5500, precioSocio: null },
+  { file: 'Pro Plan caja x10 unidades.png', id: 'DEMO-PROD-07', accion: 'nuevo', nombre: 'Pro Plan pouch Gato Pollo caja x10', categoria: 'alimento', precio: 18500, precioSocio: 15700,
+    descripcion: 'Caja con 10 pouches de Pro Plan Adult para gatos: pollo en salsa.\nSúper premium, 100% completo y balanceado. Con prebióticos para una digestión saludable y cuidado del tracto urinario.\nGatos adultos desde 1 año.' },
+  { file: 'Purina Gatos 3k.png',            id: 'DEMO-PROD-08', accion: 'nuevo', nombre: 'Pro Plan LiveClear Gato Adulto 3kg', categoria: 'alimento', precio: 28900, precioSocio: 24500,
+    descripcion: 'Reduce significativamente los alérgenos del pelo y la caspa del gato (hasta 47% a partir de la 3ª semana).\nPara gatos adultos de 1 a 7 años, con carne de pollo y 36% de proteína.\nRecomendado por veterinarios. 3 kg.' },
+  { file: 'Royal Canin Perros 3k.png',      id: 'DEMO-PROD-09', accion: 'nuevo', nombre: 'Royal Canin Mini Adult 3kg', categoria: 'alimento', precio: 24500, precioSocio: 20800,
+    descripcion: 'Royal Canin Mini Adult: nutrición precisa para perros adultos de razas pequeñas (hasta 10 kg).\nCroqueta adaptada a su mandíbula, con nutrientes para la vitalidad y la salud diaria.\nPresentación 3 kg.' },
+  { file: 'Caja para gatos.png',            id: 'DEMO-PROD-10', accion: 'nuevo', nombre: 'Caja sanitaria cerrada con pala', categoria: 'higiene', precio: 32000, precioSocio: null,
+    descripcion: 'Sanitario cerrado con techo y puerta abatible: más privacidad para tu gato y menos olores y desparrame de arena.\nTapa superior con asa para una limpieza fácil.\nIncluye pala.' },
+  { file: 'Comedero automàtico.png',        id: 'DEMO-PROD-11', accion: 'nuevo', nombre: 'Comedero automático por gravedad', categoria: 'accesorios', precio: 19900, precioSocio: null,
+    descripcion: 'Comedero automático por gravedad: cargás la tolva y el alimento baja solo a medida que tu mascota come.\nIdeal para dejar comida disponible durante el día.\nFácil de recargar y de limpiar.' },
+  { file: 'Cama para gatos.png',            id: 'DEMO-PROD-12', accion: 'nuevo', nombre: 'Cama cueva para gatos', categoria: 'camas_descanso', precio: 21000, precioSocio: null,
+    descripcion: 'Cama cueva de peluche suave: un refugio abrigado y acogedor donde tu gato se siente seguro.\nDiseño 2 en 1 (cueva o nido abierto), base mullida.\nIdeal para el descanso y los días fríos.' },
+  { file: 'Guante quitapelos.png',          id: 'DEMO-PROD-13', accion: 'nuevo', nombre: 'Guante quitapelos', categoria: 'higiene', precio: 5500, precioSocio: null,
+    descripcion: 'Guante quitapelos 2 en 1: cepillá a tu perro o gato y retirá el pelo suelto de ropa, sillones y auto.\nReutilizable y lavable, cómodo para la mano.\nUn pase y listo.' },
 ];
 
 (async () => {
@@ -54,10 +63,10 @@ const CATALOGO = [
     if (!WRITE) continue;
     const ref = db.collection('productos').doc(p.id);
     if (p.accion === 'reemplaza') {
-      await ref.update({ nombre: p.nombre, categoria: p.categoria, precio: p.precio, precioSocio: p.precioSocio, foto: foto, descripcion: '', actualizadoEn: TS });
+      await ref.update({ nombre: p.nombre, categoria: p.categoria, precio: p.precio, precioSocio: p.precioSocio, foto: foto, descripcion: p.descripcion || '', actualizadoEn: TS });
     } else {
       const snap = await ref.get();
-      const doc = { nombre: p.nombre, categoria: p.categoria, precio: p.precio, precioSocio: p.precioSocio, stock: 10, estado: 'visible', foto: foto, descripcion: '', actualizadoEn: TS };
+      const doc = { nombre: p.nombre, categoria: p.categoria, precio: p.precio, precioSocio: p.precioSocio, stock: 10, estado: 'visible', foto: foto, descripcion: p.descripcion || '', actualizadoEn: TS };
       if (!snap.exists) doc.creadoEn = TS;
       await ref.set(doc, { merge: true });
     }
