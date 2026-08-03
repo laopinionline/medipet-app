@@ -277,9 +277,11 @@ const MC=window.MEDIPAW; // núcleo puro compartido (no se duplica lógica)
 // ⚠️ TEL DE GUARDIA VETERINARIA 24hs — PLACEHOLDER. ÚNICO lugar para cambiarlo (one-liner) cuando esté el número real.
 const TEL_EMERG = '0800-000-0000';
 
-// ── VETIA (asistente IA) — endpoint en el VPS. GATE por hostname: SOLO en el demo el tile es un chat vivo; en PROD
-//    (medipaw.com.ar) sigue como placeholder "Pronto". El endpoint solo permite CORS del origen demo. ──
-const VETIA_ON = /^medipaw-demo\./.test(location.hostname) || location.hostname==='localhost' || location.hostname==='127.0.0.1';
+// ── VETIA (asistente IA) — endpoint en el VPS (dual-proyecto: verifica el token del proyecto del request). ──
+// VETIA_ON: ENCENDIDO en demo Y en prod (medipaw.com.ar es mismo origen que el endpoint → sin CORS; el servicio dual
+// verifica el token de prod). TURNOS_ON: sigue demo-only hasta su encendido en prod.
+const VETIA_ON = /^medipaw-demo\./.test(location.hostname) || location.hostname==='medipaw.com.ar' || location.hostname==='www.medipaw.com.ar' || location.hostname==='localhost' || location.hostname==='127.0.0.1';
+const TURNOS_ON = /^medipaw-demo\./.test(location.hostname) || location.hostname==='localhost' || location.hostname==='127.0.0.1';
 const VETIA_URL = 'https://medipaw.com.ar/api/vetia';
 // TURNOS — mismo gate demo y mismo servicio del VPS. La reserva/cancelación van SOLO por endpoint (nunca update directo).
 const TURNOS_RESERVAR = 'https://medipaw.com.ar/api/turnos/reservar';
@@ -829,10 +831,10 @@ async function enviarCaso(){
     S.caso={done:true}; casoView();
   }catch(e){ if(msg) msg.textContent='Error: '+e.message; }
 }
-// TURNOS — en el DEMO es un tile vivo (agenda del vet de guardia); en PROD sigue "Pronto" (mismo gate que VETIA).
+// TURNOS — en el DEMO es un tile vivo (agenda del vet de guardia); en PROD sigue "Pronto" (gate propio TURNOS_ON).
 function bloqueTurnos(m){
   if(esFree(m)) return tileLock(icon('turnos'), 'Turnos', m); // FREEMIUM: candado hasta activar
-  if(!VETIA_ON) return tilePlaceholder(icon('turnos'),'Turnos','Pedí un turno para tu mascota');
+  if(!TURNOS_ON) return tilePlaceholder(icon('turnos'),'Turnos','Pedí un turno para tu mascota');
   return `<button class="tile" onclick="abrirTurnos()">
     <div class="t-ico">${icon('turnos')}</div>
     <div class="t-body"><div class="t-title">Turnos</div><div class="t-sub">Pedí un turno con el veterinario de guardia</div></div>
