@@ -747,10 +747,13 @@ async function enviarVetia(){
     const token=await user.getIdToken();
     const mascotas=(S.cred.mascotas||[]).map(x=>({ nombre:x.nombre||'', especie:x.especie||'', plan:x.plan||'', edadAprox:x.edadAprox||'' }));
     const contexto={ mascotas, nroSocio:(S.cred.u&&S.cred.u.nroSocio)||'' };
+    // Memoria de conversación: mando el historial de la sesión SIN el mensaje nuevo (el server lo agrega como `mensaje`),
+    // acotado a los últimos 10 y con techo de chars por mensaje. El server lo pasa como turns al modelo.
+    const previos=st.mensajes.slice(0,-1).slice(-10).map(x=>({ rol:x.rol==='vetia'?'vetia':'user', texto:String(x.texto||'').slice(0,1500) }));
     const ctrl=new AbortController(); const to=setTimeout(()=>ctrl.abort(),25000);
     let res;
     try{
-      res=await fetch(VETIA_URL,{ method:'POST', headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+token }, body:JSON.stringify({ mensaje:texto, contexto }), signal:ctrl.signal });
+      res=await fetch(VETIA_URL,{ method:'POST', headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+token }, body:JSON.stringify({ mensaje:texto, contexto, mensajes:previos }), signal:ctrl.signal });
     } finally { clearTimeout(to); }
     if(!res.ok) throw new Error('http '+res.status);
     const data=await res.json();

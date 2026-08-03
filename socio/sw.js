@@ -4,7 +4,7 @@
    clients.claim toma control (la página recarga por 'controllerchange'). Sin esto el
    deploy sirve la versión vieja por horas (lección MEDICAR).
    Firebase/gstatic/fonts (cross-origin) NO se cachean: van directo a la red. */
-const CACHE = 'medipaw-socio-v25'; // ⬅️ BUMPEAR EN CADA DEPLOY del /socio/ · v25: VETIA encendido en prod (gate por hostname separado de turnos)
+const CACHE = 'medipaw-socio-v26'; // ⬅️ BUMPEAR EN CADA DEPLOY del /socio/ · v26: VETIA memoria de conversación (front manda historial en el POST)
 const SHELL = [
   './',
   './index.html',

@@ -22,6 +22,7 @@ const path = require('path');
 const { escanear } = require('./banderas-rojas-vet.js');
 const { buildSystem } = require('./vetia-prompt.js');
 const { armarContexto } = require('./contexto.js');
+const { mensajesATurns, armarMessages } = require('./turns.js');
 const turnos = require('./turnos.js');
 const tienda = require('./tienda.js');
 const MC = require('../lib/medipaw-core.js'); // núcleo (fuente única) para el veredicto informativo de la reserva
@@ -100,7 +101,7 @@ async function verificarToken(token) {
 if (!CFG.ANTHROPIC_API_KEY) console.warn('[vetia] FALTA ANTHROPIC_API_KEY — el modelo devolverá siempre respuesta de caída.');
 
 // --- Llamada a Claude (haiku) con timeout. Devuelve el texto o rechaza. Sin SDK: https nativo (corre en cualquier Node). ---
-function callClaude(system, mensaje) {
+function callClaude(system, mensaje, turns) {
   return new Promise((resolve, reject) => {
     if (!CFG.ANTHROPIC_API_KEY) return reject(new Error('sin api key'));
     const payload = JSON.stringify({
@@ -108,7 +109,7 @@ function callClaude(system, mensaje) {
       max_tokens: CFG.MAX_TOKENS,
       temperature: 0.2,
       system,
-      messages: [{ role: 'user', content: mensaje }],
+      messages: armarMessages(turns, mensaje), // historial de la sesión + el mensaje nuevo (siempre válido)
     });
     const req = https.request({
       hostname: 'api.anthropic.com',
@@ -245,8 +246,11 @@ const server = http.createServer((req, res) => {
       if (!mensaje) return enviarJSON(res, 400, { error: 'mensaje vacío' }, origin);
       if (mensaje.length > CFG.MAX_MSG_CHARS) mensaje = mensaje.slice(0, CFG.MAX_MSG_CHARS);
       const clientCtx = (data.contexto && typeof data.contexto === 'object') ? data.contexto : {};
+      // Memoria de conversación: el front manda el historial de la sesión (últimos ~10). Se pasa como turns al modelo
+      // para que retome el hilo. El scanner rojo NO lo mira: evalúa SOLO el mensaje nuevo.
+      const turns = mensajesATurns(data.mensajes);
 
-      // 3) Escaneo determinista (manda en urgencias)
+      // 3) Escaneo determinista (manda en urgencias) — SOLO el mensaje nuevo, nunca el historial.
       const scan = escanear(mensaje);
 
       // 4) URGENCIA (rojo) = SHORT-CIRCUIT: NO pasa por el modelo NI lee Firestore (no gastar queries en urgencias).
@@ -274,7 +278,7 @@ const server = http.createServer((req, res) => {
 
         const system = buildSystem(contexto, false, Date.now()); // 5) system aterrizado + fecha de hoy + modelo con timeout
         try {
-          respuesta = await callClaude(system, mensaje);
+          respuesta = await callClaude(system, mensaje, turns);
         } catch (e) {
           console.warn('[vetia] modelo caído:', e.message);
           respuesta = respuestaCaida(false);
