@@ -103,6 +103,22 @@ body{font-family:var(--font-body);background:var(--fondo);color:var(--texto);min
 .bverde{background:#dcfce7;color:#166534}
 .brojo{background:#fee2e2;color:#991b1b}
 .pend-box{background:#fffbeb;border:1px solid #fcd34d;border-radius:12px;padding:12px 14px;margin-bottom:14px}
+/* Afiliados agrupados por titular (fila colapsable + buscador) */
+.tit{background:var(--fondo);border:1px solid rgba(26,95,180,.08);border-radius:12px;margin-bottom:10px;overflow:hidden}
+.tit>summary{list-style:none;cursor:pointer;padding:12px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.tit>summary::-webkit-details-marker{display:none}
+.tit>summary::before{content:'\25B8';color:var(--azul);font-weight:800;transition:transform .15s;flex-shrink:0}
+.tit[open]>summary::before{transform:rotate(90deg)}
+.tit[open]>summary{background:#fff;border-bottom:1px solid rgba(26,95,180,.08)}
+.tit>summary:hover{background:#f0f5ff}
+.tit .tsum-main{display:flex;align-items:center;gap:8px;font-size:.9rem;color:var(--navy)}
+.tit .tsum-chip{background:#EBF3FC;color:#1A5FB4;font-size:.66rem;font-weight:800;padding:2px 8px;border-radius:100px}
+.tit .tsum-meta{color:#5a6a8a;font-size:.78rem;flex:1;min-width:130px}
+.tit .tsum-count{font-size:.74rem;color:var(--suave);font-weight:800;white-space:nowrap}
+.tit .tsum-badge{color:#fff;font-size:.62rem;font-weight:800;padding:3px 9px;border-radius:100px;white-space:nowrap;flex-shrink:0}
+.tit>.uitem{margin:0;border:none;border-radius:0;background:#fff}
+.vet-edit{margin-top:10px;background:#f8faff;border:1px solid rgba(26,95,180,.1);border-radius:10px;padding:12px}
+.vet-edit .vet-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
 .pend-tit{font-size:.75rem;font-weight:800;color:#92400e;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px}
 .form-box{background:var(--fondo);border-radius:12px;padding:14px;margin-bottom:14px;border:1px solid rgba(26,95,180,.12)}
 /* Ficha mascota admin */
@@ -1689,16 +1705,33 @@ async function cargarUsuariosAdmin(){
     if(todos.length===0){lista.innerHTML='<p style="color:#5a6a8a;font-size:.85rem;">No hay afiliados registrados aun.</p>';return;}
     const pend=todos.filter(u=>u.estado==='pendiente');
     const resto=todos.filter(u=>u.estado!=='pendiente');
-    let html='';
+    // Cada titular es una FILA colapsable (details/summary nativo): la fila muestra nombre·contacto·Nº mascotas·estado;
+    // al abrir despliega la card completa con sus mascotas (plan/estado/cuota). Buscador arriba filtra por texto.
+    const fila=(u,open)=>`<details class="tit"${open?' open':''} data-b="${esc(afBuscarKey(u))}"><summary>${titSummary(u,masMap)}</summary>${cardUsuario(u,masMap)}</details>`;
+    let html=`<input id="afBuscar" class="input-field" placeholder="Buscar afiliado (nombre, email o Nº de socio)…" oninput="filtrarAfiliados()" style="margin-bottom:12px;">`;
     if(pend.length>0){
-      html+=`<div class="pend-box"><div class="pend-tit">Pendientes de activacion (${pend.length})</div>${pend.map(u=>cardUsuario(u,masMap)).join('')}</div>`;
+      html+=`<div class="pend-box"><div class="pend-tit">Pendientes de activación (${pend.length})</div>${pend.map(u=>fila(u,true)).join('')}</div>`;
     }
     if(resto.length>0){
       html+=`<div style="font-size:.75rem;font-weight:800;color:var(--suave);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">Afiliados (${resto.length})</div>`;
-      html+=resto.map(u=>cardUsuario(u,masMap)).join('');
+      html+=resto.map(u=>fila(u,false)).join('');
     }
     lista.innerHTML=html;
   }catch(e){lista.innerHTML='<p style="color:#ef4444;">Error: '+e.message+'</p>';}
+}
+// Fila resumen del titular (summary): nombre + Nº socio · contacto · cant. mascotas · estado.
+function titSummary(u, masMap){
+  const col=u.estado==='activo'?'#22c55e':u.estado==='pendiente'?'#f59e0b':'#ef4444';
+  const n=(u.mascotas||[]).filter(Boolean).length;
+  return `<span class="tsum-main"><strong>${esc(((u.nombre||'')+' '+(u.apellido||'')).trim()||'—')}</strong>${u.nroSocio?`<span class="tsum-chip">${esc(u.nroSocio)}</span>`:''}</span>`+
+    `<span class="tsum-meta">${esc(u.email||'')}${u.telefono?' · '+esc(u.telefono):''}</span>`+
+    `<span class="tsum-count">${n} ${n===1?'mascota':'mascotas'}</span>`+
+    `<span class="tsum-badge" style="background:${col};">${esc((u.estado||'pendiente').toUpperCase())}</span>`;
+}
+function afBuscarKey(u){ return ((u.nombre||'')+' '+(u.apellido||'')+' '+(u.email||'')+' '+(u.nroSocio||'')).toLowerCase(); }
+function filtrarAfiliados(){
+  const q=(document.getElementById('afBuscar')?.value||'').toLowerCase().trim();
+  document.querySelectorAll('#listaUsuarios details.tit').forEach(d=>{ d.style.display=(!q||(d.dataset.b||'').includes(q))?'':'none'; });
 }
 
 async function cargarVeterinariosAdmin(){
@@ -1727,13 +1760,41 @@ async function cargarVeterinariosAdmin(){
           <span style="background:${col};color:white;font-size:.65rem;font-weight:700;padding:3px 9px;border-radius:100px;white-space:nowrap;flex-shrink:0;">${(u.estado||'—').toUpperCase()}</span>
         </div>
         <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button onclick="toggleEditVet('${u.id}')" class="bmini" style="background:#EBF3FC;color:#1A5FB4;">Editar</button>
           ${u.estado!=='activo'?`<button onclick="cambiarEstado('${u.id}','activo')" class="bmini bverde">Activar</button>`:''}
           ${u.estado==='activo'?`<button onclick="cambiarEstado('${u.id}','suspendido')" class="bmini brojo">Suspender</button>`:''}
           <button data-action="reenviar" data-email="${esc(u.email||'')}" class="bmini" style="background:#f0fdf4;color:#166534;">Reenviar acceso</button>
         </div>
+        <div class="vet-edit" id="editVet-${u.id}" style="display:none;">
+          <div class="vet-grid">
+            <input id="ev-nombre-${u.id}" class="input-field" placeholder="Nombre" value="${esc(u.nombre||'')}">
+            <input id="ev-apellido-${u.id}" class="input-field" placeholder="Apellido" value="${esc(u.apellido||'')}">
+            <input id="ev-tel-${u.id}" class="input-field" placeholder="Teléfono" value="${esc(u.telefono||'')}">
+            <input id="ev-clinica-${u.id}" class="input-field" placeholder="Clínica (opcional)" value="${esc(u.clinica||'')}">
+          </div>
+          <div style="font-size:.7rem;color:#9ca3af;margin-top:6px;">Email de acceso: ${esc(u.email||'—')} — no se edita acá. Estado: con Activar/Suspender.</div>
+          <div style="margin-top:8px;display:flex;gap:8px;">
+            <button onclick="guardarVet('${u.id}')" class="bmini bverde">Guardar</button>
+            <button onclick="toggleEditVet('${u.id}')" class="bmini" style="background:#f3f4f6;color:#6b7280;">Cancelar</button>
+          </div>
+          <p id="ev-msg-${u.id}" style="font-size:.74rem;margin-top:6px;"></p>
+        </div>
       </div>`;
     }).join('');
   }catch(e){lista.innerHTML='<p style="color:#ef4444;">Error: '+e.message+'</p>';}
+}
+
+function toggleEditVet(uid){ const el=document.getElementById('editVet-'+uid); if(el) el.style.display=(el.style.display==='none'?'block':'none'); }
+// Editar datos del veterinario (admin puede update cualquier campo de usuarios — reglas, sin gate). Estado va aparte (cambiarEstado).
+async function guardarVet(uid){
+  const g=(p)=>(document.getElementById(p+'-'+uid)?.value||'').trim();
+  const msg=document.getElementById('ev-msg-'+uid);
+  const nombre=g('ev-nombre');
+  if(!nombre){ if(msg){ msg.textContent='El nombre es obligatorio.'; msg.style.color='#ef4444'; } return; }
+  const upd={ nombre, apellido:g('ev-apellido'), telefono:g('ev-tel'), clinica:g('ev-clinica') };
+  if(msg){ msg.textContent='Guardando…'; msg.style.color='#5a6a8a'; }
+  try{ await db.collection('usuarios').doc(uid).update(upd); cargarVeterinariosAdmin(); }
+  catch(e){ if(msg){ msg.textContent='Error: '+e.message; msg.style.color='#ef4444'; } }
 }
 
 const SRV_ICONS_ADMIN = {
@@ -2097,13 +2158,14 @@ async function cargarCuotasAdmin(){
     const now=new Date(); const per=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
     el.innerHTML = `
       <div style="background:var(--fondo);border-radius:12px;padding:12px;margin-bottom:14px;">
-        <div style="font-size:.8rem;font-weight:700;margin-bottom:8px;">Emitir comprobantes de un período</div>
+        <div style="font-size:.8rem;font-weight:700;margin-bottom:4px;">Facturación automática</div>
+        <p style="font-size:.74rem;color:#5a6a8a;margin-bottom:8px;">Las cuotas se emiten <b>solas el día 5 de cada mes</b> (vencimiento el 10). Este botón es un <b>respaldo</b>: reemite/repara un período a mano si hiciera falta.</p>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
           <input type="month" id="emitPeriodo" value="${per}" class="input-field" style="max-width:180px;">
-          <button onclick="emitirPeriodo()" class="btn-primary" style="width:auto;padding:11px 18px;">Emitir</button>
+          <button onclick="emitirPeriodo()" class="btn-primary" style="width:auto;padding:11px 18px;">Reemitir período</button>
         </div>
         <p id="emitMsg" style="font-size:.78rem;margin-top:6px;"></p>
-        <p style="font-size:.72rem;color:#9ca3af;margin-top:4px;">Un comprobante por titular con mascotas activas. Es una FOTO: congela plan y monto por mascota al emitir. No re-emite si ya existe para ese período. Comprobantes internos (no fiscales).</p>
+        <p style="font-size:.72rem;color:#9ca3af;margin-top:4px;">Un comprobante por titular con mascotas activas. Es una FOTO: congela plan y monto por mascota al emitir. Idempotente: no re-emite si ya existe para ese período. Internos (no fiscales).</p>
       </div>
       <div style="font-size:.75rem;font-weight:800;color:var(--suave);text-transform:uppercase;margin-bottom:8px;">Comprobantes (${comps.length})</div>
       ${comps.length===0 ? '<p style="color:#9ca3af;font-size:.82rem;">Sin comprobantes emitidos.</p>' : comps.map(c=>compAdminCard(c, titulares[c.titularUid]||{})).join('')}`;
