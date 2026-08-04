@@ -2572,10 +2572,15 @@ async function cargarPedidosAdmin(){
       const metodo=p.metodo||'efectivo'; const pagoAcred=p.pago==='acreditado';
       const items=(p.items||[]).map(it=>`${esc(it.nombre||'')} ×${Number(it.cant||1)} — $${(Number(it.precioAplicado||0)*Number(it.cant||1)).toLocaleString('es-AR')}`).join('<br>');
       const ent=p.entrega||{}; const sig=PEDIDO_SIGUIENTE[est]; const consumada=MC.ventaConsumada(p);
+      // Domicilio: canónico nuevo {texto,calleId,altura,pisoDepto,isRural} o string libre viejo (compat, sin migración).
+      const dom=ent.domicilio||null;
+      const domTxt = dom ? (esc(dom.texto||'(sin dirección)')+(dom.pisoDepto?(' — '+esc(dom.pisoDepto)):'')) : esc(ent.direccion||'(sin dirección)');
+      const domDudosa = !!(dom && (!dom.calleId || dom.isRural)); // el humano que confirma es el backstop
       return `<div class="uitem">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
           <div style="flex:1;">
-            <div style="font-size:.82rem;color:#5a6a8a;">${esc(ent.direccion||'(sin dirección)')}${ent.telefono?' · '+esc(ent.telefono):''}</div>
+            <div style="font-size:.82rem;color:#5a6a8a;">${domTxt}${ent.telefono?' · '+esc(ent.telefono):''}</div>
+            ${domDudosa?`<div style="margin-top:4px;"><span style="background:#fef3c7;color:#92400e;font-size:.6rem;font-weight:800;padding:2px 8px;border-radius:100px;">⚠ verificar dirección${dom.isRural?' · rural':''}</span></div>`:''}
             <div style="font-size:.8rem;margin-top:6px;">${items||'(sin items)'}</div>
             <div style="font-size:.9rem;font-weight:800;margin-top:6px;">Total $${Number(p.total||0).toLocaleString('es-AR')} · ${esc(metodo.toUpperCase())}</div>
           </div>

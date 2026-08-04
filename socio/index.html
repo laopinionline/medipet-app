@@ -17,6 +17,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
 <script src="/lib/medipaw-core.js?v=20260802f"></script>
+<script src="/lib/callejero.js?v=20260804a"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -257,6 +258,12 @@ body{font-family:var(--font-body);background:var(--fondo);color:var(--texto);min
       </div>
       <input type="email" id="regEmail" placeholder="Email *" class="input-field" autocomplete="email">
       <input type="tel" id="regTel" placeholder="Teléfono / WhatsApp" class="input-field">
+      <input type="text" id="regCalle" placeholder="Calle (domicilio en Pergamino)" class="input-field" list="calles-pgm-reg" autocomplete="off">
+      <div class="frow">
+        <input type="text" inputmode="numeric" id="regAltura" placeholder="N°" class="input-field">
+        <input type="text" id="regPiso" placeholder="Piso / depto" class="input-field">
+      </div>
+      <datalist id="calles-pgm-reg"></datalist>
       <input type="password" id="regPass" placeholder="Contraseña (mín. 6) *" class="input-field" autocomplete="new-password">
       <input type="password" id="regPass2" placeholder="Repetir contraseña *" class="input-field" autocomplete="new-password">
       <button onclick="doRegistro()" class="btn-primary" id="btnRegistro">Crear mi cuenta</button>
@@ -306,6 +313,33 @@ const TURNOS_CANCELAR = 'https://medipaw.com.ar/api/turnos/cancelar';
 // TIENDA / PAGO MP — mismo servicio del VPS. La acreditación va SOLO por endpoint (el cliente no toca `pago`). Modo simulado.
 const TIENDA_PAGAR = 'https://medipaw.com.ar/api/tienda/pagar';
 
+// ── CALLEJERO de Pergamino (lib/callejero.js) — captura de domicilio en checkout + registro. Carga lazy del JSON
+// (589 calles) apenas arranca; el <datalist> se llena con Callejero.opciones(). Política: permitir-con-warning. ──
+const CALLEJERO_VER = '20260804a';
+if(window.Callejero) Callejero.cargar('/lib/calles-pergamino.json?v='+CALLEJERO_VER);
+// <datalist> compartido (id 'calles-pgm'): lo referencian los <input list="calles-pgm"> del checkout y el registro.
+function callejeroDatalist(){ const o=(window.Callejero?Callejero.opciones():[]); return '<datalist id="calles-pgm">'+o.map(c=>`<option value="${esc(c)}"></option>`).join('')+'</datalist>'; }
+// Tres inputs (calle con autocomplete + altura + piso/depto). `d` = domicilio canónico previo (para precargar).
+// La calle se deriva del `texto` (sin la altura del final); soporta también el string libre viejo.
+function domicilioCalle(d){ if(!d) return ''; if(d.calle!=null) return d.calle; return d.texto ? String(d.texto).replace(/\s*\d+\s*$/,'').trim() : ''; }
+function domicilioCamposHTML(pfx, d){ d=d||{};
+  return `<input type="text" id="${pfx}Calle" class="input-field" list="calles-pgm" autocomplete="off" placeholder="Calle *" value="${esc(domicilioCalle(d))}">
+    <div style="display:flex;gap:8px;margin-top:8px;">
+      <input type="text" inputmode="numeric" id="${pfx}Altura" class="input-field" style="flex:0 0 34%;" placeholder="N° *" value="${esc(d.altura!=null?String(d.altura):'')}">
+      <input type="text" id="${pfx}Piso" class="input-field" style="flex:1;" placeholder="Piso / depto (opcional)" value="${esc(d.pisoDepto||'')}">
+    </div>${callejeroDatalist()}`;
+}
+// Construye el domicilio canónico {texto, calleId, altura, pisoDepto, isRural} resolviendo contra el callejero.
+function armarDomicilio(calle, altura, piso){
+  calle=(calle||'').trim(); altura=(altura||'').trim(); piso=(piso||'').trim();
+  const texto = calle + (altura?(' '+altura):'');
+  const r = (window.Callejero && calle) ? Callejero.resolver(texto) : { calleId:null, altura:null, isRural:false };
+  const alt = (r.altura!=null) ? r.altura : (altura ? (parseInt(altura,10)||null) : null);
+  return { texto: texto, calleId: r.calleId||null, altura: alt, pisoDepto: piso, isRural: !!r.isRural };
+}
+// Texto legible del domicilio canónico (para mostrarlo donde antes iba el string libre).
+function domicilioTexto(d){ if(!d) return ''; const base=d.texto||''; return d.pisoDepto?(base+' — '+d.pisoDepto):base; }
+
 // Roles del doc usuario (compat legacy rol→roles, prestador→veterinario vía el núcleo).
 function getRoles(u){
   let roles = (u && Array.isArray(u.roles) && u.roles.length) ? u.roles.slice() : (u && u.rol ? [u.rol] : []);
@@ -346,7 +380,10 @@ function patitas(txt){ const paws=[0,0,0,0].map(()=>icon('mascotas')).join(''); 
 // Cachorro que sonríe: micro-celebración de un logro (1 vez, sutil; respeta reduced-motion).
 function celebrar(){ if(reduceMotion()) return; const el=document.createElement('div'); el.className='celebra'; el.innerHTML='<svg viewBox="0 0 100 100"><use href="#paw"/></svg>'; document.body.appendChild(el); setTimeout(function(){ el.remove(); }, 1400); }
 function v(id){ const el=document.getElementById(id); return el?el.value.trim():''; }
-function showScreen(id){ ['bootScreen','loginScreen','registerScreen'].forEach(s=>{const e=document.getElementById(s);if(e){e.classList.remove('active');e.style.display=s==='bootScreen'?'none':'';}}); document.getElementById('appScreen').style.display='none'; if(id==='appScreen'){document.getElementById('appScreen').style.display='block';} else {const e=document.getElementById(id); if(e){e.style.display='';e.classList.add('active');}} }
+function showScreen(id){ ['bootScreen','loginScreen','registerScreen'].forEach(s=>{const e=document.getElementById(s);if(e){e.classList.remove('active');e.style.display=s==='bootScreen'?'none':'';}}); document.getElementById('appScreen').style.display='none'; if(id==='appScreen'){document.getElementById('appScreen').style.display='block';} else {const e=document.getElementById(id); if(e){e.style.display='';e.classList.add('active');}} if(id==='registerScreen' && window.Callejero){ Callejero.cargar('/lib/calles-pergamino.json?v='+CALLEJERO_VER).then(poblarDatalistReg); } }
+// Llena el <datalist> del registro con las 589 calles (una sola vez está cargado el callejero).
+var regDirWarn=''; // domicilio ya avisado (permitir-con-warning en el alta)
+function poblarDatalistReg(){ const dl=document.getElementById('calles-pgm-reg'); if(!dl||!window.Callejero) return; dl.innerHTML=Callejero.opciones().map(c=>`<option value="${esc(c)}"></option>`).join(''); }
 function toast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),2600); }
 function setErr(id,msg){ const el=document.getElementById(id); if(el) el.textContent=msg||''; }
 function comprimirFoto(file,max){ max=max||480; return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=e=>{ const img=new Image(); img.onload=()=>{ const c=document.createElement('canvas'); let{width:w,height:h}=img; if(w>h){if(w>max){h=h*max/w;w=max;}}else{if(h>max){w=w*max/h;h=max;}} c.width=w;c.height=h; c.getContext('2d').drawImage(img,0,0,w,h); res(c.toDataURL('image/jpeg',.8)); }; img.onerror=rej; img.src=e.target.result; }; r.onerror=rej; r.readAsDataURL(file); }); }
@@ -362,23 +399,36 @@ async function doLogin(){
 }
 async function doRegistro(){
   const nombre=v('regNombre'),apellido=v('regApellido'),email=v('regEmail'),tel=v('regTel');
+  const calle=v('regCalle'),altura=v('regAltura'),piso=v('regPiso');
   const pass=document.getElementById('regPass').value;
   const pass2=document.getElementById('regPass2').value;
   setErr('regError','');
   if(!nombre||!email||!pass||!pass2){ setErr('regError','Completá los campos con *.'); return; }
   if(pass.length<6){ setErr('regError','La contraseña necesita al menos 6 caracteres.'); return; }
   if(pass!==pass2){ setErr('regError','Las contraseñas no coinciden.'); return; } // valida ANTES de llamar a Auth
+  // Domicilio OPCIONAL en el alta; si lo cargó y no matchea el callejero → warning-then-continue (nunca bloquea el alta).
+  let domicilio=null;
+  if(calle){
+    domicilio=armarDomicilio(calle,altura,piso);
+    if(!domicilio.calleId && regDirWarn!==domicilio.texto){
+      regDirWarn=domicilio.texto;
+      setErr('regError','Esa calle no está en el callejero de Pergamino — verificá que esté bien escrita. Si es correcta, tocá "Crear mi cuenta" otra vez para continuar igual.');
+      return;
+    }
+  }
   const btn=document.getElementById('btnRegistro'); btn.disabled=true; btn.textContent='Creando cuenta…';
   try{
     const cred=await auth.createUserWithEmailAndPassword(email,pass);
     const uid=cred.user.uid;
     // Cuenta SOLA (sin mascota). La mascota se da de alta por el EMBUDO (especie→edad→plan del sistema), activa.
-    await db.collection('usuarios').doc(uid).set({
+    const docData={
       uid,nombre,apellido,email,telefono:tel,
       rol:'afiliado', roles:['afiliado'], estado:'activo',
       mascotas:[],
       creadoEn:TS()
-    });
+    };
+    if(domicilio) docData.domicilio=domicilio; // canónico {texto,calleId,altura,pisoDepto,isRural}
+    await db.collection('usuarios').doc(uid).set(docData);
   }catch(e){
     btn.disabled=false; btn.textContent='Crear mi cuenta';
     setErr('regError', e.code==='auth/email-already-in-use' ? 'Ese email ya tiene cuenta.' : 'Error: '+e.message);
@@ -1423,7 +1473,7 @@ function bloqueTienda(m){
     <span class="t-arrow">›</span>
   </button>`;
 }
-function abrirTienda(){ S.sub='tienda'; S.tienda={ productos:null, pedidos:null, sub:'catalogo', filtro:'todos', fichaId:null, busy:false, err:'', info:'' }; render(); cargarProductosTienda(); }
+function abrirTienda(){ S.sub='tienda'; S.tienda={ productos:null, pedidos:null, sub:'catalogo', filtro:'todos', fichaId:null, busy:false, err:'', info:'', dirWarn:'' }; render(); cargarProductosTienda(); }
 function catTienda(k){ return (MC.CATEGORIA_LABEL&&MC.CATEGORIA_LABEL[k])||k; }
 async function cargarProductosTienda(){
   try{
@@ -1553,7 +1603,7 @@ function tiendaCheckoutView(){
   </div>
   <div class="seccion">
     <div class="stit" style="font-size:.8rem;">Entrega (Pergamino)</div>
-    <input type="text" id="tiendaDireccion" class="input-field" placeholder="Dirección *" value="${esc(u.direccion||'')}">
+    ${domicilioCamposHTML('tienda', u.domicilio || (u.direccion?{texto:u.direccion}:null))}
     <input type="tel" id="tiendaTelefono" class="input-field" style="margin-top:8px;" placeholder="Teléfono *" value="${esc(u.telefono||'')}">
   </div>
   <div class="seccion">
@@ -1566,12 +1616,22 @@ function tiendaCheckoutView(){
   document.getElementById('home').innerHTML = back+titulo+cuerpo;
 }
 async function confirmarPedido(){
-  const dir=v('tiendaDireccion'), tel=v('tiendaTelefono');
+  const calle=v('tiendaCalle'), altura=v('tiendaAltura'), piso=v('tiendaPiso'), tel=v('tiendaTelefono');
   setErr('tiendaCheckoutMsg','');
-  if(!dir){ setErr('tiendaCheckoutMsg','Completá la dirección de entrega.'); return; }
+  if(!calle){ setErr('tiendaCheckoutMsg','Completá la calle de entrega.'); return; }
   if(!tel){ setErr('tiendaCheckoutMsg','Completá el teléfono.'); return; }
   const lineas=carritoLineas();
   if(!lineas.length){ setErr('tiendaCheckoutMsg','Tu carrito está vacío.'); return; }
+  const dom=armarDomicilio(calle,altura,piso);
+  // Altura requerida SALVO zona rural (que no tiene numeración) — así lo rural nunca queda bloqueado.
+  if(!altura && !dom.isRural){ setErr('tiendaCheckoutMsg','Completá la altura (N°). Si es zona rural, escribila en la calle (ej. "Ruta 8 km 5").'); return; }
+  // Permitir-con-warning: si la calle no está en el callejero, avisá y dejá continuar con la MISMA dirección (2° tap).
+  // No re-renderiza (setErr solo cambia el mensaje) → no se pierde lo tipeado. El admin que confirma es el backstop.
+  if(!dom.calleId && S.tienda.dirWarn!==dom.texto){
+    S.tienda.dirWarn=dom.texto;
+    setErr('tiendaCheckoutMsg','Esa calle no está en el callejero de Pergamino — verificá que esté bien escrita. Si es correcta, tocá "Confirmar pedido" otra vez para continuar igual.');
+    return;
+  }
   const metodoEl=document.querySelector('input[name="tiendaMetodo"]:checked');
   const metodo=(metodoEl&&metodoEl.value==='mp')?'mp':'efectivo';
   const ped=MC.armarPedido(lineas, esSocioTitular()); // snapshot de precios (núcleo, fuente única)
@@ -1580,7 +1640,7 @@ async function confirmarPedido(){
   try{
     const ref=await db.collection('pedidos').add({
       titularUid:uid, items:ped.items, total:ped.total,
-      entrega:{ direccion:dir, telefono:tel }, metodo:metodo,
+      entrega:{ domicilio:dom, telefono:tel }, metodo:metodo,
       estado:'nuevo', pago:'pendiente', creadoEn:TS(), actualizadoEn:TS()
     });
     S.tienda.busy=false;
