@@ -1693,6 +1693,12 @@ function esAfiliado(u) {
 
 async function cargarUsuariosAdmin(){
   const lista=document.getElementById('listaUsuarios');if(!lista)return;
+  // BUG FIX: capturar abierto/scroll/búsqueda ANTES del "Cargando..." (que borra los details) para preservarlos en el re-render.
+  const _previos=lista.querySelectorAll('details.tit');
+  const esRerender=_previos.length>0;
+  const abiertos=new Set([..._previos].filter(d=>d.open).map(d=>d.dataset.uid));
+  const scrollY=window.scrollY;
+  const qPrev=(document.getElementById('afBuscar')||{}).value||'';
   lista.innerHTML='<p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p>';
   try{
     const [snap, masSnap]=await Promise.all([
@@ -1707,16 +1713,20 @@ async function cargarUsuariosAdmin(){
     const resto=todos.filter(u=>u.estado!=='pendiente');
     // Cada titular es una FILA colapsable (details/summary nativo): la fila muestra nombre·contacto·Nº mascotas·estado;
     // al abrir despliega la card completa con sus mascotas (plan/estado/cuota). Buscador arriba filtra por texto.
-    const fila=(u,open)=>`<details class="tit"${open?' open':''} data-b="${esc(afBuscarKey(u))}"><summary>${titSummary(u,masMap)}</summary>${cardUsuario(u,masMap)}</details>`;
-    let html=`<input id="afBuscar" class="input-field" placeholder="Buscar afiliado (nombre, email o Nº de socio)…" oninput="filtrarAfiliados()" style="margin-bottom:12px;">`;
+    // (abiertos/scrollY/qPrev/esRerender ya capturados arriba, antes del "Cargando...").
+    // En el primer render los pendientes van abiertos; en un re-render se respeta lo que el admin tenía abierto.
+    const fila=(u)=>{ const open = esRerender ? abiertos.has(u.id) : (u.estado==='pendiente'); return `<details class="tit"${open?' open':''} data-uid="${esc(u.id)}" data-b="${esc(afBuscarKey(u))}"><summary>${titSummary(u,masMap)}</summary>${cardUsuario(u,masMap)}</details>`; };
+    let html=`<input id="afBuscar" class="input-field" placeholder="Buscar afiliado (nombre, email o Nº de socio)…" oninput="filtrarAfiliados()" style="margin-bottom:12px;" value="${esc(qPrev)}">`;
     if(pend.length>0){
-      html+=`<div class="pend-box"><div class="pend-tit">Pendientes de activación (${pend.length})</div>${pend.map(u=>fila(u,true)).join('')}</div>`;
+      html+=`<div class="pend-box"><div class="pend-tit">Pendientes de activación (${pend.length})</div>${pend.map(u=>fila(u)).join('')}</div>`;
     }
     if(resto.length>0){
       html+=`<div style="font-size:.75rem;font-weight:800;color:var(--suave);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">Afiliados (${resto.length})</div>`;
-      html+=resto.map(u=>fila(u,false)).join('');
+      html+=resto.map(u=>fila(u)).join('');
     }
     lista.innerHTML=html;
+    if(qPrev) filtrarAfiliados();                    // re-aplica el filtro de búsqueda
+    if(esRerender) window.scrollTo(0, scrollY);       // restaura la posición de scroll
   }catch(e){lista.innerHTML='<p style="color:#ef4444;">Error: '+e.message+'</p>';}
 }
 // Fila resumen del titular (summary): nombre + Nº socio · contacto · cant. mascotas · estado.
@@ -1887,7 +1897,7 @@ function cardUsuario(u, masMap){
                 <div class="srv-nm">${esc(s.nombre)}</div>
                 <div class="srv-dt">${esc(s.detalle||'')}</div>
               </div>
-              <select data-srv-uid="${u.id}" data-srv-idx="${i}" data-srv-key="${esc(s.key)}">
+              <select data-srv-uid="${u.id}" data-srv-idx="${i}" data-srv-key="${esc(s.key)}" onchange="adminGuardarServicios('${u.id}',${i})">
                 <option value="activo" ${s.estado==='activo'?'selected':''}>Activo</option>
                 <option value="disponible" ${s.estado==='disponible'?'selected':''}>Disponible</option>
                 <option value="oculto" ${s.estado==='oculto'?'selected':''}>Oculto</option>
