@@ -348,6 +348,13 @@ function loaderHTML(txt){ return `<div class="loader-box">${patitas(txt||'Cargan
 // Cachorro que sonríe — SOLO en momentos que lo merecen (activar plan · venta consumada). Nunca en acciones frías.
 function celebrar(){ if(reduceMotion()) return; const el=document.createElement('div'); el.className='celebra'; el.innerHTML='<svg viewBox="0 0 100 100"><use href="#paw"/></svg>'; document.body.appendChild(el); setTimeout(function(){ el.remove(); }, 1400); }
 function animarTab(tab){ if(reduceMotion()) return; const el=document.getElementById('tab-'+tab); if(!el) return; el.classList.remove('view-anim'); void el.offsetWidth; el.classList.add('view-anim'); }
+// Esc cancela CUALQUIER form abierto del panel (descarta cambios sin guardar; los editores repueblan al reabrir).
+function cancelarFormsAbiertos(){
+  let cerrado=false;
+  document.querySelectorAll('.form-box, .vet-edit, #formNuevaMascota, #formNuevaAtencionWrap').forEach(f=>{ if(f && getComputedStyle(f).display!=='none'){ f.style.display='none'; cerrado=true; } });
+  return cerrado;
+}
+document.addEventListener('keydown', function(e){ if(e.key==='Escape') cancelarFormsAbiertos(); });
 // Etiqueta de prestación (full, del núcleo — como el socio) + forma CORTA para chips angostos.
 function etiquetaPrestacion(tipo){ try{ return (MC && MC.ETIQUETAS_PRESTACION && MC.ETIQUETAS_PRESTACION[tipo]) || tipo; }catch(e){ return tipo; } }
 const CHIP_CORTA={consultaGuardia:'Guardia',consultaExterna:'Consulta ext.',vetOnline:'Vet online',medicamentos:'Medicamentos',vacunas:'Vacunas',desparasitacion:'Desparasitación',traslado:'Traslado',analisis:'Análisis',imagen:'Imagen',resonancia:'Resonancia',periodontal:'Periodontal',cirugia:'Cirugía',internacion:'Internación',nutricionista:'Nutrición',etologo:'Etología',especialidades:'Especialidad',higiene:'Higiene',bano:'Baño',descuentos:'Descuentos',legal:'Legal',cremacion:'Cremación',consulta:'Consulta'};
@@ -1364,7 +1371,7 @@ async function vetMostrarFormAtencion(mascotaId) {
         </div>
         <div style="display:flex;gap:8px;">
           <button data-action="guardar-atencion" data-mascota-id="${esc(mascotaId)}" data-nombre="${esc(mascotaNombre)}" class="btn-primary" style="flex:1;">Guardar atencion</button>
-          <button onclick="document.getElementById('formNuevaAtencionWrap').style.display='none'" class="bmini brojo" style="padding:10px 16px;">X</button>
+          <button onclick="document.getElementById('formNuevaAtencionWrap').style.display='none'" class="bmini" style="background:#f3f4f6;color:#6b7280;padding:10px 16px;">Cancelar</button>
         </div>
         <p id="vetAtenMsg" style="font-size:.8rem;"></p>
       </div>
@@ -2631,7 +2638,10 @@ async function cargarProductosAdmin(){
       return `<div class="pcard-a">
         <div class="pa-foto">
           ${p.foto?`<img src="${esc(p.foto)}" alt="${esc(p.nombre||'')}">`:`<div class="ph">${icon('mascotas')}</div>`}
-          <span class="pa-badge" style="background:${vis?'#22c55e':'#9ca3af'};">${vis?'VISIBLE':'OCULTO'}</span>
+          ${!vis?`<span class="pa-badge" style="background:#9ca3af;">OCULTO</span>`
+            :(stock<=0?`<span class="pa-badge" style="background:var(--rojo);">SIN STOCK</span>`
+            :(pocas?`<span class="pa-badge" style="background:var(--ambar);color:#5a3d00;">QUEDAN POCAS</span>`
+            :`<span class="pa-badge" style="background:rgba(255,255,255,.92);color:var(--verde);">VISIBLE</span>`))}
         </div>
         <div class="pa-body">
           ${p.categoria?`<div class="pa-cat">${esc((MC.CATEGORIA_LABEL&&MC.CATEGORIA_LABEL[p.categoria])||p.categoria)}</div>`:''}
@@ -2807,7 +2817,7 @@ function renderPanel(data){
           </div>
           <div style="display:flex;gap:8px;">
             <button onclick="agregarMascota('${data.uid}')" class="btn-primary" style="flex:1;">Agregar mascota</button>
-            <button onclick="toggleFormMascota()" class="bmini brojo" style="padding:10px 16px;">X</button>
+            <button onclick="toggleFormMascota()" class="bmini" style="background:#f3f4f6;color:#6b7280;padding:10px 16px;">Cancelar</button>
           </div>
           <p id="mascotaMsg" style="font-size:.8rem;"></p>
         </div>
@@ -3023,7 +3033,7 @@ function renderPanel(data){
             </select>
             <div style="display:flex;gap:8px;">
               <button onclick="crearAfiliado()" class="btn-primary" style="flex:1;">Crear afiliado</button>
-              <button onclick="toggleFormAfiliado()" class="bmini brojo" style="padding:10px 16px;">X</button>
+              <button onclick="toggleFormAfiliado()" class="bmini" style="background:#f3f4f6;color:#6b7280;padding:10px 16px;">Cancelar</button>
             </div>
             <p id="afilMsg" style="font-size:.8rem;"></p>
           </div>
@@ -3049,7 +3059,7 @@ function renderPanel(data){
             <input type="password" id="vetAdmPass" placeholder="Contrasena inicial *" class="input-field">
             <div style="display:flex;gap:8px;">
               <button onclick="crearVeterinario()" class="btn-primary" style="flex:1;">Crear veterinario</button>
-              <button onclick="toggleFormVeterinario()" class="bmini brojo" style="padding:10px 16px;">X</button>
+              <button onclick="toggleFormVeterinario()" class="bmini" style="background:#f3f4f6;color:#6b7280;padding:10px 16px;">Cancelar</button>
             </div>
             <p id="vetAdmMsg" style="font-size:.8rem;"></p>
           </div>
@@ -3084,7 +3094,7 @@ function renderPanel(data){
             <textarea id="provNotas" placeholder="Notas" class="input-field" style="height:60px;resize:vertical;"></textarea>
             <div style="display:flex;gap:8px;">
               <button onclick="crearProveedor()" class="btn-primary" style="flex:1;">Registrar prestador</button>
-              <button onclick="toggleFormProveedor()" class="bmini brojo" style="padding:10px 16px;">X</button>
+              <button onclick="toggleFormProveedor()" class="bmini" style="background:#f3f4f6;color:#6b7280;padding:10px 16px;">Cancelar</button>
             </div>
             <p id="provMsg" style="font-size:.8rem;"></p>
           </div>
@@ -3119,7 +3129,7 @@ function renderPanel(data){
             </select>
             <div style="display:flex;gap:8px;">
               <button onclick="guardarCartilla()" class="btn-primary" style="flex:1;">Guardar</button>
-              <button onclick="toggleFormCartilla(false)" class="bmini brojo" style="padding:10px 16px;">X</button>
+              <button onclick="toggleFormCartilla(false)" class="bmini" style="background:#f3f4f6;color:#6b7280;padding:10px 16px;">Cancelar</button>
             </div>
             <p id="cartMsg" style="font-size:.8rem;"></p>
           </div>
@@ -3162,7 +3172,7 @@ function renderPanel(data){
             </div>
             <div style="display:flex;gap:8px;">
               <button onclick="guardarProducto()" class="btn-primary" style="flex:1;">Guardar</button>
-              <button onclick="toggleFormProducto(false)" class="bmini brojo" style="padding:10px 16px;">X</button>
+              <button onclick="toggleFormProducto(false)" class="bmini" style="background:#f3f4f6;color:#6b7280;padding:10px 16px;">Cancelar</button>
             </div>
             <p id="prodMsg" style="font-size:.8rem;"></p>
           </div>
