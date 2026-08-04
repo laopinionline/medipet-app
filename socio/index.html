@@ -299,7 +299,7 @@ body{font-family:var(--font-body);background:var(--fondo);color:var(--texto);min
 <!-- Aviso de instalación — SOLO en navegador (no standalone). En la app instalada NUNCA aparece. -->
 <div class="install-banner" id="installBanner" hidden>
   <span class="ib-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><line x1="10" y1="18" x2="14" y2="18"/></svg></span>
-  <div class="ib-txt"><b>MEDIPaw funciona mejor como app</b><span>Instalala en tu teléfono para la experiencia completa</span></div>
+  <div class="ib-txt"><b>MEDIPaw funciona mejor como app</b><span id="ibSub">Instalala en tu teléfono para la experiencia completa</span></div>
   <button class="ib-cta" id="ibInstall" onclick="instalarApp()" hidden>Instalar</button>
   <button class="ib-x" onclick="descartarInstall()" aria-label="Descartar aviso">×</button>
 </div>
@@ -457,7 +457,7 @@ function doLogout(){ auth.signOut(); }
 
 // ── Ruteo por rol (login único). Titular (afiliado) se queda; staff PURO → panel /app/. ──
 auth.onAuthStateChanged(async user=>{
-  if(!user){ S.cred=null; ocultarInstallBanner(); showScreen('loginScreen'); return; }
+  if(!user){ S.cred=null; showScreen('loginScreen'); mostrarInstallBanner(); return; }
   showScreen('bootScreen');
   try{
     const snap=await db.collection('usuarios').doc(user.uid).get();
@@ -1763,22 +1763,38 @@ async function cancelarMiPedido(id){
   S.tienda.pedidos=null; cargarMisPedidos();
 }
 
-// 9) AVISO DE INSTALACIÓN (frontera app/web, Lucas 04/08). El install-prompt VOLVIÓ pero SOLO en el banner de navegador
-//    (nunca en el home). La app instalada (standalone) NUNCA lo ve. Descartable y recordado (localStorage).
+// 9) AVISO DE INSTALACIÓN (frontera app/web, Lucas 04/08). Se muestra en TODO navegador no-standalone, DISPARE O NO el
+//    beforeinstallprompt: el evento MEJORA el banner (CTA "Instalar" con 1 tap), no lo condiciona. Sin evento → mensaje
+//    con INSTRUCCIONES (iOS/otros). La app instalada (standalone) NUNCA lo ve. Descartable y recordado (localStorage).
 function esStandalone(){ try{ return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone===true; }catch(_){ return false; } }
-// Capturamos el prompt del navegador (lo mostramos en el banner, no automático). Si estamos en standalone, ni lo ofrecemos.
-window.addEventListener('beforeinstallprompt', function(e){ e.preventDefault(); S.deferredPrompt=e; if(!esStandalone()){ const b=document.getElementById('ibInstall'); if(b) b.hidden=false; } });
+// Instrucción según plataforma cuando el navegador NO ofrece el prompt automático (iOS Safari nunca lo emite; algunos
+// navegadores desktop tampoco). El aviso igual sirve: le decimos CÓMO instalar.
+function instruccionInstall(){
+  var ua=(navigator.userAgent||'');
+  if(/iphone|ipad|ipod/i.test(ua) || (/(Mac).*(Version).*(Safari)/.test(ua) && 'ontouchend' in document)) return 'En tu teléfono: Compartir → “Agregar a inicio”.';
+  return 'Instalala desde el menú del navegador (⋮ → “Instalar app”).';
+}
+// Ajusta el lado derecho del banner: CTA si hay prompt, si no el subtítulo pasa a ser la instrucción (sin botón).
+function refrescarInstallCTA(){
+  var cta=document.getElementById('ibInstall'), sub=document.getElementById('ibSub'); if(!cta||!sub) return;
+  if(S.deferredPrompt){ cta.hidden=false; sub.textContent='Instalala en tu teléfono para la experiencia completa'; }
+  else { cta.hidden=true; sub.textContent=instruccionInstall(); }
+}
+// Capturamos el prompt del navegador (lo ofrecemos en el banner, nunca automático) y refrescamos el CTA si el banner está.
+window.addEventListener('beforeinstallprompt', function(e){ e.preventDefault(); S.deferredPrompt=e; refrescarInstallCTA(); });
 window.addEventListener('appinstalled', function(){ S.deferredPrompt=null; try{ localStorage.setItem('mp_install_done','1'); }catch(_){ } ocultarInstallBanner(); });
 function mostrarInstallBanner(){
   if(esStandalone()) return;                                   // app instalada → CERO banner
   try{ if(localStorage.getItem('mp_install_dismissed')||localStorage.getItem('mp_install_done')) return; }catch(_){ }
   const el=document.getElementById('installBanner'); if(!el) return;
-  const cta=document.getElementById('ibInstall'); if(cta) cta.hidden=!S.deferredPrompt; // CTA solo si el navegador lo permite
+  refrescarInstallCTA();                                        // CTA o instrucción — la VISIBILIDAD no depende del evento
   el.hidden=false;
 }
 function ocultarInstallBanner(){ const el=document.getElementById('installBanner'); if(el) el.hidden=true; }
 async function instalarApp(){ const p=S.deferredPrompt; ocultarInstallBanner(); if(!p) return; S.deferredPrompt=null; try{ p.prompt(); await p.userChoice; }catch(_){ } }
 function descartarInstall(){ ocultarInstallBanner(); try{ localStorage.setItem('mp_install_dismissed','1'); }catch(_){ } }
+// Mostrar YA en cualquier navegador no-standalone (login, boot o home) — no esperamos al login del titular ni al evento.
+mostrarInstallBanner();
 
 // 10) Feed (placeholder por ahora; el contenido real llega más adelante).
 function bloqueFeed(){
