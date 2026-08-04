@@ -66,6 +66,15 @@ body{font-family:var(--font-body);background:var(--fondo);color:var(--texto);min
 .role-menu-item:hover{background:var(--azul-pale)}
 .role-menu-item.active{color:var(--azul);background:var(--azul-pale)}
 .app-body{max-width:600px;margin:0 auto;padding:24px 16px 80px}
+/* DESKTOP (herramienta de trabajo del staff): el panel aprovecha el ancho; el frame angosto queda SOLO en mobile. */
+@media(min-width:860px){
+  .app-body{max-width:1180px;padding:28px clamp(24px,4vw,44px) 96px}
+  .tabs{position:sticky;top:0;z-index:6;box-shadow:var(--sombra-sm,0 2px 10px rgba(13,27,62,.05))}
+  .tab{flex:0 1 auto;padding:10px 18px}
+  /* Listas de tarjetas → grilla multicolumna que llena el ancho (afiliados agrupados quedan full-width en su bloque). */
+  .grid-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:12px;align-items:start}
+  .grid-cards>.uitem,.grid-cards>.aitem{margin-bottom:0}
+}
 .panel-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px}
 .panel-rol{display:inline-block;background:var(--azul-pale);color:var(--azul);font-size:.7rem;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;padding:4px 10px;border-radius:100px;margin-bottom:6px}
 .panel-rol.veterinario{background:#dbeafe;color:#1d4ed8}
@@ -2918,7 +2927,7 @@ function renderPanel(data){
             <p id="vetAdmMsg" style="font-size:.8rem;"></p>
           </div>
         </div>
-        <div id="listaVeterinarios"><p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p></div>
+        <div id="listaVeterinarios" class="grid-cards"><p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p></div>
       </div>
     </div>
     <div id="tab-proveedores" class="tab-content" style="display:none;">
@@ -2953,7 +2962,7 @@ function renderPanel(data){
             <p id="provMsg" style="font-size:.8rem;"></p>
           </div>
         </div>
-        <div id="listaProveedores"><p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p></div>
+        <div id="listaProveedores" class="grid-cards"><p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p></div>
       </div>
     </div>
     <div id="tab-pagos" class="tab-content" style="display:none;">
@@ -2988,7 +2997,7 @@ function renderPanel(data){
             <p id="cartMsg" style="font-size:.8rem;"></p>
           </div>
         </div>
-        <div id="listaCartilla"><p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p></div>
+        <div id="listaCartilla" class="grid-cards"><p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p></div>
       </div>
     </div>
     <div id="tab-tienda" class="tab-content" style="display:none;">
@@ -3031,11 +3040,11 @@ function renderPanel(data){
             <p id="prodMsg" style="font-size:.8rem;"></p>
           </div>
         </div>
-        <div id="listaProductos"><p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p></div>
+        <div id="listaProductos" class="grid-cards"><p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p></div>
       </div>
       <div class="seccion">
         <div class="stit">Cola de pedidos</div>
-        <div id="listaPedidos"><p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p></div>
+        <div id="listaPedidos" class="grid-cards"><p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p></div>
       </div>
     </div>`;
     setTimeout(cargarDashboard,300);
