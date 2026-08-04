@@ -23,6 +23,7 @@ const { escanear } = require('./banderas-rojas-vet.js');
 const { buildSystem } = require('./vetia-prompt.js');
 const { armarContexto } = require('./contexto.js');
 const { mensajesATurns, armarMessages } = require('./turns.js');
+const { preguntaPorPlan, suprimirPreguntaPlan } = require('./filtro-plan.js');
 const turnos = require('./turnos.js');
 const tienda = require('./tienda.js');
 const MC = require('../lib/medipaw-core.js'); // núcleo (fuente única) para el veredicto informativo de la reserva
@@ -279,6 +280,18 @@ const server = http.createServer((req, res) => {
         const system = buildSystem(contexto, false, Date.now()); // 5) system aterrizado + fecha de hoy + modelo con timeout
         try {
           respuesta = await callClaude(system, mensaje, turns);
+          // R10 — CINTURÓN DETERMINISTA: si el modelo preguntó por el plan/estado/afiliación (lo prohibido), re-pedir UNA
+          // vez con corrección explícita; si recae, SUPRIMIR esa oración. El error nunca llega al socio aunque el modelo recaiga.
+          if (preguntaPorPlan(respuesta)) {
+            const systemR10 = system + '\n\nCORRECCIÓN OBLIGATORIA (R10): en un borrador preguntaste por el plan / estado / '
+              + 'afiliación de una mascota. ESO ESTÁ PROHIBIDO: esos datos están en DATOS CONFIRMADOS y son tuyos. Reescribí '
+              + 'tu respuesta SIN ninguna pregunta sobre el plan, el estado ni la afiliación; usá el dato que ya tenés.';
+            let reintento = '';
+            try { reintento = await callClaude(systemR10, mensaje, turns); } catch (_) { reintento = ''; }
+            if (reintento && !preguntaPorPlan(reintento)) respuesta = reintento;
+            else respuesta = suprimirPreguntaPlan(reintento || '') || suprimirPreguntaPlan(respuesta) || respuesta;
+            console.warn('[vetia] R10: el modelo preguntó por el plan → corregido por el cinturón.');
+          }
         } catch (e) {
           console.warn('[vetia] modelo caído:', e.message);
           respuesta = respuestaCaida(false);

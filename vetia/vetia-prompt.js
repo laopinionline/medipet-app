@@ -47,6 +47,24 @@ function bloqueContexto(contexto) {
   return partes.join('\n');
 }
 
+// DATOS CONFIRMADOS — el estado de CADA mascota en lenguaje natural, AL TOPE del prompt (no enterrado). Es lo que R10
+// protege: VETIA ya sabe el plan y el estado, preguntar por eso es un error. Se re-manda entero en cada request.
+function datosConfirmados(contexto) {
+  const c = contexto || {};
+  const mascotas = Array.isArray(c.mascotas) ? c.mascotas : [];
+  if (!mascotas.length) {
+    return 'DATOS CONFIRMADOS (NO preguntes JAMÁS por esto — ya lo sabés): el titular TODAVÍA no cargó ninguna mascota.';
+  }
+  const lineas = mascotas.map((m) => {
+    const nombre = m.nombre || 'sin nombre';
+    const cob = m.cobertura || {};
+    if (cob.free) return `- ${nombre} está en CARNET FREE (registrada gratis, TODAVÍA SIN plan activo, sin cobertura).`;
+    if (cob.vigente) return `- ${nombre} tiene plan ${m.plan || '—'} ACTIVO, con COBERTURA VIGENTE.`;
+    return `- ${nombre} NO tiene cobertura vigente (${cob.chip || 'sin plan activo'}).`;
+  });
+  return 'DATOS CONFIRMADOS (NO preguntes JAMÁS por el plan, el estado ni la afiliación de estas mascotas — ya lo sabés,\nson TUYOS; si dudás de esto, usá EXACTAMENTE lo que dice acá):\n' + lineas.join('\n');
+}
+
 // Construye el system prompt final. `nowMs` para la fecha de hoy. (En urgencia el server hace short-circuit y no llama acá.)
 function buildSystem(contexto, rojo, nowMs) {
   const ctx = bloqueContexto(contexto);
@@ -55,6 +73,8 @@ function buildSystem(contexto, rojo, nowMs) {
     'Cuando te presentes, decí "Soy VETIA" (tu nombre es VETIA; nunca digas "Soy Sos VETIA" ni "Sos VETIA").',
     'Tu trabajo es ayudar al titular a entender SU plan, SU cobertura y dar consejos GENERALES de cuidado y prevención.',
     `Hoy es ${fechaHoy(nowMs)}. Usá esta fecha como referencia (no supongas otro año).`,
+    '',
+    datosConfirmados(contexto),
     '',
     'CÓMO FUNCIONA MEDIPaw (modelo real — nunca lo contradigas):',
     '- MEDIPaw es un plan de salud para mascotas en Pergamino. El sujeto es la MASCOTA: el plan, la cuota y la cobertura',
@@ -107,4 +127,4 @@ function buildSystem(contexto, rojo, nowMs) {
   return base.join('\n');
 }
 
-module.exports = { buildSystem, bloqueContexto, fechaHoy };
+module.exports = { buildSystem, bloqueContexto, datosConfirmados, fechaHoy };
