@@ -148,6 +148,17 @@ body{font-family:var(--font-body);background:var(--fondo);color:var(--texto);min
 .tcard-precio{line-height:1.15}
 /* Feed / instalar */
 .foot-note{font-size:.72rem;color:var(--suave);text-align:center;line-height:1.5;margin-top:8px}
+/* Banner de instalación — SOLO en navegador (no standalone). Identidad de la casa; discreto, fijo abajo, descartable. */
+.install-banner{position:fixed;left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:90;display:flex;align-items:center;gap:11px;width:calc(100% - 24px);max-width:520px;background:var(--blanco);border:1px solid var(--linea);border-radius:var(--r-lg);box-shadow:var(--sombra-lg);padding:11px 12px}
+.install-banner[hidden]{display:none}
+.install-banner .ib-ic{flex-shrink:0;width:38px;height:38px;border-radius:11px;background:var(--azul-pale);display:flex;align-items:center;justify-content:center;color:var(--azul)}
+.install-banner .ib-ic svg{width:21px;height:21px}
+.install-banner .ib-txt{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.2}
+.install-banner .ib-txt b{font-size:.82rem;color:var(--navy);font-weight:800}
+.install-banner .ib-txt span{font-size:.72rem;color:var(--suave);margin-top:1px}
+.install-banner .ib-cta{flex-shrink:0;background:var(--azul);color:#fff;border:none;border-radius:var(--r-pill);padding:8px 14px;font-weight:800;font-size:.8rem;cursor:pointer;font-family:var(--font-body)}
+.install-banner .ib-cta[hidden]{display:none}
+.install-banner .ib-x{flex-shrink:0;background:none;border:none;color:var(--tenue);font-size:1.35rem;line-height:1;cursor:pointer;padding:0 4px}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(120px);background:var(--noche);color:white;padding:12px 20px;border-radius:100px;font-size:.85rem;font-weight:700;box-shadow:0 8px 30px rgba(0,0,0,.3);transition:transform .3s;z-index:100;max-width:90vw;text-align:center}
 .toast.show{transform:translateX(-50%) translateY(0)}
 .boot{display:flex;align-items:center;justify-content:center;min-height:100vh;color:var(--suave);font-weight:700}
@@ -284,6 +295,14 @@ body{font-family:var(--font-body);background:var(--fondo);color:var(--texto);min
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- Aviso de instalación — SOLO en navegador (no standalone). En la app instalada NUNCA aparece. -->
+<div class="install-banner" id="installBanner" hidden>
+  <span class="ib-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><line x1="10" y1="18" x2="14" y2="18"/></svg></span>
+  <div class="ib-txt"><b>MEDIPaw funciona mejor como app</b><span>Instalala en tu teléfono para la experiencia completa</span></div>
+  <button class="ib-cta" id="ibInstall" onclick="instalarApp()" hidden>Instalar</button>
+  <button class="ib-x" onclick="descartarInstall()" aria-label="Descartar aviso">×</button>
+</div>
 
 <script>
 firebase.initializeApp(window.__FB_CONFIG || {
@@ -438,7 +457,7 @@ function doLogout(){ auth.signOut(); }
 
 // ── Ruteo por rol (login único). Titular (afiliado) se queda; staff PURO → panel /app/. ──
 auth.onAuthStateChanged(async user=>{
-  if(!user){ S.cred=null; showScreen('loginScreen'); return; }
+  if(!user){ S.cred=null; ocultarInstallBanner(); showScreen('loginScreen'); return; }
   showScreen('bootScreen');
   try{
     const snap=await db.collection('usuarios').doc(user.uid).get();
@@ -446,8 +465,9 @@ auth.onAuthStateChanged(async user=>{
     const u={uid:user.uid,...snap.data()};
     const roles=getRoles(u);
     if(!MC.esTitular(roles)){
-      // Sin rol de titular. Si es staff → al panel; si no, cartel honesto. (El mixto staff+afiliado SÍ es titular → se queda.)
-      if(MC.esStaff(roles)){ window.location.replace('../app/'); return; }
+      // Sin rol de titular. STAFF PURO → pantalla clara de derivación al panel web (la app es SOLO socios, sin limbo ni
+      // redirect silencioso). El resto (sin rol útil) → cartel honesto. (El mixto staff+afiliado SÍ es titular → se queda.)
+      if(MC.esStaff(roles)){ renderStaffEnSocio(u); return; }
       renderSinAcceso(u); return;
     }
     // Es titular (afiliado). Carga sus mascotas de la colección y muestra el home. (Si además es staff, se queda acá:
@@ -462,10 +482,25 @@ auth.onAuthStateChanged(async user=>{
     if(recienActivada){ const i=mascotas.findIndex(m=>m.mascotaId===recienActivada.mascotaId); if(i>=0) S.mascotaSel=i; }
     render();
     showScreen('appScreen');
+    mostrarInstallBanner(); // socio titular en navegador → aviso de instalar (no en standalone / si lo descartó)
     if(recienActivada){ setTimeout(function(){ celebrar(); toast('¡'+(recienActivada.nombre||'Tu mascota')+' ya tiene su plan activo!'); }, 420); }
   }catch(e){ showScreen('loginScreen'); setErr('loginError','Error al cargar tu cuenta: '+e.message); }
 });
 
+// STAFF (vet/admin) puro que abrió /socio/: la app es SOLO socios. Pantalla clara → panel de trabajo web + logout.
+function renderStaffEnSocio(u){
+  ocultarInstallBanner(); // el staff no instala la app de socios
+  document.getElementById('home').innerHTML = `
+    <div class="seccion" style="text-align:center;">
+      <div class="big-ic">${icon('tienda')}</div>
+      <div class="stit" style="text-transform:none;font-size:1.05rem;">Esta es la app de socios</div>
+      <p style="font-size:.88rem;color:var(--suave);line-height:1.5;margin-top:6px;">Hola${u.nombre?' '+esc(u.nombre):''} — tu panel de trabajo está en la web.</p>
+      <a class="btn-primary" href="../app/" style="display:block;margin-top:16px;text-decoration:none;">Ir a mi panel de trabajo</a>
+      <div style="font-size:.74rem;color:var(--tenue);margin-top:8px;">medipaw.com.ar/app</div>
+      <button class="link-btn" onclick="doLogout()" style="margin-top:16px;">Cerrar sesión</button>
+    </div>`;
+  showScreen('appScreen');
+}
 function renderSinAcceso(u){
   document.getElementById('home').innerHTML = `
     <div class="seccion" style="text-align:center;">
@@ -475,6 +510,7 @@ function renderSinAcceso(u){
       <a class="btn-emerg" href="tel:${TEL_EMERG}" style="margin-top:14px;"><span class="em-ico">${icon('emerg')}</span><span><span class="em-top">EMERGENCIA 24hs</span><span class="em-sub">Llamar a la guardia veterinaria</span></span></a>
     </div>`;
   showScreen('appScreen');
+  mostrarInstallBanner();
 }
 
 /* ══════════════ HOME DEL TITULAR — builder único por bloque, en el orden aprobado ══════════════ */
@@ -1727,9 +1763,22 @@ async function cancelarMiPedido(id){
   S.tienda.pedidos=null; cargarMisPedidos();
 }
 
-// 9) [Bloque de instalación PWA quitado del home (2026-07-29): se removió el cluster completo (el builder del bloque,
-//     su helper de standalone, el handler del botón y el listener de install-prompt). manifest y SW NO se tocaron;
-//     el alcance app-only queda como decisión aparte de Lucas.]
+// 9) AVISO DE INSTALACIÓN (frontera app/web, Lucas 04/08). El install-prompt VOLVIÓ pero SOLO en el banner de navegador
+//    (nunca en el home). La app instalada (standalone) NUNCA lo ve. Descartable y recordado (localStorage).
+function esStandalone(){ try{ return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone===true; }catch(_){ return false; } }
+// Capturamos el prompt del navegador (lo mostramos en el banner, no automático). Si estamos en standalone, ni lo ofrecemos.
+window.addEventListener('beforeinstallprompt', function(e){ e.preventDefault(); S.deferredPrompt=e; if(!esStandalone()){ const b=document.getElementById('ibInstall'); if(b) b.hidden=false; } });
+window.addEventListener('appinstalled', function(){ S.deferredPrompt=null; try{ localStorage.setItem('mp_install_done','1'); }catch(_){ } ocultarInstallBanner(); });
+function mostrarInstallBanner(){
+  if(esStandalone()) return;                                   // app instalada → CERO banner
+  try{ if(localStorage.getItem('mp_install_dismissed')||localStorage.getItem('mp_install_done')) return; }catch(_){ }
+  const el=document.getElementById('installBanner'); if(!el) return;
+  const cta=document.getElementById('ibInstall'); if(cta) cta.hidden=!S.deferredPrompt; // CTA solo si el navegador lo permite
+  el.hidden=false;
+}
+function ocultarInstallBanner(){ const el=document.getElementById('installBanner'); if(el) el.hidden=true; }
+async function instalarApp(){ const p=S.deferredPrompt; ocultarInstallBanner(); if(!p) return; S.deferredPrompt=null; try{ p.prompt(); await p.userChoice; }catch(_){ } }
+function descartarInstall(){ ocultarInstallBanner(); try{ localStorage.setItem('mp_install_dismissed','1'); }catch(_){ } }
 
 // 10) Feed (placeholder por ahora; el contenido real llega más adelante).
 function bloqueFeed(){

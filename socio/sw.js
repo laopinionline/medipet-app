@@ -4,7 +4,7 @@
    clients.claim toma control (la página recarga por 'controllerchange'). Sin esto el
    deploy sirve la versión vieja por horas (lección MEDICAR).
    Firebase/gstatic/fonts (cross-origin) NO se cachean: van directo a la red. */
-const CACHE = 'medipaw-socio-v28'; // ⬅️ BUMPEAR EN CADA DEPLOY del /socio/ · v28: callejero de Pergamino (captura de domicilio en checkout + registro)
+const CACHE = 'medipaw-socio-v29'; // ⬅️ BUMPEAR EN CADA DEPLOY del /socio/ · v29: frontera app/web (banner de instalación solo en navegador + derivación de staff)
 const SHELL = [
   './',
   './index.html',
