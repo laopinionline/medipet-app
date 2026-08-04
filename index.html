@@ -158,6 +158,49 @@ body{font-family:var(--font-body);background:var(--fondo);color:var(--texto);min
 .cobertura-ok svg,.cobertura-no svg{width:22px;height:22px;flex-shrink:0}
 .cobertura-ok svg{color:var(--azul)}.cobertura-no svg{color:var(--tenue)}
 @media(max-width:500px){.frow{grid-template-columns:1fr}.auth-card{padding:28px 18px}.vet-actions{grid-template-columns:1fr}}
+/* ── MOVIMIENTO (sobrio — herramienta de trabajo; prefers-reduced-motion lo apaga) ── */
+#panelContent.view-anim,.tab-content.view-anim{animation:viewIn .2s var(--ease,cubic-bezier(.22,.61,.36,1))}
+@keyframes viewIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.uitem,.tcard,.pcard-a{transition:transform .15s var(--ease,ease),box-shadow .15s}
+.tcard:hover,.pcard-a:hover{transform:translateY(-2px);box-shadow:var(--sombra-md)}
+.bmini,.btn-primary,.tab{transition:transform .12s var(--ease,ease),background .2s}
+.bmini:not(:disabled):active,.btn-primary:not(:disabled):active,.tab:active{transform:scale(.97)}
+/* Patitas-loader (huellitas que "caminan") — reemplaza los "Cargando..." de texto */
+.paws{display:inline-flex;gap:7px;align-items:center}
+.paws svg{width:16px;height:16px;color:var(--azul-claro);opacity:.25}
+.paws svg:nth-child(odd){transform:rotate(-12deg)}.paws svg:nth-child(even){transform:rotate(12deg)}
+.paws.go svg{animation:pawWalk 1.1s infinite}
+.paws.go svg:nth-child(2){animation-delay:.16s}.paws.go svg:nth-child(3){animation-delay:.32s}.paws.go svg:nth-child(4){animation-delay:.48s}
+@keyframes pawWalk{0%,55%,100%{opacity:.22}28%{opacity:1}}
+.loader-box{display:flex;align-items:center;gap:10px;padding:16px 4px}
+/* Cachorro que sonríe en un logro (activar plan · venta consumada) */
+.celebra{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:200}
+.celebra svg{width:118px;height:118px;color:var(--azul);stroke-width:5;filter:drop-shadow(0 10px 24px rgba(26,95,180,.35));animation:cachorroJoy 1.3s var(--ease,ease) forwards}
+@keyframes cachorroJoy{0%{opacity:0;transform:scale(.3) rotate(-8deg)}22%{opacity:1;transform:scale(1.12) rotate(3deg)}38%{transform:scale(1) rotate(0)}78%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.06) translateY(-6px)}}
+/* Tienda admin — cards de producto (foto protagonista, versión herramienta) */
+.pcard-a{display:flex;flex-direction:column;background:#fff;border:1px solid var(--linea);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--sombra-sm)}
+.pcard-a .pa-foto{position:relative;width:100%;aspect-ratio:16/10;background:var(--azul-pale);overflow:hidden}
+.pcard-a .pa-foto img{width:100%;height:100%;object-fit:cover;display:block}
+.pcard-a .pa-foto .ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--azul)}
+.pcard-a .pa-foto .ph svg{width:38px;height:38px}
+.pcard-a .pa-badge{position:absolute;top:8px;right:8px;color:#fff;font-size:.6rem;font-weight:800;padding:3px 9px;border-radius:100px;box-shadow:var(--sombra-sm)}
+.pcard-a .pa-body{display:flex;flex-direction:column;gap:4px;padding:11px 12px 12px;flex:1}
+.pcard-a .pa-nom{font-size:.9rem;font-weight:800;color:var(--navy);line-height:1.2}
+.pcard-a .pa-cat{font-size:.62rem;font-weight:800;color:var(--azul);text-transform:uppercase;letter-spacing:.4px}
+.pcard-a .pa-pre{font-size:.9rem;font-weight:900;color:var(--navy)}
+.pcard-a .pa-pre .soc{color:var(--azul);font-size:.76rem;font-weight:800}
+.pcard-a .pa-stock{font-size:.72rem;font-weight:700}
+.pcard-a .pa-acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:auto;padding-top:8px}
+/* Pedido admin — chips de los dos ejes (pago · logística) */
+.chip-eje{display:inline-flex;align-items:center;gap:5px;font-size:.62rem;font-weight:800;padding:3px 9px;border-radius:100px;white-space:nowrap}
+@media(prefers-reduced-motion:reduce){
+  #panelContent.view-anim,.tab-content.view-anim{animation:none}
+  .uitem,.tcard,.pcard-a,.bmini,.btn-primary,.tab{transition:none}
+  .tcard:hover,.pcard-a:hover{transform:none;box-shadow:var(--sombra-sm)}
+  .bmini:active,.btn-primary:active,.tab:active{transform:none}
+  .paws.go svg{animation:none;opacity:.5}
+  .celebra{display:none}
+}
 </style>
 </head>
 <body>
@@ -297,6 +340,14 @@ const TURNOS_ON = /^medipaw-demo\./.test(location.hostname) || location.hostname
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 // Iconografía propia (identidad, mismo lenguaje del socio): id fijo del set → sin esc.
 function icon(name){ return `<svg class="ic" aria-hidden="true"><use href="#ic-${name}"/></svg>`; }
+// ── Movimiento e identidad (sobrio; prefers-reduced-motion lo apaga) ──
+function reduceMotion(){ return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches); }
+// Patitas-loader (huellitas que "caminan") — reemplaza los "Cargando..." de texto.
+function patitas(txt){ const paws=[0,0,0,0].map(()=>icon('mascotas')).join(''); return `<span class="paws go" role="status" aria-label="Cargando">${paws}</span>${txt?`<span style="margin-left:4px;color:var(--suave);font-size:.85rem;font-weight:700;">${esc(txt)}</span>`:''}`; }
+function loaderHTML(txt){ return `<div class="loader-box">${patitas(txt||'Cargando…')}</div>`; }
+// Cachorro que sonríe — SOLO en momentos que lo merecen (activar plan · venta consumada). Nunca en acciones frías.
+function celebrar(){ if(reduceMotion()) return; const el=document.createElement('div'); el.className='celebra'; el.innerHTML='<svg viewBox="0 0 100 100"><use href="#paw"/></svg>'; document.body.appendChild(el); setTimeout(function(){ el.remove(); }, 1400); }
+function animarTab(tab){ if(reduceMotion()) return; const el=document.getElementById('tab-'+tab); if(!el) return; el.classList.remove('view-anim'); void el.offsetWidth; el.classList.add('view-anim'); }
 // Etiqueta de prestación (full, del núcleo — como el socio) + forma CORTA para chips angostos.
 function etiquetaPrestacion(tipo){ try{ return (MC && MC.ETIQUETAS_PRESTACION && MC.ETIQUETAS_PRESTACION[tipo]) || tipo; }catch(e){ return tipo; } }
 const CHIP_CORTA={consultaGuardia:'Guardia',consultaExterna:'Consulta ext.',vetOnline:'Vet online',medicamentos:'Medicamentos',vacunas:'Vacunas',desparasitacion:'Desparasitación',traslado:'Traslado',analisis:'Análisis',imagen:'Imagen',resonancia:'Resonancia',periodontal:'Periodontal',cirugia:'Cirugía',internacion:'Internación',nutricionista:'Nutrición',etologo:'Etología',especialidades:'Especialidad',higiene:'Higiene',bano:'Baño',descuentos:'Descuentos',legal:'Legal',cremacion:'Cremación',consulta:'Consulta'};
@@ -747,6 +798,7 @@ async function cambiarEstadoMascota(mascotaId, estado) {
       upd.cuota = 0;
     }
     await ref.set(upd, { merge: true });
+    if (estado === 'activo') { celebrar(); toast('¡Plan activado! Cobertura vigente.'); } // el momento MEDIPaw del admin
     // Primer punto de peso desde pesoInicial (una sola vez, solo al activar). El titular free no pudo cargarlo (reglas).
     if (estado === 'activo' && Number(m.pesoInicial) > 0) {
       try {
@@ -971,7 +1023,7 @@ async function generarFichaPublica(mascotaId) {
 async function cargarDashboardVet() {
   const el = document.getElementById('vet-dashboard-content');
   if (!el) return;
-  el.innerHTML = '<p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p>';
+  el.innerHTML = loaderHTML();
   try {
     const uid = auth.currentUser.uid;
     const now = new Date();
@@ -1144,7 +1196,7 @@ async function vetVerHistoria(mascotaId) {
 
   const el = document.getElementById('vet-historia-content');
   if (!el) return;
-  el.innerHTML = '<p style="color:#5a6a8a;font-size:.85rem;">Cargando historia clinica...</p>';
+  el.innerHTML = loaderHTML('Cargando la historia clínica…');
 
   try {
     // Buscar datos de la mascota en la colección (fuente de verdad).
@@ -1412,7 +1464,7 @@ async function vetGuardarAtencion(mascotaId, mascotaNombre) {
 async function cargarMisPacientes() {
   const el = document.getElementById('vet-pacientes-content');
   if (!el) return;
-  el.innerHTML = '<p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p>';
+  el.innerHTML = loaderHTML();
 
   try {
     const uid = auth.currentUser.uid;
@@ -1484,7 +1536,7 @@ function desdeTexto(v){ return {hoy:'hoy', ayer:'ayer', varios_dias:'hace varios
 async function cargarBandejaCasos(){
   _casoParaAtencion = null; // volver a la bandeja descarta una derivación "Cerrar + atención" abandonada
   const el=document.getElementById('vet-casos-content'); if(!el) return;
-  el.innerHTML='<p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p>';
+  el.innerHTML=loaderHTML();
   try{
     const [casosSnap, clinicoSnap, usSnap] = await Promise.all([
       db.collection('casos').get(),
@@ -1699,7 +1751,7 @@ async function cargarUsuariosAdmin(){
   const abiertos=new Set([..._previos].filter(d=>d.open).map(d=>d.dataset.uid));
   const scrollY=window.scrollY;
   const qPrev=(document.getElementById('afBuscar')||{}).value||'';
-  lista.innerHTML='<p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p>';
+  lista.innerHTML=loaderHTML();
   try{
     const [snap, masSnap]=await Promise.all([
       db.collection('usuarios').get(),
@@ -1746,7 +1798,7 @@ function filtrarAfiliados(){
 
 async function cargarVeterinariosAdmin(){
   const lista=document.getElementById('listaVeterinarios');if(!lista)return;
-  lista.innerHTML='<p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p>';
+  lista.innerHTML=loaderHTML();
   try{
     const snap=await db.collection('usuarios').get();
     const veterinarios=snap.docs.map(d=>({id:d.id,...d.data()})).filter(u=>{
@@ -2159,7 +2211,7 @@ async function siguienteNroComprobante(){
 }
 async function cargarCuotasAdmin(){
   const el=document.getElementById('cuotas-content'); if(!el) return;
-  el.innerHTML='<p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p>';
+  el.innerHTML=loaderHTML();
   try{
     const [compSnap, usSnap] = await Promise.all([ db.collection('comprobantes').get(), db.collection('usuarios').get() ]);
     const titulares={}; usSnap.docs.forEach(d=>titulares[d.id]=d.data());
@@ -2242,6 +2294,7 @@ function switchTab(tab,btn){
   document.querySelectorAll('.tab-content').forEach(t=>t.style.display='none');
   document.getElementById('tab-'+tab).style.display='block';
   btn.classList.add('active');
+  animarTab(tab); // fade+slide sobrio 200ms
   if(tab==='dashboard')cargarDashboard();
   if(tab==='afiliados')cargarUsuariosAdmin();
   if(tab==='veterinarios')cargarVeterinariosAdmin();
@@ -2255,7 +2308,7 @@ function switchTab(tab,btn){
 async function cargarDashboard(){
   const el = document.getElementById('dashboard-content');
   if(!el) return;
-  el.innerHTML = '<p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p>';
+  el.innerHTML = loaderHTML();
 
   try {
     // F0.5: unidad de negocio = MASCOTA ACTIVA (colección), no el titular. Facturación = Σ cuota de activas.
@@ -2438,7 +2491,7 @@ async function crearProveedor(){
 
 async function cargarProveedoresAdmin(){
   const lista=document.getElementById('listaProveedores');if(!lista)return;
-  lista.innerHTML='<p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p>';
+  lista.innerHTML=loaderHTML();
   try{
     const snap=await db.collection('prestadores').orderBy('creadoEn','desc').get();
     if(snap.empty){lista.innerHTML='<p style="color:#5a6a8a;font-size:.85rem;">No hay prestadores registrados aun.</p>';return;}
@@ -2487,7 +2540,7 @@ function nuevaCartilla(){
 }
 async function cargarCartillaAdmin(){
   const lista=document.getElementById('listaCartilla'); if(!lista)return;
-  lista.innerHTML='<p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p>';
+  lista.innerHTML=loaderHTML();
   try{
     const snap=await db.collection('cartilla').orderBy('localidad').get(); // el admin ve TODO (visible + oculto)
     if(snap.empty){ lista.innerHTML='<p style="color:#5a6a8a;font-size:.85rem;">No hay prestadores en la cartilla.</p>'; return; }
@@ -2567,29 +2620,29 @@ function previewProdFoto(input){
 async function cargarTiendaAdmin(){ await cargarProductosAdmin(); await cargarPedidosAdmin(); }
 async function cargarProductosAdmin(){
   const lista=document.getElementById('listaProductos'); if(!lista)return;
-  lista.innerHTML='<p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p>';
+  lista.innerHTML=loaderHTML();
   try{
     const snap=await db.collection('productos').orderBy('nombre').get(); // el admin ve TODO (visible + oculto)
     if(snap.empty){ lista.innerHTML='<p style="color:#5a6a8a;font-size:.85rem;">No hay productos todavía.</p>'; return; }
     lista.innerHTML=snap.docs.map(d=>{
-      const p=d.data(); const vis=p.estado!=='oculto'; const col=vis?'#22c55e':'#9ca3af';
+      const p=d.data(); const vis=p.estado!=='oculto';
       const precio=Number(p.precio||0), soc=(p.precioSocio!=null&&p.precioSocio!=='')?Number(p.precioSocio):null, stock=Number(p.stock||0);
-      return `<div class="uitem">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
-          <div style="display:flex;gap:10px;flex:1;">
-            ${p.foto?`<img src="${esc(p.foto)}" style="width:48px;height:48px;border-radius:10px;object-fit:cover;flex-shrink:0;">`:`<div style="width:48px;height:48px;border-radius:10px;background:var(--azul-pale);display:flex;align-items:center;justify-content:center;color:var(--azul);flex-shrink:0;">${icon('mascotas')}</div>`}
-            <div style="flex:1;">
-              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><strong style="font-size:.95rem;">${esc(p.nombre||'')}</strong>${p.categoria?`<span style="font-size:.68rem;color:var(--azul);text-transform:uppercase;">${esc((MC.CATEGORIA_LABEL&&MC.CATEGORIA_LABEL[p.categoria])||p.categoria)}</span>`:''}</div>
-              <div style="font-size:.82rem;color:var(--texto);font-weight:700;">$${precio.toLocaleString('es-AR')}${soc!=null?` · <span style="color:var(--azul);">socio $${soc.toLocaleString('es-AR')}</span>`:''}</div>
-              <div style="font-size:.72rem;color:${stock>0?'#5a6a8a':'#e11d48'};">Stock: ${stock}${p.descripcion?' · '+esc(p.descripcion):''}</div>
-            </div>
-          </div>
-          <span style="background:${col};color:white;font-size:.65rem;font-weight:700;padding:3px 9px;border-radius:100px;white-space:nowrap;flex-shrink:0;">${vis?'VISIBLE':'OCULTO'}</span>
+      const pocas=stock>0&&stock<=3;
+      return `<div class="pcard-a">
+        <div class="pa-foto">
+          ${p.foto?`<img src="${esc(p.foto)}" alt="${esc(p.nombre||'')}">`:`<div class="ph">${icon('mascotas')}</div>`}
+          <span class="pa-badge" style="background:${vis?'#22c55e':'#9ca3af'};">${vis?'VISIBLE':'OCULTO'}</span>
         </div>
-        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
-          <button onclick="editarProducto('${d.id}')" class="bmini">Editar</button>
-          ${vis?`<button onclick="cambiarEstadoProducto('${d.id}','oculto')" class="bmini brojo">Ocultar</button>`:`<button onclick="cambiarEstadoProducto('${d.id}','visible')" class="bmini bverde">Mostrar</button>`}
-          <button onclick="eliminarProducto('${d.id}')" class="bmini brojo">Eliminar</button>
+        <div class="pa-body">
+          ${p.categoria?`<div class="pa-cat">${esc((MC.CATEGORIA_LABEL&&MC.CATEGORIA_LABEL[p.categoria])||p.categoria)}</div>`:''}
+          <div class="pa-nom">${esc(p.nombre||'—')}</div>
+          <div class="pa-pre">$${precio.toLocaleString('es-AR')}${soc!=null?` <span class="soc">· socio $${soc.toLocaleString('es-AR')}</span>`:''}</div>
+          <div class="pa-stock" style="color:${stock>0?(pocas?'#b8791e':'#5a6a8a'):'#e11d48'};">Stock: ${stock}${stock<=0?' · sin stock':(pocas?' · quedan pocas':'')}</div>
+          <div class="pa-acts">
+            <button onclick="editarProducto('${d.id}')" class="bmini">Editar</button>
+            ${vis?`<button onclick="cambiarEstadoProducto('${d.id}','oculto')" class="bmini brojo">Ocultar</button>`:`<button onclick="cambiarEstadoProducto('${d.id}','visible')" class="bmini bverde">Mostrar</button>`}
+            <button onclick="eliminarProducto('${d.id}')" class="bmini brojo">Eliminar</button>
+          </div>
         </div>
       </div>`;
     }).join('');
@@ -2644,7 +2697,7 @@ function efectoLabel(estadoDe, estadoA, metodo){
 }
 async function cargarPedidosAdmin(){
   const lista=document.getElementById('listaPedidos'); if(!lista)return;
-  lista.innerHTML='<p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p>';
+  lista.innerHTML=loaderHTML();
   try{
     const snap=await db.collection('pedidos').orderBy('creadoEn','desc').get();
     if(snap.empty){ lista.innerHTML='<p style="color:#5a6a8a;font-size:.85rem;">No hay pedidos.</p>'; return; }
@@ -2665,10 +2718,10 @@ async function cargarPedidosAdmin(){
             <div style="font-size:.8rem;margin-top:6px;">${items||'(sin items)'}</div>
             <div style="font-size:.9rem;font-weight:800;margin-top:6px;">Total $${Number(p.total||0).toLocaleString('es-AR')} · ${esc(metodo.toUpperCase())}</div>
           </div>
-          <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0;">
-            <span style="background:${col};color:white;font-size:.62rem;font-weight:800;padding:3px 9px;border-radius:100px;white-space:nowrap;">${(PEDIDO_LABEL[est]||est).toUpperCase()}</span>
-            <span style="background:${pagoAcred?'#dcfce7':'#fef3c7'};color:${pagoAcred?'#166534':'#92400e'};font-size:.62rem;font-weight:800;padding:3px 9px;border-radius:100px;white-space:nowrap;">PAGO: ${pagoAcred?'ACREDITADO':'PENDIENTE'}</span>
-            ${consumada?`<span style="background:#1A5FB4;color:white;font-size:.58rem;font-weight:800;padding:2px 8px;border-radius:100px;">✓ VENTA</span>`:''}
+          <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end;flex-shrink:0;">
+            <span class="chip-eje" style="background:${col};color:#fff;" title="Estado logístico">${(PEDIDO_LABEL[est]||est).toUpperCase()}</span>
+            <span class="chip-eje" style="background:${pagoAcred?'var(--azul)':'#eef1f6'};color:${pagoAcred?'#fff':'var(--suave)'};" title="Estado de pago">${pagoAcred?'PAGADO':'PAGO PENDIENTE'}</span>
+            ${consumada?`<span class="chip-eje" style="background:var(--verde);color:#fff;">✓ VENTA</span>`:''}
           </div>
         </div>
         <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
@@ -2696,6 +2749,8 @@ async function transicionarPedido(id, estadoNuevo){
     if(estadoNuevo==='entregado' && metodo==='efectivo') upd.pago='acreditado'; // entregar = cobrar (efectivo), un solo acto
     batch.update(ref, upd);
     await batch.commit();
+    // Venta consumada = entregado + acreditado (los dos ejes cerrados) → cachorro.
+    if(estadoNuevo==='entregado' && (upd.pago==='acreditado' || p.pago==='acreditado')) celebrar();
     toast('Pedido → '+(PEDIDO_LABEL[estadoNuevo]||estadoNuevo)+(ef==='baja'?' · stock bajó':ef==='reingreso'?' · stock reingresó':'')+((estadoNuevo==='entregado'&&metodo==='efectivo')?' · pago acreditado':''));
   }catch(e){ toast('Error: '+e.message); }
   cargarPedidosAdmin(); cargarProductosAdmin(); // refrescá también la lista de productos (el stock pudo moverse)
@@ -2852,14 +2907,14 @@ function renderPanel(data){
           <div class="va-text">Nueva atencion</div>
         </div>
       </div>
-      <div id="vet-dashboard-content"><p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p></div>
+      <div id="vet-dashboard-content">${loaderHTML()}</div>
     </div>
 
     <!-- TAB CASOS (F1-B · bandeja de despacho veterinario) -->
     <div id="vet-tab-casos" class="vet-tab-content" style="display:none;">
       <div class="seccion">
         <div class="stit">Casos entrantes</div>
-        <div id="vet-casos-content"><p style="color:#9ca3af;font-size:.82rem;">Cargando...</p></div>
+        <div id="vet-casos-content">${loaderHTML()}</div>
       </div>
     </div>
 
@@ -2890,7 +2945,7 @@ function renderPanel(data){
     <div id="vet-tab-pacientes" class="vet-tab-content" style="display:none;">
       <div class="seccion">
         <div class="stit">Mis pacientes</div>
-        <div id="vet-pacientes-content"><p style="color:#9ca3af;font-size:.82rem;">Cargando...</p></div>
+        <div id="vet-pacientes-content">${loaderHTML()}</div>
       </div>
     </div>
 
@@ -2931,7 +2986,7 @@ function renderPanel(data){
     <div id="tab-cuotas" class="tab-content" style="display:none;">
       <div class="seccion">
         <div class="stit">Comprobantes de cuota</div>
-        <div id="cuotas-content"><p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p></div>
+        <div id="cuotas-content">${loaderHTML()}</div>
       </div>
     </div>
     <div id="tab-dashboard" class="tab-content">
@@ -2973,7 +3028,7 @@ function renderPanel(data){
             <p id="afilMsg" style="font-size:.8rem;"></p>
           </div>
         </div>
-        <div id="listaUsuarios"><p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p></div>
+        <div id="listaUsuarios">${loaderHTML()}</div>
       </div>
     </div>
     <div id="tab-veterinarios" class="tab-content" style="display:none;">
@@ -2999,7 +3054,7 @@ function renderPanel(data){
             <p id="vetAdmMsg" style="font-size:.8rem;"></p>
           </div>
         </div>
-        <div id="listaVeterinarios" class="grid-cards"><p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p></div>
+        <div id="listaVeterinarios" class="grid-cards">${loaderHTML()}</div>
       </div>
     </div>
     <div id="tab-proveedores" class="tab-content" style="display:none;">
@@ -3034,11 +3089,11 @@ function renderPanel(data){
             <p id="provMsg" style="font-size:.8rem;"></p>
           </div>
         </div>
-        <div id="listaProveedores" class="grid-cards"><p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p></div>
+        <div id="listaProveedores" class="grid-cards">${loaderHTML()}</div>
       </div>
     </div>
     <div id="tab-pagos" class="tab-content" style="display:none;">
-      <div class="seccion"><div class="stit">Atenciones y pagos</div><div id="listaAtenciones"><p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p></div></div>
+      <div class="seccion"><div class="stit">Atenciones y pagos</div><div id="listaAtenciones">${loaderHTML()}</div></div>
     </div>
     <div id="tab-cartilla" class="tab-content" style="display:none;">
       <div class="seccion">
@@ -3069,7 +3124,7 @@ function renderPanel(data){
             <p id="cartMsg" style="font-size:.8rem;"></p>
           </div>
         </div>
-        <div id="listaCartilla" class="grid-cards"><p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p></div>
+        <div id="listaCartilla" class="grid-cards">${loaderHTML()}</div>
       </div>
     </div>
     <div id="tab-tienda" class="tab-content" style="display:none;">
@@ -3112,11 +3167,11 @@ function renderPanel(data){
             <p id="prodMsg" style="font-size:.8rem;"></p>
           </div>
         </div>
-        <div id="listaProductos" class="grid-cards"><p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p></div>
+        <div id="listaProductos" class="grid-cards">${loaderHTML()}</div>
       </div>
       <div class="seccion">
         <div class="stit">Cola de pedidos</div>
-        <div id="listaPedidos" class="grid-cards"><p style="color:#5a6a8a;font-size:.85rem;">Cargando...</p></div>
+        <div id="listaPedidos" class="grid-cards">${loaderHTML()}</div>
       </div>
     </div>`;
     setTimeout(cargarDashboard,300);
