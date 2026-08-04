@@ -138,16 +138,18 @@
   .comp .cell.hotcol{background:rgba(26,95,180,.04)}
   .comp .ch.rowlblh{position:sticky;left:0;background:var(--navy);z-index:3;text-align:left;padding-left:12px}
 
-  /* Tienda teaser */
-  .tienda{background:linear-gradient(120deg,var(--ambar-suave),#fff);border:1px solid var(--ambar);border-radius:var(--r-xl);padding:34px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px}
-  .tienda .pico{width:56px;height:56px;border-radius:16px;background:var(--ambar);display:flex;align-items:center;justify-content:center}
-  .tienda .pico svg{width:30px;height:30px;color:var(--navy)}
-  .tienda .soon{font-size:.72rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#b5822a}
-
-  /* CTA final */
-  .cta-final{background:var(--navy);color:#fff;border-radius:var(--r-xl);padding:48px 30px;text-align:center}
-  .cta-final h2{color:#fff;font-size:clamp(1.7rem,4vw,2.3rem)}
-  .cta-final p{color:#c3cee4;margin:10px 0 22px}
+  /* Tienda — vidriera (carrusel de productos reales, deslizable) */
+  .vitrina{display:flex;gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;padding:6px 2px 14px;margin:0 -2px;-webkit-overflow-scrolling:touch;scrollbar-width:none;cursor:grab}
+  .vitrina::-webkit-scrollbar{display:none}
+  .vitrina.drag{cursor:grabbing;scroll-snap-type:none}
+  .vitrina.drag *{pointer-events:none}
+  .vcard{flex:0 0 auto;width:190px;scroll-snap-align:start;background:#fff;border:1px solid var(--linea);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--sombra-sm)}
+  .vcard .vfoto{width:100%;aspect-ratio:1/1;background:var(--azul-pale);overflow:hidden}
+  .vcard .vfoto img{width:100%;height:100%;object-fit:cover;display:block}
+  .vcard .vbody{padding:10px 12px 12px}
+  .vcard .vnom{font-size:.82rem;font-weight:800;color:var(--navy);line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.05em}
+  .vcard .vpre{margin-top:6px;font-size:1rem;font-weight:900;color:var(--azul)}
+  .vcard .vsoc{display:block;font-size:.66rem;font-weight:800;color:#b5822a;margin-top:1px}
 
   /* Footer */
   footer{background:var(--navy);color:#8ea0c8;padding:40px 0 34px;margin-top:56px}
@@ -276,25 +278,19 @@
 </div></section>
 
 <!-- TIENDA -->
-<section class="sec" style="padding-top:0"><div class="wrap"><div class="tienda reveal">
-  <div class="pico"><svg><use href="#ic-tienda"/></svg></div>
-  <h2 style="font-size:1.5rem">Tienda MEDIPaw</h2>
-  <p style="color:var(--suave);max-width:470px">Alimentos, accesorios, higiene y camas — con <b>envío en Pergamino</b>. Los socios con plan activo pagan <b>precio socio</b>; abonás en efectivo contra entrega o con Mercado Pago.</p>
-  <a class="btn btn-primary" href="/socio/" style="margin-top:6px"><svg style="color:#fff"><use href="#ic-tienda"/></svg>Registrate y comprá</a>
-</div></div></section>
-
-<!-- CTA FINAL -->
-<section class="sec" style="padding-top:0"><div class="wrap"><div class="cta-final reveal">
-  <h2>Empezá gratis hoy</h2>
-  <p>Cargá a tu mascota en un minuto. Activás la cobertura cuando quieras.</p>
-  <a class="btn btn-ghost dark" href="/socio/" style="font-size:1.05rem"><svg style="color:var(--azul)"><use href="#ic-cargar"/></svg>Cargá a tu mascota gratis</a>
-</div></div></section>
+<section class="sec" style="padding-top:0"><div class="wrap">
+  <div class="sec-head reveal"><div class="lbl">Tienda MEDIPaw</div><h2>Alimentos, accesorios y más</h2><p>Con <b>envío en Pergamino</b>. Los socios con plan activo pagan <b>precio socio</b>; efectivo contra entrega o Mercado Pago.</p></div>
+  <div class="vitrina reveal" id="vitrinaTienda" aria-label="Vidriera de la Tienda MEDIPaw"></div>
+  <div class="reveal" style="text-align:center;margin-top:18px">
+    <a class="btn btn-primary" href="/socio/"><svg style="color:#fff"><use href="#ic-tienda"/></svg>Registrate y comprá</a>
+  </div>
+</div></section>
 
 <!-- FOOTER -->
 <footer><div class="wrap">
   <div class="lockup"><svg width="26" height="26" style="color:#fff;stroke-width:6"><use href="#paw"/></svg><span class="wm">MEDI<span class="paw">Paw</span></span></div>
-  <div class="cols"><a href="#como">Cómo funciona</a><a href="#planes">Planes</a><a href="/socio/">Ingresar</a></div>
-  <small>MEDIPaw · Plan de salud para mascotas · Pergamino · © 2026</small>
+  <div class="cols"><a href="#como">Cómo funciona</a><a href="#planes">Planes</a><a href="/app/">Ingresar (solo personal MEDIPaw)</a></div>
+  <small>MEDIPaw · Plan de salud para mascotas · © 2026 · Desarrollado por <a href="https://at1974.ar" target="_blank" rel="noopener">At1974</a></small>
 </div></footer>
 
 <script src="/lib/medipaw-core.js"></script>
@@ -347,11 +343,12 @@
 
   // ── Prestaciones destacadas (números reales; vacunas = máximo entre planes: "hasta N/año") ──
   function maxCupo(k){ var m=0; PLKEYS.forEach(function(pl){var r=reg(k,pl); if(r&&r.cupoAnual!=null&&r.cupoAnual>m)m=r.cupoAnual;}); return m; }
-  function maxTope(k){ var m=0; PLKEYS.forEach(function(pl){var r=reg(k,pl); if(r&&r.tope&&r.tope>m)m=r.tope;}); return m; }
+  // NOTA (Lucas 04/08): en la vidriera NO van montos de topes. Los topes reales viven en la tabla comparativa (letra
+  // chica). Los PRECIOS DE PLANES sí quedan (es pricing, no tope).
   var PREST=[
     {ic:'ic-guardia', h:'Guardia veterinaria', big:'Sin límite', p:'Consultas con el veterinario MEDIPaw, las que necesites.'},
     {ic:'ic-vacuna', h:'Vacunas', big:'hasta '+maxCupo('vacunas')+'/año', p:'Según el plan de tu mascota, con reintegro.'},
-    {ic:'ic-cirugia', h:'Cirugías', big:'hasta '+money(maxTope('cirugia')), p:'Intervenciones quirúrgicas con reintegro.'},
+    {ic:'ic-cirugia', h:'Cirugías', big:'Cubiertas', p:'Intervenciones quirúrgicas con cobertura según el plan de tu mascota.'},
     {ic:'ic-estudio', h:'Estudios', big:'Imagen y análisis', p:'Diagnóstico por imagen, análisis y cardiología con tope.'}
   ];
   document.getElementById('prestGrid').innerHTML = PREST.map(function(x){
@@ -397,6 +394,36 @@
     var io2=new IntersectionObserver(function(es){es.forEach(function(en){ if(en.isIntersecting){ [].slice.call(huellas.children).forEach(function(h,i){ setTimeout(function(){h.classList.add('huella-on');}, 250+i*180); }); io2.disconnect(); } });},{threshold:.3});
     io2.observe(pasos);
   } else if(huellas){ huellas.innerHTML=''; }
+
+  // ── Vidriera de la Tienda: carrusel de productos REALES (espejo estático servido en /lib/, sin login) ──
+  (function(){
+    var cont=document.getElementById('vitrinaTienda'); if(!cont) return;
+    fetch('/lib/vidriera-tienda.json?v=20260804b').then(function(r){return r.ok?r.json():[];}).then(function(prods){
+      if(!Array.isArray(prods)||!prods.length){ if(cont.parentNode) cont.parentNode.removeChild(cont); return; }
+      cont.innerHTML = prods.map(function(p){
+        var soc=(p.precioSocio!=null&&p.precioSocio>0)?'<span class="vsoc">socio '+money(p.precioSocio)+'</span>':'';
+        var foto=p.foto?'<img src="'+esc(p.foto)+'" alt="'+esc(p.nombre)+'" loading="lazy">':'';
+        return '<div class="vcard"><div class="vfoto">'+foto+'</div><div class="vbody"><div class="vnom">'+esc(p.nombre)+'</div><div class="vpre">'+money(p.precio)+soc+'</div></div></div>';
+      }).join('');
+      // Drag con mouse (en touch desliza nativo).
+      var down=false, sx=0, sl=0;
+      cont.addEventListener('pointerdown', function(e){ if(e.pointerType==='mouse'){ down=true; sx=e.clientX; sl=cont.scrollLeft; cont.classList.add('drag'); } });
+      window.addEventListener('pointermove', function(e){ if(down){ cont.scrollLeft=sl-(e.clientX-sx); } });
+      window.addEventListener('pointerup', function(){ if(down){ down=false; cont.classList.remove('drag'); } });
+      // Auto sutil: avanza una card cada 3.2s y vuelve al inicio al final. Pausa al interactuar.
+      if(reduce) return;
+      var paused=false;
+      cont.addEventListener('pointerenter', function(){paused=true;});
+      cont.addEventListener('pointerleave', function(){paused=false;});
+      cont.addEventListener('touchstart', function(){paused=true;}, {passive:true});
+      setInterval(function(){
+        if(paused||down) return;
+        var card=cont.querySelector('.vcard'); if(!card) return;
+        if(cont.scrollLeft + cont.clientWidth >= cont.scrollWidth-6){ cont.scrollTo({left:0,behavior:'smooth'}); }
+        else{ cont.scrollBy({left:card.offsetWidth+14,behavior:'smooth'}); }
+      }, 3200);
+    }).catch(function(){ if(cont&&cont.parentNode) cont.parentNode.removeChild(cont); });
+  })();
 })();
 </script>
 </body>
